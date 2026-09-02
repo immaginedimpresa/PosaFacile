@@ -15,10 +15,15 @@ DELETE FROM auth.users WHERE email LIKE '%@posafacile-demo.it';
 
 INSERT INTO auth.users
   (instance_id, id, aud, role, email, email_confirmed_at,
-   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+   confirmation_token, recovery_token, email_change, email_change_token_new,
+   email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 SELECT '00000000-0000-0000-0000-000000000000', v.id::uuid, 'authenticated', 'authenticated',
        v.email, now(), '{"provider":"email","providers":["email"]}'::jsonb,
-       v.meta::jsonb, now(), now()
+       v.meta::jsonb, now(), now(),
+       -- GoTrue legge queste colonne in stringhe: un NULL fa fallire il login con
+       -- "Database error querying schema". Le righe reali contengono '' non NULL.
+       '', '', '', '', '', '', '', ''
 FROM (VALUES
   ('fae71199-3be5-5cf7-a06f-66cd149b2329', 'grassi0pie@posafacile-demo.it', '{"role": "professional", "full_name": "Daniela Grassi", "first_name": "Daniela", "last_name": "Grassi"}'),
   ('f6c16349-c731-56c3-bbf3-5fb939180662', 'ferrari1pie@posafacile-demo.it', '{"role": "professional", "full_name": "Vincenzo Ferrari", "first_name": "Vincenzo", "last_name": "Ferrari"}'),
@@ -74,10 +79,15 @@ FROM (VALUES
 
 INSERT INTO auth.users
   (instance_id, id, aud, role, email, email_confirmed_at,
-   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+   confirmation_token, recovery_token, email_change, email_change_token_new,
+   email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 SELECT '00000000-0000-0000-0000-000000000000', v.id::uuid, 'authenticated', 'authenticated',
        v.email, now(), '{"provider":"email","providers":["email"]}'::jsonb,
-       v.meta::jsonb, now(), now()
+       v.meta::jsonb, now(), now(),
+       -- GoTrue legge queste colonne in stringhe: un NULL fa fallire il login con
+       -- "Database error querying schema". Le righe reali contengono '' non NULL.
+       '', '', '', '', '', '', '', ''
 FROM (VALUES
   ('b2afc756-191d-5ca7-a83b-942f7ab5dc27', 'lombardi0fri@posafacile-demo.it', '{"role": "professional", "full_name": "Emanuele Lombardi", "first_name": "Emanuele", "last_name": "Lombardi"}'),
   ('3e841014-4c0e-54f2-9242-573d13fd93cd', 'mancini1fri@posafacile-demo.it', '{"role": "professional", "full_name": "Salvatore Mancini", "first_name": "Salvatore", "last_name": "Mancini"}'),
@@ -133,10 +143,15 @@ FROM (VALUES
 
 INSERT INTO auth.users
   (instance_id, id, aud, role, email, email_confirmed_at,
-   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+   confirmation_token, recovery_token, email_change, email_change_token_new,
+   email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 SELECT '00000000-0000-0000-0000-000000000000', v.id::uuid, 'authenticated', 'authenticated',
        v.email, now(), '{"provider":"email","providers":["email"]}'::jsonb,
-       v.meta::jsonb, now(), now()
+       v.meta::jsonb, now(), now(),
+       -- GoTrue legge queste colonne in stringhe: un NULL fa fallire il login con
+       -- "Database error querying schema". Le righe reali contengono '' non NULL.
+       '', '', '', '', '', '', '', ''
 FROM (VALUES
   ('b4bd756d-3283-5458-a537-3584cacb289e', 'ferrara0mar@posafacile-demo.it', '{"role": "professional", "full_name": "Lorenzo Ferrara", "first_name": "Lorenzo", "last_name": "Ferrara"}'),
   ('2fb5d092-361a-5a1a-bc1b-55ff2e5863c3', 'bruno1mar@posafacile-demo.it', '{"role": "professional", "full_name": "Fabio Bruno", "first_name": "Fabio", "last_name": "Bruno"}'),
@@ -192,10 +207,15 @@ FROM (VALUES
 
 INSERT INTO auth.users
   (instance_id, id, aud, role, email, email_confirmed_at,
-   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+   confirmation_token, recovery_token, email_change, email_change_token_new,
+   email_change_token_current, phone_change, phone_change_token, reauthentication_token)
 SELECT '00000000-0000-0000-0000-000000000000', v.id::uuid, 'authenticated', 'authenticated',
        v.email, now(), '{"provider":"email","providers":["email"]}'::jsonb,
-       v.meta::jsonb, now(), now()
+       v.meta::jsonb, now(), now(),
+       -- GoTrue legge queste colonne in stringhe: un NULL fa fallire il login con
+       -- "Database error querying schema". Le righe reali contengono '' non NULL.
+       '', '', '', '', '', '', '', ''
 FROM (VALUES
   ('1316cb03-baf8-56ce-85d1-bcb97177b640', 'moretti0pug@posafacile-demo.it', '{"role": "professional", "full_name": "Chiara Moretti", "first_name": "Chiara", "last_name": "Moretti"}'),
   ('6364d08d-8599-5d31-9488-781d8a695d62', 'rossi1pug@posafacile-demo.it', '{"role": "professional", "full_name": "Stefano Rossi", "first_name": "Stefano", "last_name": "Rossi"}'),

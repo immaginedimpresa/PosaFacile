@@ -17,6 +17,8 @@ export interface Coordinates {
 }
 
 export interface StreetSuggestion {
+    lat: number
+    lon: number
     street: string
     housenumber: string | null
     postcode: string | null
@@ -94,7 +96,10 @@ export async function searchStreets(
         if (seen.has(key)) continue
         seen.add(key)
 
+        const [lon, lat] = f.geometry.coordinates
         results.push({
+            lat,
+            lon,
             street,
             housenumber: p.housenumber ?? null,
             postcode: p.postcode ?? null,

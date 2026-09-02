@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Save, Search, Loader2 } from 'lucide-react'
+import { X, Save, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { ITALIAN_PROVINCES } from '@/lib/provinces'
+import { CoverageSelector, type CoverageValue } from '@/components/admin/CoverageSelector'
 
 export interface EditableProfessional {
     id: string
@@ -19,6 +19,10 @@ export interface EditableProfessional {
     rating: number | null
     verified: boolean | null
     price_per_sqm: number | null
+    coverage_mode: string | null
+    center_lat: number | null
+    center_lon: number | null
+    radius_km: number | null
     billing_address: string | null
     billing_city: string | null
     billing_cap: string | null
@@ -55,19 +59,20 @@ const inputClass =
 export function EditProfessionalDialog({ professional, onClose, onSuccess }: EditProfessionalDialogProps) {
     const [formData, setFormData] = useState(() => toForm(professional))
     const [verified, setVerified] = useState<boolean>(professional.verified ?? false)
-    const [selectedZones, setSelectedZones] = useState<string[]>([])
+    const [coverage, setCoverage] = useState<CoverageValue>(() => ({
+        mode: professional.coverage_mode === 'radius' ? 'radius' : 'province',
+        zones: [],
+        centerLat: professional.center_lat,
+        centerLon: professional.center_lon,
+        centerLabel: professional.billing_city ?? '',
+        radiusKm: professional.radius_km?.toString() ?? '',
+    }))
     const [zonesLoading, setZonesLoading] = useState(true)
-    const [provinceSearch, setProvinceSearch] = useState('')
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const update = (field: keyof typeof formData, value: string) =>
         setFormData(prev => ({ ...prev, [field]: value }))
-
-    const toggleZone = (code: string) =>
-        setSelectedZones(prev =>
-            prev.includes(code) ? prev.filter(z => z !== code) : [...prev, code]
-        )
 
     useEffect(() => {
         let cancelled = false
@@ -78,7 +83,7 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
             .then(({ data, error: zonesError }) => {
                 if (cancelled) return
                 if (zonesError) setError(`Zone non caricate: ${zonesError.message}`)
-                else setSelectedZones((data ?? []).map(z => z.province_code))
+                else setCoverage(prev => ({ ...prev, zones: (data ?? []).map(z => z.province_code) }))
                 setZonesLoading(false)
             })
         return () => { cancelled = true }
@@ -92,6 +97,20 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
         try {
             const price = formData.price_per_sqm.trim()
             const years = formData.years_experience.trim()
+
+            // Il vincolo a DB rifiuterebbe una copertura a raggio incompleta:
+            // meglio dirlo qui che mostrare un errore Postgres.
+            if (coverage.mode === 'radius') {
+                const km = Number(coverage.radiusKm)
+                if (coverage.centerLat === null || coverage.centerLon === null) {
+                    throw new Error('Scegli il comune da cui parte il raggio')
+                }
+                if (!Number.isFinite(km) || km <= 0) {
+                    throw new Error('Indica un raggio in km maggiore di zero')
+                }
+            } else if (coverage.zones.length === 0) {
+                throw new Error('Seleziona almeno una provincia servita')
+            }
 
             const { error: updateError } = await supabase
                 .from('professional_profiles')
@@ -111,6 +130,10 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
                     billing_cap: formData.billing_cap || null,
                     billing_province: formData.billing_province || null,
                     verified,
+                    coverage_mode: coverage.mode,
+                    center_lat: coverage.mode === 'radius' ? coverage.centerLat : null,
+                    center_lon: coverage.mode === 'radius' ? coverage.centerLon : null,
+                    radius_km: coverage.mode === 'radius' ? Number(coverage.radiusKm) : null,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', professional.id)
@@ -126,7 +149,7 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
             if (readError) throw readError
 
             const before = new Set((currentZones ?? []).map(z => z.province_code))
-            const after = new Set(selectedZones)
+            const after = new Set(coverage.mode === 'province' ? coverage.zones : [])
             const changed = before.size !== after.size || [...after].some(z => !before.has(z))
 
             if (changed) {
@@ -136,10 +159,10 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
                     .eq('professional_id', professional.id)
                 if (deleteError) throw deleteError
 
-                if (selectedZones.length > 0) {
+                if (coverage.mode === 'province' && coverage.zones.length > 0) {
                     const { error: insertError } = await supabase
                         .from('professional_zones')
-                        .insert(selectedZones.map(code => ({
+                        .insert(coverage.zones.map(code => ({
                             professional_id: professional.id,
                             province_code: code,
                         })))
@@ -155,12 +178,6 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
             setSaving(false)
         }
     }
-
-    const filteredProvinces = ITALIAN_PROVINCES.filter(p =>
-        provinceSearch === '' ||
-        p.name.toLowerCase().includes(provinceSearch.toLowerCase()) ||
-        p.code.toLowerCase().includes(provinceSearch.toLowerCase())
-    )
 
     const modalContent = (
         <AnimatePresence>
@@ -337,65 +354,14 @@ export function EditProfessionalDialog({ professional, onClose, onSuccess }: Edi
 
                             <div className="border-t border-gray-100" />
 
-                            <section className="space-y-3">
-                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                    Zone di Lavoro
-                                </h3>
-
-                                {zonesLoading ? (
-                                    <p className="text-xs text-gray-400">Caricamento zone...</p>
-                                ) : (
-                                    <>
-                                        {selectedZones.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 p-3 bg-orange-50 border border-orange-100 rounded-lg">
-                                                <span className="w-full text-xs font-semibold text-orange-700 mb-1">
-                                                    {selectedZones.length} province selezionate:
-                                                </span>
-                                                {selectedZones.map(code => {
-                                                    const prov = ITALIAN_PROVINCES.find(p => p.code === code)
-                                                    return (
-                                                        <button key={code} type="button" onClick={() => toggleZone(code)}
-                                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-orange-200 rounded-md text-xs font-medium text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors">
-                                                            {code} · {prov?.name ?? code}
-                                                            <X size={10} />
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
-
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                                            <input type="text" placeholder="Cerca provincia..."
-                                                value={provinceSearch}
-                                                onChange={e => setProvinceSearch(e.target.value)}
-                                                className={`${inputClass} pl-9`} />
-                                        </div>
-
-                                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                            <div className="max-h-44 overflow-y-auto p-2 bg-gray-50">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                    {filteredProvinces.map(prov => (
-                                                        <label key={prov.code}
-                                                            className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors text-xs ${
-                                                                selectedZones.includes(prov.code)
-                                                                    ? 'bg-orange-100 text-orange-800'
-                                                                    : 'hover:bg-white text-gray-700'
-                                                            }`}>
-                                                            <input type="checkbox"
-                                                                checked={selectedZones.includes(prov.code)}
-                                                                onChange={() => toggleZone(prov.code)}
-                                                                className="rounded border-gray-300 text-orange-500 focus:ring-orange-400" />
-                                                            <span className="font-medium">{prov.code}</span>
-                                                            <span className="text-gray-500 truncate">{prov.name}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </section>
+                            {zonesLoading ? (
+                                <p className="text-xs text-gray-400">Caricamento copertura...</p>
+                            ) : (
+                                <CoverageSelector
+                                    value={coverage}
+                                    onChange={patch => setCoverage(prev => ({ ...prev, ...patch }))}
+                                />
+                            )}
 
                             {error && (
                                 <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">

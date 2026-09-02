@@ -589,7 +589,10 @@ export type Database = {
           billing_city: string | null
           billing_province: string | null
           bio: string | null
+          center_lat: number | null
+          center_lon: number | null
           company_name: string | null
+          coverage_mode: string
           created_at: string | null
           fiscal_code: string | null
           full_name: string | null
@@ -599,6 +602,7 @@ export type Database = {
           pec: string | null
           phone: string | null
           price_per_sqm: number | null
+          radius_km: number | null
           rating: number | null
           sdi_code: string | null
           updated_at: string | null
@@ -612,7 +616,10 @@ export type Database = {
           billing_city?: string | null
           billing_province?: string | null
           bio?: string | null
+          center_lat?: number | null
+          center_lon?: number | null
           company_name?: string | null
+          coverage_mode?: string
           created_at?: string | null
           fiscal_code?: string | null
           full_name?: string | null
@@ -622,6 +629,7 @@ export type Database = {
           pec?: string | null
           phone?: string | null
           price_per_sqm?: number | null
+          radius_km?: number | null
           rating?: number | null
           sdi_code?: string | null
           updated_at?: string | null
@@ -635,7 +643,10 @@ export type Database = {
           billing_city?: string | null
           billing_province?: string | null
           bio?: string | null
+          center_lat?: number | null
+          center_lon?: number | null
           company_name?: string | null
+          coverage_mode?: string
           created_at?: string | null
           fiscal_code?: string | null
           full_name?: string | null
@@ -645,6 +656,7 @@ export type Database = {
           pec?: string | null
           phone?: string | null
           price_per_sqm?: number | null
+          radius_km?: number | null
           rating?: number | null
           sdi_code?: string | null
           updated_at?: string | null
@@ -1040,7 +1052,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      distance_km: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
+      }
       is_admin: { Args: never; Returns: boolean }
+      professionals_for_location: {
+        Args: { p_lat?: number; p_lon?: number; p_province: string }
+        Returns: {
+          bio: string
+          company_name: string
+          coverage_mode: string
+          distance_km: number
+          full_name: string
+          id: string
+          markup_fixed: number
+          markup_percent: number
+          price_per_sqm: number
+          rating: number
+          years_experience: number
+        }[]
+      }
     }
     Enums: {
       customer_type: "private" | "business"

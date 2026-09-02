@@ -8,6 +8,8 @@ export interface AddressValue {
     citta: string
     provincia: string
     cap: string
+    lat: number | null
+    lon: number | null
 }
 
 interface AddressAutocompleteProps {
@@ -61,7 +63,7 @@ export function AddressAutocomplete({ value, onChange }: AddressAutocompleteProp
         setComuneQuery(text)
         setComuneConfirmed(false)
         setCoords(null)
-        onChange({ citta: '', provincia: '', cap: '' })
+        onChange({ citta: '', provincia: '', cap: '', lat: null, lon: null })
         setComuneOptions(comuni ? searchComuni(comuni, text) : [])
         setComuneOpen(true)
     }
@@ -76,7 +78,12 @@ export function AddressAutocomplete({ value, onChange }: AddressAutocompleteProp
         // Le coordinate servono solo a orientare la ricerca della via: se il
         // geocoder non risponde, l'indirizzo resta comunque compilabile a mano.
         geocodeComune(comune.nome, comune.sigla)
-            .then(setCoords)
+            .then(c => {
+                setCoords(c)
+                // Coordinate del comune: bastano già a valutare le coperture a raggio,
+                // poi verranno affinate se l'utente sceglie una via dai suggerimenti.
+                if (c) onChange({ lat: c.lat, lon: c.lon })
+            })
             .catch(() => setCoords(null))
     }
 
@@ -103,7 +110,9 @@ export function AddressAutocomplete({ value, onChange }: AddressAutocompleteProp
     const selectStreet = (s: StreetSuggestion) => {
         onChange({
             indirizzo: [s.street, s.housenumber].filter(Boolean).join(' '),
-            // Il CAP del civico è più preciso di quello generico del comune.
+            // Il CAP e le coordinate del civico sono più precisi di quelli del comune.
+            lat: s.lat,
+            lon: s.lon,
             ...(s.postcode ? { cap: s.postcode } : {}),
         })
         setStreetOptions([])

@@ -77,6 +77,9 @@ export interface LocationInfo {
     citta: string
     provincia: string
     cap: string
+    /** Coordinate del luogo di posa: servono ai professionisti che coprono un raggio. */
+    lat: number | null
+    lon: number | null
     dataPreferita: string | null
     flessibile: boolean
 }
@@ -97,10 +100,21 @@ export interface SelectedProfessional {
 // il preventivo usa la sua tariffa reale, così il totale non cambia a sorpresa.
 const BASE_LAYING_RATE = 25 // €/mq
 
-/** Prezzo al mq esposto al cliente: tariffa del posatore più markup percentuale. */
+/** Numero utilizzabile, oppure il valore di ripiego indicato. */
+function num(value: unknown, fallback = 0): number {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : fallback
+}
+
+/**
+ * Prezzo al mq esposto al cliente: tariffa del posatore più markup percentuale.
+ * Tollera professionisti salvati con il formato precedente, privi di tariffa:
+ * lo stato è persistito in localStorage e sopravvive agli aggiornamenti.
+ */
 export function layingRateFor(pro: SelectedProfessional | null): number {
-    if (!pro || pro.price_per_sqm === null) return BASE_LAYING_RATE
-    return pro.price_per_sqm * (1 + (pro.markup_percent ?? 0) / 100)
+    const base = num(pro?.price_per_sqm)
+    if (base <= 0) return BASE_LAYING_RATE
+    return base * (1 + num(pro?.markup_percent) / 100)
 }
 
 interface ConfiguratorState {
@@ -173,6 +187,8 @@ const initialState = {
         citta: '',
         provincia: '',
         cap: '',
+        lat: null,
+        lon: null,
         dataPreferita: null,
         flessibile: true,
     },
@@ -234,7 +250,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                 const surcharge = LAYING_TYPE_SURCHARGE[layingType]
                 const rate = layingRateFor(selectedProfessional)
                 // Il markup fisso è una tantum: non va moltiplicato per i metri quadri.
-                const oneOff = selectedProfessional?.markup_fixed ?? 0
+                const oneOff = num(selectedProfessional?.markup_fixed)
                 return baseMq * rate * (1 + surcharge) + oneOff
             },
 
@@ -269,6 +285,19 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
         }),
         {
             name: 'posafacile-configurator',
+            // Il professionista ha acquisito tariffa e markup: senza questa migrazione
+            // uno stato salvato in precedenza resterebbe privo di quei campi.
+            version: 1,
+            migrate: (persisted: any, fromVersion: number) => {
+                if (fromVersion < 1 && persisted?.selectedProfessional) {
+                    const pro = persisted.selectedProfessional
+                    if (pro.price_per_sqm === undefined) {
+                        // Va riscelto: la tariffa si legge solo dall'elenco professionisti.
+                        persisted.selectedProfessional = null
+                    }
+                }
+                return persisted
+            },
         }
     )
 )

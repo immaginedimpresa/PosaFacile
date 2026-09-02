@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useConfiguratorStore, layingRateFor } from '@/store/configuratorStore'
 import { supabase } from '@/lib/supabase'
-import { Star, Briefcase, ArrowRight, AlertCircle } from 'lucide-react'
+import { Star, Briefcase, ArrowRight, AlertCircle, MapPin } from 'lucide-react'
 import { loadComuni, provincesInSameRegion } from '@/lib/comuni'
 import { motion } from 'framer-motion'
 
@@ -15,6 +15,9 @@ interface Professional {
     price_per_sqm: number | null
     markup_percent: number | null
     markup_fixed: number | null
+    coverage_mode: string
+    /** Valorizzata solo per chi copre un raggio e se conosciamo le coordinate. */
+    distance_km: number | null
 }
 
 export function Step7ProfessionalSelect() {
@@ -27,90 +30,26 @@ export function Step7ProfessionalSelect() {
         if (location.provincia) {
             fetchProfessionals()
         }
-    }, [location.provincia])
+    }, [location.provincia, location.lat, location.lon])
 
     const fetchProfessionals = async () => {
         setLoading(true)
         setWidenedToRegion(false)
         try {
-            // Normalize province code (uppercase + trim)
             const provinceCode = (location.provincia || '').trim().toUpperCase()
-            console.log('🔎 [Step7] Fetching professionals for province:', provinceCode)
 
-            const { data, error } = await supabase
-                .from('professional_profiles')
-                .select(`
-                    id,
-                    full_name,
-                    company_name,
-                    rating,
-                    years_experience,
-                    bio,
-                    price_per_sqm,
-                    markup_percent,
-                    markup_fixed,
-                    professional_zones!inner(province_code)
-                `)
-                .eq('professional_zones.province_code', provinceCode)
-                .eq('verified', true)
-                .order('rating', { ascending: false })
-
+            // professionals_for_location unisce le due modalità di copertura:
+            // chi ha scelto le province e chi ha scelto un raggio attorno a un punto.
+            // Il filtro sta a DB, così non si scaricano tutti i profili per scartarli.
+            const { data, error } = await supabase.rpc('professionals_for_location', {
+                p_province: provinceCode,
+                p_lat: location.lat ?? undefined,
+                p_lon: location.lon ?? undefined,
+            })
             if (error) throw error
 
-            console.log('📊 [Step7] Query returned:', data?.length || 0, 'professionals')
-
-            // If we got results, use them
             if (data && data.length > 0) {
-                const uniquePros = data.filter((pro, index, self) =>
-                    index === self.findIndex(p => p.id === pro.id)
-                )
-
-                // Verify existence in public.users to avoid FK errors
-                // Verify existence in public.users can fail due to RLS. 
-                // We assume professional_profiles is the source of truth for public display.
-                // const proIds = uniquePros.map(p => p.id)
-                // const { data: existingUsers, error: userCheckError } = await supabase.from('users').select('id').in('id', proIds)
-                // if (userCheckError) console.error('❌ [Step7] User check error:', userCheckError)
-
-                // Just use the profiles we found
-                console.log('✅ [Step7] Setting', uniquePros.length, 'professionals')
-                setProfessionals(uniquePros as any)
-                return
-            }
-
-            // FALLBACK: Query all professionals and filter client-side
-            console.warn('⚠️ [Step7] No results from join query, trying fallback...')
-            const { data: allData, error: allError } = await supabase
-                .from('professional_profiles')
-                .select(`
-                    id,
-                    full_name,
-                    company_name,
-                    rating,
-                    years_experience,
-                    bio,
-                    price_per_sqm,
-                    markup_percent,
-                    markup_fixed,
-                    professional_zones!inner(province_code)
-                `)
-                .eq('verified', true)
-                .order('rating', { ascending: false })
-
-            if (allError) throw allError
-
-            // Filter client-side by province
-            const filtered = (allData || []).filter((pro: any) => {
-                const zones = Array.isArray(pro.professional_zones) ? pro.professional_zones : []
-                return zones.some((z: any) =>
-                    (z.province_code || '').trim().toUpperCase() === provinceCode
-                )
-            })
-
-            console.log('🔁 [Step7] Fallback found', filtered.length, 'professionals for', provinceCode)
-
-            if (filtered.length > 0) {
-                setProfessionals(filtered as any)
+                setProfessionals(data as Professional[])
                 return
             }
 
@@ -118,20 +57,33 @@ export function Step7ProfessionalSelect() {
             // meglio proporre un posatore un po' più lontano che una lista vuota.
             const comuni = await loadComuni()
             const regionCodes = provincesInSameRegion(comuni, provinceCode)
-            if (regionCodes.length === 0) {
-                setProfessionals([])
-                return
+                .filter(code => code !== provinceCode)
+
+            const perProvince = await Promise.all(
+                regionCodes.map(code =>
+                    supabase.rpc('professionals_for_location', {
+                        p_province: code,
+                        p_lat: location.lat ?? undefined,
+                        p_lon: location.lon ?? undefined,
+                    })
+                )
+            )
+
+            const seen = new Set<string>()
+            const inRegion: Professional[] = []
+            for (const { data: rows } of perProvince) {
+                for (const pro of (rows ?? []) as Professional[]) {
+                    if (seen.has(pro.id)) continue
+                    seen.add(pro.id)
+                    inRegion.push(pro)
+                }
             }
 
-            const inRegion = (allData || []).filter((pro: any) => {
-                const zones = Array.isArray(pro.professional_zones) ? pro.professional_zones : []
-                return zones.some((z: any) => regionCodes.includes((z.province_code || '').trim().toUpperCase()))
-            })
-
             setWidenedToRegion(inRegion.length > 0)
-            setProfessionals(inRegion as any)
+            setProfessionals(inRegion)
         } catch (error) {
-            console.error('❌ [Step7] Error fetching professionals:', error)
+            console.error('[Step7] Errore nel recupero dei professionisti:', error)
+            setProfessionals([])
         } finally {
             setLoading(false)
         }
@@ -218,6 +170,14 @@ export function Step7ProfessionalSelect() {
                                                 <Briefcase size={16} />
                                                 <span className="text-sm">{pro.years_experience} anni</span>
                                             </div>
+                                            {pro.distance_km !== null && (
+                                                <div className="flex items-center gap-1 text-gray-600">
+                                                    <MapPin size={16} />
+                                                    <span className="text-sm">
+                                                        a {Math.round(pro.distance_km)} km
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                         {pro.bio && <p className="text-gray-600 text-sm mt-2 line-clamp-2">{pro.bio}</p>}
                                     </div>

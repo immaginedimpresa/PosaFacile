@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Mail, Search, CheckCircle2, Loader2 } from 'lucide-react'
+import { X, Mail, CheckCircle2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { ITALIAN_PROVINCES } from '@/lib/provinces'
+import { CoverageSelector, type CoverageValue } from '@/components/admin/CoverageSelector'
 
 interface AddProfessionalDialogProps {
     onClose: () => void
@@ -29,17 +29,13 @@ export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDia
         billing_province: '',
         price_per_sqm: ''
     })
-    const [selectedZones, setSelectedZones] = useState<string[]>([])
-    const [provinceSearch, setProvinceSearch] = useState('')
+    const [coverage, setCoverage] = useState<CoverageValue>({
+        mode: 'province', zones: [], centerLat: null, centerLon: null, centerLabel: '', radiusKm: '',
+    })
     const [error, setError] = useState<string | null>(null)
 
     const update = (field: keyof typeof formData, value: string) =>
         setFormData(prev => ({ ...prev, [field]: value }))
-
-    const toggleZone = (code: string) =>
-        setSelectedZones(prev =>
-            prev.includes(code) ? prev.filter(z => z !== code) : [...prev, code]
-        )
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -47,14 +43,35 @@ export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDia
         setError(null)
 
         try {
-            const { error: fnError } = await supabase.functions.invoke('invite-user', {
+            // Gli stessi controlli del vincolo a DB, per dare un messaggio comprensibile.
+            if (coverage.mode === 'radius') {
+                const km = Number(coverage.radiusKm)
+                if (coverage.centerLat === null || coverage.centerLon === null) {
+                    throw new Error('Scegli il comune da cui parte il raggio')
+                }
+                if (!Number.isFinite(km) || km <= 0) {
+                    throw new Error('Indica un raggio in km maggiore di zero')
+                }
+            } else if (coverage.zones.length === 0) {
+                throw new Error('Seleziona almeno una provincia servita')
+            }
+
+            const { data, error: fnError } = await supabase.functions.invoke('invite-user', {
                 body: {
                     email: formData.email,
-                    meta: { ...formData },
-                    zones: selectedZones
+                    meta: {
+                        ...formData,
+                        coverage_mode: coverage.mode,
+                        center_lat: coverage.mode === 'radius' ? coverage.centerLat : null,
+                        center_lon: coverage.mode === 'radius' ? coverage.centerLon : null,
+                        radius_km: coverage.mode === 'radius' ? Number(coverage.radiusKm) : null,
+                    },
+                    zones: coverage.mode === 'province' ? coverage.zones : [],
                 }
             })
             if (fnError) throw fnError
+            // La funzione risponde 200 anche sugli errori applicativi.
+            if (data?.success === false) throw new Error(data.error)
             setStep(2)
         } catch (err: any) {
             setError(err.message || 'Errore durante la registrazione')
@@ -62,12 +79,6 @@ export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDia
             setLoading(false)
         }
     }
-
-    const filteredProvinces = ITALIAN_PROVINCES.filter(p =>
-        provinceSearch === '' ||
-        p.name.toLowerCase().includes(provinceSearch.toLowerCase()) ||
-        p.code.toLowerCase().includes(provinceSearch.toLowerCase())
-    )
 
     const modalContent = (
         <AnimatePresence>
@@ -323,74 +334,11 @@ export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDia
 
                                 <div className="border-t border-gray-100" />
 
-                                {/* — Sezione 5: Zone di Lavoro — */}
-                                <section className="space-y-3">
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                        Zone di Lavoro
-                                    </h3>
-
-                                    {/* Chips zone selezionate */}
-                                    {selectedZones.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 p-3 bg-orange-50 border border-orange-100 rounded-lg">
-                                            <span className="w-full text-xs font-semibold text-orange-700 mb-1">
-                                                {selectedZones.length} province selezionate:
-                                            </span>
-                                            {selectedZones.map(code => {
-                                                const prov = ITALIAN_PROVINCES.find(p => p.code === code)
-                                                return (
-                                                    <button
-                                                        key={code}
-                                                        type="button"
-                                                        onClick={() => toggleZone(code)}
-                                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-orange-200 rounded-md text-xs font-medium text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
-                                                    >
-                                                        {code} · {prov?.name}
-                                                        <X size={10} />
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {/* Search province */}
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                                        <input
-                                            type="text"
-                                            placeholder="Cerca provincia..."
-                                            value={provinceSearch}
-                                            onChange={e => setProvinceSearch(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
-                                        />
-                                    </div>
-
-                                    {/* Grid province */}
-                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                        <div className="max-h-44 overflow-y-auto p-2 bg-gray-50">
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                                {filteredProvinces.map(prov => (
-                                                    <label
-                                                        key={prov.code}
-                                                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors text-xs ${
-                                                            selectedZones.includes(prov.code)
-                                                                ? 'bg-orange-100 text-orange-800'
-                                                                : 'hover:bg-white text-gray-700'
-                                                        }`}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedZones.includes(prov.code)}
-                                                            onChange={() => toggleZone(prov.code)}
-                                                            className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
-                                                        />
-                                                        <span className="font-medium">{prov.code}</span>
-                                                        <span className="text-gray-500 truncate">{prov.name}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
+                                {/* — Sezione 5: Copertura — */}
+                                <CoverageSelector
+                                    value={coverage}
+                                    onChange={patch => setCoverage(prev => ({ ...prev, ...patch }))}
+                                />
 
                                 {/* Errore */}
                                 {error && (
@@ -418,7 +366,7 @@ export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDia
                                         Chiudi
                                     </button>
                                     <button
-                                        onClick={() => { setStep(1); setFormData({ email: '', full_name: '', company_name: '', vat_number: '', fiscal_code: '', phone: '', sdi_code: '', pec: '', billing_address: '', billing_city: '', billing_cap: '', billing_province: '', price_per_sqm: '' }); setSelectedZones([]) }}
+                                        onClick={() => { setStep(1); setFormData({ email: '', full_name: '', company_name: '', vat_number: '', fiscal_code: '', phone: '', sdi_code: '', pec: '', billing_address: '', billing_city: '', billing_cap: '', billing_province: '', price_per_sqm: '' }); setCoverage({ mode: 'province', zones: [], centerLat: null, centerLon: null, centerLabel: '', radiusKm: '' }) }}
                                         className="px-6 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
                                     >
                                         Aggiungi un altro

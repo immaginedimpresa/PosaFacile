@@ -85,6 +85,12 @@ serve(async (req) => {
                 billing_province: meta.billing_province,
                 full_name: meta.full_name,
                 price_per_sqm: pricePerSqm,
+                // La copertura decide dove il professionista sarà proposto: per
+                // province (in professional_zones) oppure per raggio da un punto.
+                coverage_mode: meta.coverage_mode === 'radius' ? 'radius' : 'province',
+                center_lat: meta.coverage_mode === 'radius' ? meta.center_lat : null,
+                center_lon: meta.coverage_mode === 'radius' ? meta.center_lon : null,
+                radius_km: meta.coverage_mode === 'radius' ? meta.radius_km : null,
                 verified: true, // invitato dall'admin, quindi già attendibile
             })
 
