@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { X, Mail, Search } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Mail, Search, CheckCircle2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ITALIAN_PROVINCES } from '@/lib/provinces'
 
@@ -11,7 +12,7 @@ interface AddProfessionalDialogProps {
 
 export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDialogProps) {
     const [loading, setLoading] = useState(false)
-    const [step, setStep] = useState(1)
+    const [step, setStep] = useState<1 | 2>(1)
 
     const [formData, setFormData] = useState({
         email: '',
@@ -25,290 +26,443 @@ export function AddProfessionalDialog({ onClose, onSuccess }: AddProfessionalDia
         billing_address: '',
         billing_city: '',
         billing_cap: '',
-        billing_province: ''
+        billing_province: '',
+        price_per_sqm: ''
     })
     const [selectedZones, setSelectedZones] = useState<string[]>([])
     const [provinceSearch, setProvinceSearch] = useState('')
+    const [error, setError] = useState<string | null>(null)
+
+    const update = (field: keyof typeof formData, value: string) =>
+        setFormData(prev => ({ ...prev, [field]: value }))
+
+    const toggleZone = (code: string) =>
+        setSelectedZones(prev =>
+            prev.includes(code) ? prev.filter(z => z !== code) : [...prev, code]
+        )
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+        setError(null)
 
         try {
-            // Function invoke with all metadata
-            const { data: _data, error } = await supabase.functions.invoke('invite-user', {
+            const { error: fnError } = await supabase.functions.invoke('invite-user', {
                 body: {
                     email: formData.email,
                     meta: { ...formData },
                     zones: selectedZones
                 }
             })
-
-            if (error) throw error
-
-            setStep(2) // Success step
-        } catch (error: any) {
-            console.error('Invite error details:', error)
-            // Debugging
-            if (error.message?.includes('Failed to send a request')) {
-                alert('Errore di connessione alla Edge Function. Controlla: \n1. Che la funzione sia deployata (npx supabase functions deploy invite-user)\n2. Che il client non abbia blocchi (AdBlock, firewall)\n3. Vedi console per dettagli.')
-            } else {
-                alert('Errore invio invito: ' + error.message)
-            }
+            if (fnError) throw fnError
+            setStep(2)
+        } catch (err: any) {
+            setError(err.message || 'Errore durante la registrazione')
+        } finally {
             setLoading(false)
         }
     }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+    const filteredProvinces = ITALIAN_PROVINCES.filter(p =>
+        provinceSearch === '' ||
+        p.name.toLowerCase().includes(provinceSearch.toLowerCase()) ||
+        p.code.toLowerCase().includes(provinceSearch.toLowerCase())
+    )
+
+    const modalContent = (
+        <AnimatePresence>
+            {/* Overlay */}
             <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl my-8"
+                key="overlay"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
             >
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h2 className="text-lg font-bold text-gray-900">Nuovo Professionista Completo</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X size={20} />
-                    </button>
-                </div>
+                {/* Dialog */}
+                <motion.div
+                    key="dialog"
+                    initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                    transition={{ type: 'spring', duration: 0.35 }}
+                    className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Header — fisso */}
+                    <div className="flex-none flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
+                        <div>
+                            <h2 className="text-base font-bold text-gray-900">
+                                {step === 1 ? 'Nuovo Professionista' : 'Invito inviato'}
+                            </h2>
+                            {step === 1 && (
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Compila i dati e invia l'invito via email
+                                </p>
+                            )}
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
 
-                <div className="p-6">
-                    {step === 1 ? (
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Body — scrollabile */}
+                    <div className="flex-1 overflow-y-auto">
+                        {step === 1 ? (
+                            <form id="add-pro-form" onSubmit={handleSubmit} className="p-6 space-y-6">
 
-                            {/* Account Info */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b pb-1">Dati Account & Contatto</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Email (Login)</label>
-                                        <input
-                                            type="email" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        />
+                                {/* — Sezione 1: Account & Contatto — */}
+                                <section className="space-y-3">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Dati Account &amp; Contatto
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="col-span-2 sm:col-span-1">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Email (Login) <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="email" required
+                                                placeholder="nome@azienda.it"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.email}
+                                                onChange={e => update('email', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-span-2 sm:col-span-1">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Telefono <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="tel" required
+                                                placeholder="+39 333 1234567"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.phone}
+                                                onChange={e => update('phone', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Nome Completo Referente <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text" required
+                                                placeholder="Mario Rossi"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.full_name}
+                                                onChange={e => update('full_name', e.target.value)}
+                                            />
+                                        </div>
                                     </div>
+                                </section>
+
+                                <div className="border-t border-gray-100" />
+
+                                {/* — Sezione 2: Dati Fiscali — */}
+                                <section className="space-y-3">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Dati Fiscali Aziendali
+                                    </h3>
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Telefono</label>
-                                        <input
-                                            type="tel" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.phone}
-                                            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Nome Completo Referente</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                            Ragione Sociale <span className="text-red-500">*</span>
+                                        </label>
                                         <input
                                             type="text" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.full_name}
-                                            onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                                            placeholder="Posa & Tiles S.r.l."
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                            value={formData.company_name}
+                                            onChange={e => update('company_name', e.target.value)}
                                         />
                                     </div>
-                                </div>
-                            </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Partita IVA <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text" required
+                                                placeholder="IT12345678901"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.vat_number}
+                                                onChange={e => update('vat_number', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Codice Fiscale <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text" required
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition uppercase"
+                                                value={formData.fiscal_code}
+                                                onChange={e => update('fiscal_code', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Codice SDI
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="XXXXXXX"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.sdi_code}
+                                                onChange={e => update('sdi_code', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                PEC
+                                            </label>
+                                            <input
+                                                type="email"
+                                                placeholder="pec@pec.it"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.pec}
+                                                onChange={e => update('pec', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
 
-                            {/* Company Info */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b pb-1">Dati Fiscali Aziendali</h3>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Ragione Sociale</label>
-                                    <input
-                                        type="text" required
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                        value={formData.company_name}
-                                        onChange={e => setFormData({ ...formData, company_name: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Partita IVA</label>
-                                        <input
-                                            type="text" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.vat_number}
-                                            onChange={e => setFormData({ ...formData, vat_number: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Codice Fiscale</label>
-                                        <input
-                                            type="text" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.fiscal_code}
-                                            onChange={e => setFormData({ ...formData, fiscal_code: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Codice SDI</label>
-                                        <input
-                                            type="text" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.sdi_code}
-                                            onChange={e => setFormData({ ...formData, sdi_code: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">PEC</label>
-                                        <input
-                                            type="email" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.pec}
-                                            onChange={e => setFormData({ ...formData, pec: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                                <div className="border-t border-gray-100" />
 
-                            {/* Billing Address */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b pb-1">Sede Legale / Fatturazione</h3>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 mb-1">Indirizzo (Via/Piazza, Civico)</label>
-                                    <input
-                                        type="text" required
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                        value={formData.billing_address}
-                                        onChange={e => setFormData({ ...formData, billing_address: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-6 gap-4">
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">CAP</label>
+                                {/* — Sezione 3: Sede Legale — */}
+                                <section className="space-y-3">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Sede Legale / Fatturazione
+                                    </h3>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                            Indirizzo <span className="text-red-500">*</span>
+                                        </label>
                                         <input
                                             type="text" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.billing_cap}
-                                            onChange={e => setFormData({ ...formData, billing_cap: e.target.value })}
+                                            placeholder="Via Roma 1"
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                            value={formData.billing_address}
+                                            onChange={e => update('billing_address', e.target.value)}
                                         />
                                     </div>
-                                    <div className="col-span-3">
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Città</label>
-                                        <input
-                                            type="text" required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                            value={formData.billing_city}
-                                            onChange={e => setFormData({ ...formData, billing_city: e.target.value })}
-                                        />
+                                    <div className="grid grid-cols-6 gap-3">
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                CAP <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text" required maxLength={5}
+                                                placeholder="20100"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.billing_cap}
+                                                onChange={e => update('billing_cap', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-span-3">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Città <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text" required
+                                                placeholder="Milano"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                value={formData.billing_city}
+                                                onChange={e => update('billing_city', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Prov.
+                                            </label>
+                                            <input
+                                                type="text" maxLength={2}
+                                                placeholder="MI"
+                                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition uppercase"
+                                                value={formData.billing_province}
+                                                onChange={e => update('billing_province', e.target.value.toUpperCase())}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="col-span-1">
-                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Prov.</label>
-                                        <input
-                                            type="text" required maxLength={2}
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none uppercase"
-                                            value={formData.billing_province}
-                                            onChange={e => setFormData({ ...formData, billing_province: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                                </section>
 
-                            {/* Work Zones */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b pb-1">Zone di Lavoro</h3>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 mb-2">Province Coperte</label>
+                                <div className="border-t border-gray-100" />
 
-                                    {/* Selected Zones Display */}
+                                {/* — Sezione 4: Condizioni Economiche — */}
+                                <section className="space-y-3">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Condizioni Economiche
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Prezzo/mq <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">
+                                                    €
+                                                </span>
+                                                <input
+                                                    type="number" required
+                                                    min="0" step="0.01" inputMode="decimal"
+                                                    placeholder="35.00"
+                                                    className="w-full pl-7 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
+                                                    value={formData.price_per_sqm}
+                                                    onChange={e => update('price_per_sqm', e.target.value)}
+                                                />
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-gray-400">
+                                                Tariffa di posa al metro quadro, IVA esclusa
+                                            </p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div className="border-t border-gray-100" />
+
+                                {/* — Sezione 5: Zone di Lavoro — */}
+                                <section className="space-y-3">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                        Zone di Lavoro
+                                    </h3>
+
+                                    {/* Chips zone selezionate */}
                                     {selectedZones.length > 0 && (
-                                        <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-xs font-semibold text-green-700">Selezionate ({selectedZones.length}):</span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedZones.map(code => {
-                                                    const prov = ITALIAN_PROVINCES.find(p => p.code === code)
-                                                    return (
-                                                        <button
-                                                            key={code}
-                                                            type="button"
-                                                            onClick={() => setSelectedZones(selectedZones.filter(z => z !== code))}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-green-300 rounded-md text-xs font-medium text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors"
-                                                        >
-                                                            {code} - {prov?.name}
-                                                            <X size={12} />
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
+                                        <div className="flex flex-wrap gap-1.5 p-3 bg-orange-50 border border-orange-100 rounded-lg">
+                                            <span className="w-full text-xs font-semibold text-orange-700 mb-1">
+                                                {selectedZones.length} province selezionate:
+                                            </span>
+                                            {selectedZones.map(code => {
+                                                const prov = ITALIAN_PROVINCES.find(p => p.code === code)
+                                                return (
+                                                    <button
+                                                        key={code}
+                                                        type="button"
+                                                        onClick={() => toggleZone(code)}
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-orange-200 rounded-md text-xs font-medium text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
+                                                    >
+                                                        {code} · {prov?.name}
+                                                        <X size={10} />
+                                                    </button>
+                                                )
+                                            })}
                                         </div>
                                     )}
 
-                                    {/* Search Bar */}
-                                    <div className="relative mb-3">
-                                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                                    {/* Search province */}
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                                         <input
                                             type="text"
                                             placeholder="Cerca provincia..."
                                             value={provinceSearch}
                                             onChange={e => setProvinceSearch(e.target.value)}
-                                            className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition"
                                         />
                                     </div>
 
-                                    <div className="border rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {ITALIAN_PROVINCES
-                                                .filter(prov =>
-                                                    provinceSearch === '' ||
-                                                    prov.name.toLowerCase().includes(provinceSearch.toLowerCase()) ||
-                                                    prov.code.toLowerCase().includes(provinceSearch.toLowerCase())
-                                                )
-                                                .map(prov => (
-                                                    <label key={prov.code} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded">
+                                    {/* Grid province */}
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                        <div className="max-h-44 overflow-y-auto p-2 bg-gray-50">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                                {filteredProvinces.map(prov => (
+                                                    <label
+                                                        key={prov.code}
+                                                        className={`flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors text-xs ${
+                                                            selectedZones.includes(prov.code)
+                                                                ? 'bg-orange-100 text-orange-800'
+                                                                : 'hover:bg-white text-gray-700'
+                                                        }`}
+                                                    >
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedZones.includes(prov.code)}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setSelectedZones([...selectedZones, prov.code])
-                                                                } else {
-                                                                    setSelectedZones(selectedZones.filter(z => z !== prov.code))
-                                                                }
-                                                            }}
-                                                            className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                                            onChange={() => toggleZone(prov.code)}
+                                                            className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
                                                         />
-                                                        <span className="text-sm text-gray-700">{prov.code} - {prov.name}</span>
+                                                        <span className="font-medium">{prov.code}</span>
+                                                        <span className="text-gray-500 truncate">{prov.name}</span>
                                                     </label>
                                                 ))}
+                                            </div>
                                         </div>
                                     </div>
+                                </section>
+
+                                {/* Errore */}
+                                {error && (
+                                    <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                                        {error}
+                                    </div>
+                                )}
+                            </form>
+                        ) : (
+                            /* — Step 2: Success — */
+                            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                                    <CheckCircle2 size={36} className="text-green-600" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Invito Inviato!</h3>
+                                <p className="text-sm text-gray-500 max-w-xs">
+                                    Abbiamo inviato un'email a <strong>{formData.email}</strong>.<br />
+                                    Il profilo è stato creato con tutti i dati inseriti.
+                                </p>
+                                <div className="mt-6 flex gap-3">
+                                    <button
+                                        onClick={() => { onSuccess(); onClose() }}
+                                        className="px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors"
+                                    >
+                                        Chiudi
+                                    </button>
+                                    <button
+                                        onClick={() => { setStep(1); setFormData({ email: '', full_name: '', company_name: '', vat_number: '', fiscal_code: '', phone: '', sdi_code: '', pec: '', billing_address: '', billing_city: '', billing_cap: '', billing_province: '', price_per_sqm: '' }); setSelectedZones([]) }}
+                                        className="px-6 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                                    >
+                                        Aggiungi un altro
+                                    </button>
                                 </div>
                             </div>
+                        )}
+                    </div>
 
-                            <div className="pt-4">
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {loading ? 'Registrazione in corso...' : 'Registra e Invia Invito'}
-                                </button>
-                            </div>
-                        </form>
-                    ) : (
-                        <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Mail size={32} />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Invito Inviato!</h3>
-                            <p className="text-gray-500 mb-6">
-                                Abbiamo inviato un'email a <strong>{formData.email}</strong>.<br />
-                                Il profilo è stato creato completo di tutti i dati fiscali.
-                            </p>
+                    {/* Footer — fisso, solo in step 1 */}
+                    {step === 1 && (
+                        <div className="flex-none flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
                             <button
-                                onClick={() => { onSuccess(); onClose(); }}
-                                className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium"
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                             >
-                                Chiudi
+                                Annulla
+                            </button>
+                            <button
+                                type="submit"
+                                form="add-pro-form"
+                                disabled={loading}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Registrazione...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Mail size={16} />
+                                        Registra &amp; Invia Invito
+                                    </>
+                                )}
                             </button>
                         </div>
                     )}
-                </div>
+                </motion.div>
             </motion.div>
-        </div>
+        </AnimatePresence>
     )
+
+    // Usa un portal per evitare problemi di z-index e overflow del layout admin
+    return createPortal(modalContent, document.body)
 }

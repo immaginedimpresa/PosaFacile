@@ -213,20 +213,7 @@ ALTER TABLE public.professionals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
--- Helper function to get current user's role from JWT metadata
--- This avoids querying the users table and prevents recursion
-CREATE OR REPLACE FUNCTION auth.user_role()
-RETURNS TEXT
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT COALESCE(
-    current_setting('request.jwt.claims', true)::json->>'role',
-    (current_setting('request.jwt.claims', true)::json->'user_metadata'->>'role')
-  )
-$$;
-
--- Alternative: SECURITY DEFINER function to safely check admin status
+-- SECURITY DEFINER function to safely check admin status
 -- This bypasses RLS when checking the users table
 CREATE OR REPLACE FUNCTION public.is_admin(check_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN

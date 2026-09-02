@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 
 interface AIVisualizerProps {
     productImageUrl: string | null
+    productId?: string
     productName?: string
     tileWidth?: number
     tileHeight?: number
@@ -32,7 +33,7 @@ const ROOM_TYPES: { value: RoomType; label: string }[] = [
     { value: 'esterno', label: 'Esterno' },
 ]
 
-export function AIVisualizer({ productImageUrl, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', onResultGenerated }: AIVisualizerProps) {
+export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', onResultGenerated }: AIVisualizerProps) {
     const [image, setImage] = useState<string | null>(null)
     const [resultImage, setResultImage] = useState<string | null>(null)
     const [processing, setProcessing] = useState(false)
@@ -74,6 +75,7 @@ export function AIVisualizer({ productImageUrl, productName = 'piastrella selezi
                     roomImage: image,
                     tileImage: productImageUrl,
                     tileName: productName,
+                    productId,
                     layingPattern,
                     roomType,
                     tileWidth,
@@ -109,9 +111,14 @@ export function AIVisualizer({ productImageUrl, productName = 'piastrella selezi
     const handleDownload = () => {
         if (!resultImage) return
 
+        // L'estensione va dedotta dal data URL: la funzione può restituire PNG o JPEG
+        const mime = resultImage.match(/^data:(image\/[a-z+]+);/)?.[1]
+        const ext = mime ? mime.split('/')[1].replace('jpeg', 'jpg') : 'png'
+        const slug = productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
         const link = document.createElement('a')
         link.href = resultImage
-        link.download = `posafacile-visualizzazione-${Date.now()}.jpg`
+        link.download = `posafacile-${slug || 'visualizzazione'}-${Date.now()}.${ext}`
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -183,6 +190,19 @@ export function AIVisualizer({ productImageUrl, productName = 'piastrella selezi
                                 <Sparkles size={14} />
                                 Generato con AI
                             </div>
+                        )}
+
+                        {/* Download rapido sull'immagine */}
+                        {resultImage && !processing && (
+                            <button
+                                type="button"
+                                onClick={handleDownload}
+                                title="Scarica immagine"
+                                aria-label="Scarica immagine"
+                                className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-md backdrop-blur hover:bg-white hover:text-gray-900 transition-colors"
+                            >
+                                <Download size={16} />
+                            </button>
                         )}
                     </div>
 

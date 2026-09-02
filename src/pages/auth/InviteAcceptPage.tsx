@@ -11,6 +11,8 @@ export function InviteAcceptPage() {
     const [error, setError] = useState('')
     const [success, setSuccess] = useState(false)
     const [urlError, setUrlError] = useState<string | null>(null)
+    const [checking, setChecking] = useState(true)
+    const [ready, setReady] = useState(false)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -26,12 +28,47 @@ export function InviteAcceptPage() {
             } else {
                 setUrlError(errorDesc?.replace(/\+/g, ' ') || 'Si è verificato un errore. Richiedi un nuovo invito.')
             }
+            setChecking(false)
             return
         }
 
-        // Check if we have valid invite params
-        if (type !== 'invite') {
-            navigate('/login')
+        // updateUser() richiede la sessione creata dal token nell'URL: il client la
+        // stabilisce in modo asincrono, quindi non basta leggere i parametri dell'hash.
+        let cancelled = false
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (cancelled || !session) return
+            setReady(true)
+            setChecking(false)
+        })
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (cancelled) return
+            if (session) {
+                setReady(true)
+                setChecking(false)
+                return
+            }
+            // Nessuna sessione e nessun token di invito nell'URL: non c'è nulla da accettare.
+            if (type !== 'invite' && type !== 'recovery') {
+                navigate('/login', { replace: true })
+                return
+            }
+            // Token presente ma sessione non ancora pronta: lasciamo lavorare il listener
+            // e ci arrendiamo solo dopo un timeout, altrimenti resteremmo in attesa infinita.
+            setTimeout(() => {
+                if (cancelled) return
+                setChecking(false)
+                setReady(prev => {
+                    if (!prev) setUrlError('Non è stato possibile validare il link di invito. Richiedi un nuovo invito.')
+                    return prev
+                })
+            }, 5000)
+        })
+
+        return () => {
+            cancelled = true
+            subscription.unsubscribe()
         }
     }, [navigate])
 
@@ -60,10 +97,12 @@ export function InviteAcceptPage() {
             if (updateError) throw updateError
 
             setSuccess(true)
+            // Il token resta nell'hash: lo rimuoviamo per non lasciarlo nella cronologia
+            window.history.replaceState(null, '', window.location.pathname)
 
             // Redirect to dashboard after 2 seconds
             setTimeout(() => {
-                navigate('/pro/dashboard')
+                navigate('/pro', { replace: true })
             }, 2000)
 
         } catch (err: any) {
@@ -71,6 +110,17 @@ export function InviteAcceptPage() {
             setError(err.message || 'Errore durante la configurazione della password')
             setLoading(false)
         }
+    }
+
+    if (checking) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white flex items-center justify-center p-4">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-gray-600">Verifica dell'invito in corso...</p>
+                </div>
+            </div>
+        )
     }
 
     // If there's a URL error, show error state
@@ -169,7 +219,7 @@ export function InviteAcceptPage() {
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !ready}
                         className="w-full py-3 bg-gray-900 text-white rounded-lg font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors"
                     >
                         {loading ? 'Configurazione in corso...' : 'Imposta Password e Accedi'}

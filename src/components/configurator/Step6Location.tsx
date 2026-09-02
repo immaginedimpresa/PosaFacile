@@ -111,9 +111,8 @@ export function Step6Location() {
                     </p>
                     <AIVisualizer
                         productImageUrl={selectedProduct.images[0]}
+                        productId={selectedProduct.id}
                         productName={selectedProduct.name}
-                        tileWidth={undefined}
-                        tileHeight={undefined}
                         initialLayingPattern={layingType}
                         onResultGenerated={(img) => setAiResultImage(img)}
                     />
