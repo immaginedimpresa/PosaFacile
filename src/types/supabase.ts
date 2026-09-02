@@ -594,6 +594,8 @@ export type Database = {
           fiscal_code: string | null
           full_name: string | null
           id: string
+          markup_fixed: number
+          markup_percent: number
           pec: string | null
           phone: string | null
           price_per_sqm: number | null
@@ -615,6 +617,8 @@ export type Database = {
           fiscal_code?: string | null
           full_name?: string | null
           id: string
+          markup_fixed?: number
+          markup_percent?: number
           pec?: string | null
           phone?: string | null
           price_per_sqm?: number | null
@@ -636,6 +640,8 @@ export type Database = {
           fiscal_code?: string | null
           full_name?: string | null
           id?: string
+          markup_fixed?: number
+          markup_percent?: number
           pec?: string | null
           phone?: string | null
           price_per_sqm?: number | null

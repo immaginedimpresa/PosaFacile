@@ -12,13 +12,15 @@ import { Step8CalendarSelect } from '@/components/configurator/Step8CalendarSele
 import { Step7Summary as Step9Summary } from '@/components/configurator/Step7Summary'
 import { ArrowLeft, Check } from 'lucide-react'
 
+// Il luogo viene chiesto per primo: conoscendo la provincia si può usare la
+// tariffa del professionista che copre quella zona invece di una stima generica.
 const STEPS = [
-    { num: 1, label: 'Progetto' },
-    { num: 2, label: 'Piastrella' },
-    { num: 3, label: 'Dimensioni' },
-    { num: 4, label: 'Posa' },
-    { num: 5, label: 'Servizi' },
-    { num: 6, label: 'Luogo' },
+    { num: 1, label: 'Luogo' },
+    { num: 2, label: 'Progetto' },
+    { num: 3, label: 'Piastrella' },
+    { num: 4, label: 'Dimensioni' },
+    { num: 5, label: 'Posa' },
+    { num: 6, label: 'Servizi' },
     { num: 7, label: 'Professionista' },
     { num: 8, label: 'Data' },
     { num: 9, label: 'Riepilogo' },
@@ -48,16 +50,16 @@ export function ConfiguratorPage() {
 
     const renderStep = () => {
         switch (currentStep) {
-            case 1: return <Step1ProjectType />
-            case 2: return <Step2ProductSelect />
-            case 3: return <Step3Dimensions />
-            case 4: return <Step4LayingType />
-            case 5: return <Step5Services />
-            case 6: return <Step6Location />
+            case 1: return <Step6Location />
+            case 2: return <Step1ProjectType />
+            case 3: return <Step2ProductSelect />
+            case 4: return <Step3Dimensions />
+            case 5: return <Step4LayingType />
+            case 6: return <Step5Services />
             case 7: return <Step7ProfessionalSelect />
             case 8: return <Step8CalendarSelect />
             case 9: return <Step9Summary />
-            default: return <Step1ProjectType />
+            default: return <Step6Location />
         }
     }
 

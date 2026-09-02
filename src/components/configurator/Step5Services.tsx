@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
+import { AuthDialog } from '@/components/auth/AuthDialog'
 import { useConfiguratorStore, SERVICE_PRICES } from '@/store/configuratorStore'
 import { Trash2, Layers, Droplets, Truck, Square, DoorOpen } from 'lucide-react'
 
@@ -10,6 +13,14 @@ const SERVICES = [
 
 export function Step5Services() {
     const { services, setServices, dimensions, getServicesCost, prevStep, nextStep } = useConfiguratorStore()
+    const { user } = useAuth()
+    const [showAuthDialog, setShowAuthDialog] = useState(false)
+
+    // L'accesso serve prima di assegnare un professionista e una data.
+    const handleNext = () => {
+        if (user) nextStep()
+        else setShowAuthDialog(true)
+    }
 
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
     const servicesCost = getServicesCost()
@@ -148,6 +159,12 @@ export function Step5Services() {
                 </div>
             )}
 
+            <AuthDialog
+                open={showAuthDialog}
+                onOpenChange={setShowAuthDialog}
+                onSuccess={() => { setShowAuthDialog(false); nextStep() }}
+            />
+
             {/* Navigation */}
             <div className="flex justify-between pt-4">
                 <button
@@ -157,10 +174,10 @@ export function Step5Services() {
                     Indietro
                 </button>
                 <button
-                    onClick={nextStep}
+                    onClick={handleNext}
                     className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
                 >
-                    Continua
+                    Scegli Professionista
                 </button>
             </div>
         </div>

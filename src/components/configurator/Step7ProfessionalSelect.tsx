@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useConfiguratorStore } from '@/store/configuratorStore'
+import { useConfiguratorStore, layingRateFor } from '@/store/configuratorStore'
 import { supabase } from '@/lib/supabase'
 import { Star, Briefcase, ArrowRight, AlertCircle } from 'lucide-react'
+import { loadComuni, provincesInSameRegion } from '@/lib/comuni'
 import { motion } from 'framer-motion'
 
 interface Professional {
@@ -11,12 +12,16 @@ interface Professional {
     rating: number
     years_experience: number
     bio: string
+    price_per_sqm: number | null
+    markup_percent: number | null
+    markup_fixed: number | null
 }
 
 export function Step7ProfessionalSelect() {
     const { location, selectedProfessional, setSelectedProfessional, prevStep, nextStep } = useConfiguratorStore()
     const [professionals, setProfessionals] = useState<Professional[]>([])
     const [loading, setLoading] = useState(true)
+    const [widenedToRegion, setWidenedToRegion] = useState(false)
 
     useEffect(() => {
         if (location.provincia) {
@@ -26,6 +31,7 @@ export function Step7ProfessionalSelect() {
 
     const fetchProfessionals = async () => {
         setLoading(true)
+        setWidenedToRegion(false)
         try {
             // Normalize province code (uppercase + trim)
             const provinceCode = (location.provincia || '').trim().toUpperCase()
@@ -40,6 +46,9 @@ export function Step7ProfessionalSelect() {
                     rating,
                     years_experience,
                     bio,
+                    price_per_sqm,
+                    markup_percent,
+                    markup_fixed,
                     professional_zones!inner(province_code)
                 `)
                 .eq('professional_zones.province_code', provinceCode)
@@ -80,6 +89,9 @@ export function Step7ProfessionalSelect() {
                     rating,
                     years_experience,
                     bio,
+                    price_per_sqm,
+                    markup_percent,
+                    markup_fixed,
                     professional_zones!inner(province_code)
                 `)
                 .eq('verified', true)
@@ -96,7 +108,28 @@ export function Step7ProfessionalSelect() {
             })
 
             console.log('🔁 [Step7] Fallback found', filtered.length, 'professionals for', provinceCode)
-            setProfessionals(filtered as any)
+
+            if (filtered.length > 0) {
+                setProfessionals(filtered as any)
+                return
+            }
+
+            // Provincia scoperta: si allarga alle altre province della stessa regione,
+            // meglio proporre un posatore un po' più lontano che una lista vuota.
+            const comuni = await loadComuni()
+            const regionCodes = provincesInSameRegion(comuni, provinceCode)
+            if (regionCodes.length === 0) {
+                setProfessionals([])
+                return
+            }
+
+            const inRegion = (allData || []).filter((pro: any) => {
+                const zones = Array.isArray(pro.professional_zones) ? pro.professional_zones : []
+                return zones.some((z: any) => regionCodes.includes((z.province_code || '').trim().toUpperCase()))
+            })
+
+            setWidenedToRegion(inRegion.length > 0)
+            setProfessionals(inRegion as any)
         } catch (error) {
             console.error('❌ [Step7] Error fetching professionals:', error)
         } finally {
@@ -109,7 +142,10 @@ export function Step7ProfessionalSelect() {
             id: pro.id,
             full_name: pro.full_name,
             company_name: pro.company_name,
-            rating: pro.rating
+            rating: pro.rating,
+            price_per_sqm: pro.price_per_sqm,
+            markup_percent: pro.markup_percent ?? 0,
+            markup_fixed: pro.markup_fixed ?? 0,
         })
     }
 
@@ -126,7 +162,9 @@ export function Step7ProfessionalSelect() {
             <div>
                 <h2 className="text-2xl font-bold mb-2">Scegli il tuo Professionista</h2>
                 <p className="text-gray-600">
-                    Professionisti disponibili in provincia di <strong>{location.provincia}</strong>
+                    {widenedToRegion
+                        ? <>Nessun posatore copre <strong>{location.provincia}</strong>: ecco i disponibili nella stessa regione</>
+                        : <>Professionisti disponibili in provincia di <strong>{location.provincia}</strong></>}
                 </p>
             </div>
 
@@ -183,9 +221,24 @@ export function Step7ProfessionalSelect() {
                                         </div>
                                         {pro.bio && <p className="text-gray-600 text-sm mt-2 line-clamp-2">{pro.bio}</p>}
                                     </div>
-                                    {isSelected && (
-                                        <div className="text-orange-600 font-bold">✓ Selezionato</div>
-                                    )}
+                                    <div className="text-right flex-shrink-0">
+                                        {pro.price_per_sqm !== null && (
+                                            <>
+                                                <div className="text-xl font-bold text-gray-900">
+                                                    € {layingRateFor({
+                                                        id: pro.id, full_name: pro.full_name, company_name: pro.company_name,
+                                                        rating: pro.rating, price_per_sqm: pro.price_per_sqm,
+                                                        markup_percent: pro.markup_percent ?? 0,
+                                                        markup_fixed: pro.markup_fixed ?? 0,
+                                                    }).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </div>
+                                                <div className="text-xs text-gray-500">al mq, posa</div>
+                                            </>
+                                        )}
+                                        {isSelected && (
+                                            <div className="text-orange-600 font-bold mt-2">✓ Selezionato</div>
+                                        )}
+                                    </div>
                                 </div>
                             </motion.div>
                         )

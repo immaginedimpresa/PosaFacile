@@ -87,10 +87,21 @@ export interface SelectedProfessional {
     full_name: string
     company_name: string
     rating: number
+    /** Tariffa di posa del professionista, al netto del markup di piattaforma. */
+    price_per_sqm: number | null
+    markup_percent: number
+    markup_fixed: number
 }
 
-// Base laying rate (configurable per zone)
+// Tariffa usata solo finché non è stato scelto un professionista: da lì in poi
+// il preventivo usa la sua tariffa reale, così il totale non cambia a sorpresa.
 const BASE_LAYING_RATE = 25 // €/mq
+
+/** Prezzo al mq esposto al cliente: tariffa del posatore più markup percentuale. */
+export function layingRateFor(pro: SelectedProfessional | null): number {
+    if (!pro || pro.price_per_sqm === null) return BASE_LAYING_RATE
+    return pro.price_per_sqm * (1 + (pro.markup_percent ?? 0) / 100)
+}
 
 interface ConfiguratorState {
     currentStep: number
@@ -218,10 +229,13 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             },
 
             getLayingCost: () => {
-                const { layingType, dimensions } = get()
+                const { layingType, dimensions, selectedProfessional } = get()
                 const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
                 const surcharge = LAYING_TYPE_SURCHARGE[layingType]
-                return baseMq * BASE_LAYING_RATE * (1 + surcharge)
+                const rate = layingRateFor(selectedProfessional)
+                // Il markup fisso è una tantum: non va moltiplicato per i metri quadri.
+                const oneOff = selectedProfessional?.markup_fixed ?? 0
+                return baseMq * rate * (1 + surcharge) + oneOff
             },
 
             getServicesCost: () => {

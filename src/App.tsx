@@ -10,6 +10,7 @@ import { AdminDashboard } from '@/pages/private/AdminDashboard'
 import { AdminProductsPage } from '@/pages/admin/AdminProductsPage'
 import { AdminProductFormPage } from '@/pages/admin/AdminProductFormPage'
 import { AdminProfessionalsPage } from '@/pages/admin/AdminProfessionalsPage'
+import { AdminMarkupPage } from '@/pages/admin/AdminMarkupPage'
 import { AdminOrdersPage } from '@/pages/admin/AdminOrdersPage'
 import { CustomerDashboard } from '@/pages/private/CustomerDashboard'
 import { CustomerOrderDetailPage } from '@/pages/private/CustomerOrderDetailPage'
@@ -73,6 +74,7 @@ function App() {
           <Route path="products/:id" element={<AdminProductFormPage />} />
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="professionals" element={<AdminProfessionalsPage />} />
+          <Route path="markup" element={<AdminMarkupPage />} />
           <Route path="customers" element={<AdminCustomersPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
         </Route>

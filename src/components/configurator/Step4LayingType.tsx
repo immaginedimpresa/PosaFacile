@@ -1,3 +1,5 @@
+import { Sparkles } from 'lucide-react'
+import { AIVisualizer } from '@/components/ai/AIVisualizer'
 import { useConfiguratorStore, LAYING_TYPE_LABELS, LAYING_TYPE_SURCHARGE, type LayingType } from '@/store/configuratorStore'
 
 
@@ -10,7 +12,7 @@ const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
 ]
 
 export function Step4LayingType() {
-    const { layingType, setLayingType, getLayingCost, prevStep, nextStep } = useConfiguratorStore()
+    const { layingType, setLayingType, getLayingCost, prevStep, nextStep, selectedProduct, setAiResultImage } = useConfiguratorStore()
 
     const layingCost = getLayingCost()
 
@@ -66,6 +68,26 @@ export function Step4LayingType() {
             </div>
 
 
+
+            {/* Visualizzatore AI: richiede piastrella e tipo di posa, entrambi noti a questo punto */}
+            {selectedProduct && selectedProduct.images && selectedProduct.images.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-5 h-5 text-purple-600" />
+                        <span className="font-medium text-purple-900">Visualizza nel tuo ambiente</span>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Carica una foto della tua stanza per vedere l'effetto finale con la posa {LAYING_TYPE_LABELS[layingType].toLowerCase()}.
+                    </p>
+                    <AIVisualizer
+                        productImageUrl={selectedProduct.images[0]}
+                        productId={selectedProduct.id}
+                        productName={selectedProduct.name}
+                        initialLayingPattern={layingType}
+                        onResultGenerated={(img) => setAiResultImage(img)}
+                    />
+                </div>
+            )}
 
             {/* Navigation */}
             <div className="flex justify-between pt-4">

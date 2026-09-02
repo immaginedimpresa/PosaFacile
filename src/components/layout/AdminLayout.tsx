@@ -1,11 +1,12 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Package, LayoutDashboard, ShoppingCart, Users, Settings, Briefcase } from 'lucide-react'
+import { Package, LayoutDashboard, ShoppingCart, Users, Settings, Briefcase, Percent } from 'lucide-react'
 
 const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
     { path: '/admin/products', icon: Package, label: 'Prodotti' },
     { path: '/admin/orders', icon: ShoppingCart, label: 'Ordini' },
     { path: '/admin/professionals', icon: Briefcase, label: 'Professionisti' },
+    { path: '/admin/markup', icon: Percent, label: 'Markup' },
     { path: '/admin/customers', icon: Users, label: 'Clienti' },
     { path: '/admin/settings', icon: Settings, label: 'Impostazioni' },
 ]
