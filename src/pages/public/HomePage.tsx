@@ -11,9 +11,9 @@ export default function HomePage() {
             <TileFloorHero />
 
             {/* Prove: numeri sotto la hero, su fondo scuro continuo */}
-            <section className="bg-[#0e1012] pb-24 pt-4">
+            <section className="bg-[#f5f2ec] pb-24 pt-4">
                 <div className="mx-auto max-w-6xl px-6">
-                    <dl className="grid grid-cols-2 gap-x-6 gap-y-10 border-t border-white/10 pt-12 md:grid-cols-4">
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-10 border-t border-[#14171a]/10 pt-12 md:grid-cols-4">
                         {[
                             { valore: '10k+', voce: 'Progetti completati' },
                             { valore: '500+', voce: 'Posatori verificati' },
@@ -21,10 +21,10 @@ export default function HomePage() {
                             { valore: '100%', voce: 'Garanzia soddisfatti' },
                         ].map(({ valore, voce }) => (
                             <div key={voce}>
-                                <dt className="font-display text-3xl font-bold tracking-tight text-white md:text-4xl">
+                                <dt className="font-display text-3xl font-bold tracking-tight text-[#14171a] md:text-4xl">
                                     {valore}
                                 </dt>
-                                <dd className="mt-1.5 text-sm text-white/50">{voce}</dd>
+                                <dd className="mt-1.5 text-sm text-[#6b7178]">{voce}</dd>
                             </div>
                         ))}
                     </dl>

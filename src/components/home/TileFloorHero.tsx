@@ -8,12 +8,12 @@ import { ArrowRight, ShieldCheck } from 'lucide-react'
  * THESIS: la stanza è aperta come un plastico e il pavimento si posa dentro,
  *   davanti a chi guarda. Rifiuta la hero di categoria: fotografia stock
  *   d'interni, velo scuro, titolo centrato sopra.
- * OWN-WORLD: fondo grafite, un solo arancio come segnale d'azione, materiali
+ * OWN-WORLD: fondo chiaro caldo, un solo arancio come segnale d'azione, materiali
  *   resi come materiali (venatura, fuga, battiscopa, luce dall'alto) e non come
  *   campioni di colore. Nessuna card: la struttura è la stanza stessa.
  * STORY: "vedo il mio pavimento prima di sceglierlo, e il prezzo è quello del
  *   posatore che verrà davvero" → apre il configuratore.
- * FIRST VIEWPORT: testo a sinistra su fondo scuro pieno, a destra la stanza in
+ * FIRST VIEWPORT: testo a sinistra su fondo chiaro pieno, a destra la stanza in
  *   prospettiva — tre pareti, soffitto aperto — con il pavimento che si posa a
  *   cascata; i tre materiali sono controlli reali sotto la stanza.
  * FORM: scatola CSS 3D senza soffitto né quarta parete. Direzione fissata
@@ -142,7 +142,7 @@ export function TileFloorHero() {
     }
 
     return (
-        <section className="relative overflow-hidden bg-[#0e1012] text-white">
+        <section className="relative overflow-hidden bg-[#f5f2ec] text-[#14171a]">
             <style>{`
                 .pf-stage {
                     --w: 430px; --h: 268px; --d: 340px; --lift: 26px;
@@ -153,9 +153,10 @@ export function TileFloorHero() {
                        il riquadro la contiene e la tiene fuori dalla colonna di testo. */
                     overflow: hidden;
                     border-radius: 20px;
-                    border: 1px solid rgba(255,255,255,.09);
-                    background:
-                        radial-gradient(120% 90% at 50% 0%, #191c1f 0%, #0e1012 68%);
+                    border: 1px solid rgba(20,23,26,.10);
+                    /* Sopra le pareti si vede la luce che entra dal soffitto tolto */
+                    background: linear-gradient(to bottom, #dfe6ec 0%, #eceae5 55%, #e4e0d9 100%);
+                    box-shadow: 0 24px 60px -28px rgba(20,23,26,.35);
                 }
                 @media (max-width: 1023px) {
                     .pf-stage { --w: 400px; --h: 250px; --d: 320px; --lift: 24px; perspective: 760px; height: 400px; }
@@ -206,7 +207,7 @@ export function TileFloorHero() {
                 /* Intonaco: la luce entra dal soffitto aperto, quindi il muro
                    è più chiaro in alto e si spegne verso il battiscopa. */
                 .pf-wall {
-                    background: linear-gradient(to bottom, #cfcac2 0%, #b3ada4 46%, #8e8880 100%);
+                    background: linear-gradient(to bottom, #e6e0d6 0%, #cfc8bc 46%, #a9a196 100%);
                 }
                 .pf-wall--side { filter: brightness(.82); }
                 .pf-wall--side-right { filter: brightness(.90); }
@@ -269,18 +270,18 @@ export function TileFloorHero() {
 
                 {/* Testo: fondo scuro pieno, nessuna immagine sotto */}
                 <div>
-                    <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-[13px] font-medium text-white/85">
-                        <ShieldCheck size={14} className="text-orange-400" />
+                    <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#14171a]/12 bg-white px-3.5 py-1.5 text-[13px] font-medium text-[#3c4249]">
+                        <ShieldCheck size={14} className="text-orange-600" />
                         Piastrelle e posatore certificato, un unico preventivo
                     </p>
 
-                    <h1 className="font-display text-[2.6rem] font-bold leading-[1] tracking-[-0.035em] text-white sm:text-[3.4rem] lg:text-[4rem]">
+                    <h1 className="font-display text-[2.6rem] font-bold leading-[1] tracking-[-0.035em] text-[#14171a] sm:text-[3.4rem] lg:text-[4rem]">
                         Il tuo pavimento,
                         <br />
-                        <span className="text-white/60">prima di posarlo.</span>
+                        <span className="text-[#857f76]">prima di posarlo.</span>
                     </h1>
 
-                    <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/80">
+                    <p className="mt-6 max-w-lg text-lg leading-relaxed text-[#4b5158]">
                         Scegli il materiale, guardalo nella tua stanza e ricevi il prezzo finito:
                         materiale, posa e servizi. La tariffa è quella del posatore che verrà
                         davvero a casa tua, non una stima.
@@ -289,14 +290,14 @@ export function TileFloorHero() {
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                         <Link
                             to="/configuratore"
-                            className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-orange-500 px-8 text-base font-semibold text-white transition-colors hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0e1012]"
+                            className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-orange-500 px-8 text-base font-semibold text-white transition-colors hover:bg-orange-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f2ec]"
                         >
                             Calcola il preventivo
                             <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                         </Link>
                         <Link
                             to="/catalog"
-                            className="inline-flex h-14 items-center justify-center rounded-full border border-white/20 px-8 text-base font-medium text-white/90 transition-colors hover:border-white/40 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0e1012]"
+                            className="inline-flex h-14 items-center justify-center rounded-full border border-[#14171a]/20 px-8 text-base font-medium text-[#14171a] transition-colors hover:border-[#14171a]/40 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5f2ec]"
                         >
                             Sfoglia il catalogo
                         </Link>
@@ -309,7 +310,7 @@ export function TileFloorHero() {
                         {/* Luce che scende dal soffitto aperto */}
                         <div
                             className="pointer-events-none absolute inset-x-0 top-0 h-1/2"
-                            style={{ background: 'radial-gradient(60% 100% at 50% 0%, rgba(255,255,255,.10), transparent 70%)' }}
+                            style={{ background: 'radial-gradient(60% 100% at 50% 0%, rgba(255,255,255,.55), transparent 72%)' }}
                         />
 
                         <div ref={roomRef} className="pf-room">
@@ -368,7 +369,7 @@ export function TileFloorHero() {
 
                     {/* I materiali sono controlli veri: scegliendone uno la stanza si riposa */}
                     <div className="mt-6">
-                        <span className="mb-3 block text-[13px] font-medium text-white/55">
+                        <span className="mb-3 block text-[13px] font-medium text-[#6b7178]">
                             Scegli il materiale e guarda la posa
                         </span>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -380,22 +381,22 @@ export function TileFloorHero() {
                                         type="button"
                                         onClick={() => chooseMaterial(i)}
                                         aria-pressed={active}
-                                        className={`flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
+                                        className={`flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14171a]/40 ${
                                             active
-                                                ? 'border-white/35 bg-white/[0.10]'
-                                                : 'border-white/12 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.07]'
+                                                ? 'border-[#14171a]/30 bg-white shadow-sm'
+                                                : 'border-[#14171a]/10 bg-white/60 hover:border-[#14171a]/25 hover:bg-white'
                                         }`}
                                     >
                                         <span
                                             aria-hidden="true"
-                                            className="h-9 w-9 flex-shrink-0 rounded-lg ring-1 ring-inset ring-black/25"
+                                            className="h-9 w-9 flex-shrink-0 rounded-lg ring-1 ring-inset ring-black/15"
                                             style={{ backgroundImage: m.face }}
                                         />
                                         <span className="leading-tight">
-                                            <span className={`block text-sm font-medium ${active ? 'text-white' : 'text-white/75'}`}>
+                                            <span className={`block text-sm font-medium ${active ? 'text-[#14171a]' : 'text-[#4b5158]'}`}>
                                                 {m.nome}
                                             </span>
-                                            <span className="block text-xs text-white/50">{m.formato} cm</span>
+                                            <span className="block text-xs text-[#7b8189]">{m.formato} cm</span>
                                         </span>
                                     </button>
                                 )
