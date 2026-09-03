@@ -73,17 +73,22 @@ const ROWS = 9
 
 export function TileFloorHero() {
     const [materialIndex, setMaterialIndex] = useState(0)
-    const [laid, setLaid] = useState(false)
-    const [reduced, setReduced] = useState(false)
+    // Quale materiale risulta già posato: derivarne 'laid' evita di azzerare e
+    // riaccendere uno stato dentro un effect a ogni cambio.
+    const [laidFor, setLaidFor] = useState<number | null>(null)
+    const [reduced, setReduced] = useState(
+        () => typeof window !== 'undefined'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    )
     const [interacted, setInteracted] = useState(false)
     const roomRef = useRef<HTMLDivElement>(null)
 
     const material = MATERIALI[materialIndex]
+    const laid = laidFor === materialIndex
 
     useEffect(() => {
         const query = window.matchMedia('(prefers-reduced-motion: reduce)')
         const apply = () => setReduced(query.matches)
-        apply()
         query.addEventListener('change', apply)
         return () => query.removeEventListener('change', apply)
     }, [])
@@ -91,9 +96,9 @@ export function TileFloorHero() {
     // A ogni cambio materiale il pavimento si riposa: le piastrelle si ribaltano
     // dal massetto grezzo al materiale scelto, in diagonale come una posa vera.
     useEffect(() => {
-        if (reduced) { setLaid(true); return }
-        setLaid(false)
-        const id = window.setTimeout(() => setLaid(true), 90)
+        // Senza attesa il ribaltamento non parte: le piastrelle devono comparire
+        // sul massetto per un frame prima di girarsi.
+        const id = window.setTimeout(() => setLaidFor(materialIndex), reduced ? 0 : 90)
         return () => window.clearTimeout(id)
     }, [materialIndex, reduced])
 
