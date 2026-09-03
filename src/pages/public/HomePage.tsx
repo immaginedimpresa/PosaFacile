@@ -1,80 +1,33 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, Star, ShieldCheck } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { FadeIn, SlideUp, StaggerContainer } from '@/components/ui/motion'
+import { FadeIn, StaggerContainer } from '@/components/ui/motion'
+import { TileFloorHero } from '@/components/home/TileFloorHero'
 
 export default function HomePage() {
     return (
         <div className="bg-background min-h-screen font-sans">
 
-            {/* 1. HERO SECTION: Dark, Immersive, Premium */}
-            <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-                {/* Cinematic Background */}
-                <div className="absolute inset-0 z-0">
-                    <img
-                        src="https://images.unsplash.com/photo-1600607687644-c7171b42498b?q=80&w=2674&auto=format&fit=crop"
-                        alt="Luxury Interior"
-                        className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                </div>
+            <TileFloorHero />
 
-                <div className="container px-4 relative z-10 text-center text-white pt-20">
-                    <SlideUp delay={0.2}>
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-sm font-medium tracking-wide">La Piattaforma N.1 in Italia</span>
-                        </div>
-                    </SlideUp>
-
-                    <SlideUp delay={0.3}>
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tighter mb-6 leading-[1.1]">
-                            Design che Ispira. <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400">
-                                Posa che Dura.
-                            </span>
-                        </h1>
-                    </SlideUp>
-
-                    <SlideUp delay={0.4} className="max-w-2xl mx-auto mb-10">
-                        <p className="text-lg md:text-xl text-gray-200 leading-relaxed font-light">
-                            PosaFacile unisce le migliori piastrelle Made in Italy con i migliori posatori certificati della tua zona. Un unico preventivo, zero sorprese.
-                        </p>
-                    </SlideUp>
-
-                    <SlideUp delay={0.5} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link to="/configuratore">
-                            <Button size="lg" className="h-14 px-8 text-lg rounded-full bg-white text-black hover:bg-white/90 hover:scale-105 transition-all duration-300 font-semibold">
-                                Inizia il tuo Progetto
-                            </Button>
-                        </Link>
-                        <Link to="/catalog">
-                            <Button size="lg" variant="outline" className="h-14 px-8 text-lg rounded-full border-white/50 text-white hover:bg-white/10 transition-all duration-300">
-                                Sfoglia il Catalogo
-                            </Button>
-                        </Link>
-                    </SlideUp>
-
-                    {/* Trust Indicators */}
-                    <SlideUp delay={0.7} className="mt-20 pt-8 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-8">
-                        <div className="text-center">
-                            <p className="text-3xl font-bold font-display">10k+</p>
-                            <p className="text-sm text-gray-400">Progetti Completati</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-3xl font-bold font-display">500+</p>
-                            <p className="text-sm text-gray-400">Posatori Verificati</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-3xl font-bold font-display">4.9/5</p>
-                            <p className="text-sm text-gray-400">Recensioni Clienti</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-3xl font-bold font-display">100%</p>
-                            <p className="text-sm text-gray-400">Garanzia Soddisfatti</p>
-                        </div>
-                    </SlideUp>
+            {/* Prove: numeri sotto la hero, su fondo scuro continuo */}
+            <section className="bg-[#0e1012] pb-24 pt-4">
+                <div className="mx-auto max-w-6xl px-6">
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-10 border-t border-white/10 pt-12 md:grid-cols-4">
+                        {[
+                            { valore: '10k+', voce: 'Progetti completati' },
+                            { valore: '500+', voce: 'Posatori verificati' },
+                            { valore: '4,9/5', voce: 'Recensioni clienti' },
+                            { valore: '100%', voce: 'Garanzia soddisfatti' },
+                        ].map(({ valore, voce }) => (
+                            <div key={voce}>
+                                <dt className="font-display text-3xl font-bold tracking-tight text-white md:text-4xl">
+                                    {valore}
+                                </dt>
+                                <dd className="mt-1.5 text-sm text-white/50">{voce}</dd>
+                            </div>
+                        ))}
+                    </dl>
                 </div>
             </section>
 

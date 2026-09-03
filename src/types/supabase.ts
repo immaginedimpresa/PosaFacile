@@ -1087,6 +1087,7 @@ export type Database = {
         | "completed"
         | "disputed"
         | "refunded"
+        | "cancelled"
       product_category: "floor" | "wall" | "outdoor" | "mosaic"
       product_finish: "matt" | "glossy" | "textured" | "lappato"
       product_material: "gres" | "ceramic" | "cotto" | "natural_stone"
@@ -1238,6 +1239,7 @@ export const Constants = {
         "completed",
         "disputed",
         "refunded",
+        "cancelled",
       ],
       product_category: ["floor", "wall", "outdoor", "mosaic"],
       product_finish: ["matt", "glossy", "textured", "lappato"],
