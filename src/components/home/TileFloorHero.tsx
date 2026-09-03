@@ -13,9 +13,9 @@ import { ArrowRight, ShieldCheck } from 'lucide-react'
  *   campioni di colore. Nessuna card: la struttura è la stanza stessa.
  * STORY: "vedo il mio pavimento prima di sceglierlo, e il prezzo è quello del
  *   posatore che verrà davvero" → apre il configuratore.
- * FIRST VIEWPORT: testo a sinistra su fondo chiaro pieno, a destra la stanza in
- *   prospettiva — tre pareti, soffitto aperto — con il pavimento che si posa a
- *   cascata; i tre materiali sono controlli reali sotto la stanza.
+ * FIRST VIEWPORT: testo a sinistra su fondo chiaro pieno, a destra la stanza
+ *   in prospettiva — tre pareti, soffitto aperto, senza cornice — con il
+ *   pavimento che si posa a cascata; i materiali sono controlli sotto la stanza.
  * FORM: scatola CSS 3D senza soffitto né quarta parete. Direzione fissata
  *   dall'utente (stanza frontale a tre pareti), quindi nessuna estrazione.
  */
@@ -28,8 +28,6 @@ interface Material {
     face: string
     /** Fuga, sempre un poco più scura del materiale. */
     grout: string
-    /** Luce che il pavimento rimanda sulle pareti. */
-    bounce: string
 }
 
 const MATERIALI: Material[] = [
@@ -42,7 +40,6 @@ const MATERIALI: Material[] = [
             'repeating-linear-gradient(88deg, rgba(60,32,10,.14) 0 1px, rgba(255,255,255,0) 1px 17px),' +
             'linear-gradient(105deg, #c08a4e 0%, #a9723c 38%, #bb8449 62%, #9c6733 100%)',
         grout: '#6b4a24',
-        bounce: 'rgba(196,138,78,.16)',
     },
     {
         id: 'statuario',
@@ -53,7 +50,6 @@ const MATERIALI: Material[] = [
             'linear-gradient(102deg, rgba(70,78,92,0) 58%, rgba(70,78,92,.26) 60%, rgba(70,78,92,0) 63%),' +
             'linear-gradient(150deg, #f6f6f4 0%, #e6e7e6 55%, #f2f2f0 100%)',
         grout: '#b9bab6',
-        bounce: 'rgba(238,239,236,.18)',
     },
     {
         id: 'antracite',
@@ -64,7 +60,6 @@ const MATERIALI: Material[] = [
             'radial-gradient(circle at 68% 71%, rgba(255,255,255,.07) 0 1px, rgba(255,255,255,0) 2px),' +
             'linear-gradient(128deg, #3d4249 0%, #2c3036 60%, #363b42 100%)',
         grout: '#1d2024',
-        bounce: 'rgba(90,100,112,.16)',
     },
 ]
 
@@ -149,14 +144,9 @@ export function TileFloorHero() {
                     perspective: 820px;
                     perspective-origin: 50% 34%;
                     height: 430px;
-                    /* La stanza è un oggetto guardato dentro, non uno sfondo:
-                       il riquadro la contiene e la tiene fuori dalla colonna di testo. */
-                    overflow: hidden;
-                    border-radius: 20px;
-                    border: 1px solid rgba(20,23,26,.10);
-                    /* Sopra le pareti si vede la luce che entra dal soffitto tolto */
-                    background: linear-gradient(to bottom, #dfe6ec 0%, #eceae5 55%, #e4e0d9 100%);
-                    box-shadow: 0 24px 60px -28px rgba(20,23,26,.35);
+                    /* Nessun riquadro: la stanza poggia sulla pagina. Niente
+                       overflow nascosto, altrimenti un bordo taglierebbe il
+                       pavimento come un ritaglio involontario. */
                 }
                 @media (max-width: 1023px) {
                     .pf-stage { --w: 400px; --h: 250px; --d: 320px; --lift: 24px; perspective: 760px; height: 400px; }
@@ -204,10 +194,26 @@ export function TileFloorHero() {
                     transform: rotateX(90deg) translateZ(calc(var(--h) / -2));
                 }
 
-                /* Intonaco: la luce entra dal soffitto aperto, quindi il muro
+                /* Intonaco: unica sorgente è il soffitto tolto, quindi il muro
                    è più chiaro in alto e si spegne verso il battiscopa. */
                 .pf-wall {
                     background: linear-gradient(to bottom, #e6e0d6 0%, #cfc8bc 46%, #a9a196 100%);
+                    /* Senza cornice il muro finirebbe con un taglio netto: in alto
+                       si dissolve, come se la stanza si aprisse verso la luce. */
+                    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.55) 12%, #000 30%);
+                    mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.55) 12%, #000 30%);
+                }
+                /* Sulle laterali la dissolvenza è su due assi: in alto verso la
+                   luce e sullo spigolo vicino, dove il muro esce di scena. */
+                .pf-wall--side, .pf-wall--side-right {
+                    -webkit-mask-image:
+                        linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.55) 12%, #000 30%),
+                        linear-gradient(to right, transparent 0%, #000 22%);
+                    mask-image:
+                        linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.55) 12%, #000 30%),
+                        linear-gradient(to right, transparent 0%, #000 22%);
+                    -webkit-mask-composite: source-in;
+                    mask-composite: intersect;
                 }
                 .pf-wall--side { filter: brightness(.82); }
                 .pf-wall--side-right { filter: brightness(.90); }
@@ -218,27 +224,6 @@ export function TileFloorHero() {
                     background: linear-gradient(to bottom, #f2efe9, #ddd8d0);
                     box-shadow: 0 -1px 0 rgba(0,0,0,.18);
                 }
-                /* Finestra sulla parete di fondo: giustifica la luce della scena */
-                .pf-window {
-                    position: absolute;
-                    left: 12%; top: 16%;
-                    width: 30%; height: 46%;
-                    background: linear-gradient(160deg, #eaf0f4 0%, #cfdde6 55%, #b9ccd8 100%);
-                    box-shadow:
-                        0 0 0 6px #e8e4dd,
-                        0 18px 44px rgba(226,236,243,.30);
-                }
-                .pf-window::after {
-                    content: '';
-                    position: absolute; inset: 0;
-                    background:
-                        linear-gradient(to right, rgba(120,140,155,.5) 0 2px, transparent 2px),
-                        linear-gradient(to bottom, rgba(120,140,155,.5) 0 2px, transparent 2px);
-                    background-position: 50% 0, 0 46%;
-                    background-size: 100% 100%, 100% 100%;
-                    background-repeat: no-repeat;
-                }
-
                 .pf-tile {
                     position: relative;
                     width: 100%;
@@ -307,15 +292,8 @@ export function TileFloorHero() {
                 {/* La stanza */}
                 <div>
                     <div className="pf-stage relative" aria-hidden="true">
-                        {/* Luce che scende dal soffitto aperto */}
-                        <div
-                            className="pointer-events-none absolute inset-x-0 top-0 h-1/2"
-                            style={{ background: 'radial-gradient(60% 100% at 50% 0%, rgba(255,255,255,.55), transparent 72%)' }}
-                        />
-
                         <div ref={roomRef} className="pf-room">
                             <div className="pf-surface pf-back pf-wall">
-                                <div className="pf-window" />
                                 <div className="pf-skirting" />
                             </div>
                             <div className="pf-surface pf-left pf-wall pf-wall--side">
@@ -360,10 +338,9 @@ export function TileFloorHero() {
                             </div>
                         </div>
 
-                        {/* Luce che il pavimento rimanda nell'aria della stanza */}
                         <div
-                            className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 transition-colors duration-700"
-                            style={{ background: `linear-gradient(to top, ${material.bounce}, transparent)` }}
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-16"
+                            style={{ background: 'linear-gradient(to top, #f5f2ec 12%, rgba(245,242,236,0) 100%)' }}
                         />
                     </div>
 
