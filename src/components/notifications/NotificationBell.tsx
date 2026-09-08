@@ -55,10 +55,15 @@ function formatRelativeTime(dateString: string): string {
 
 interface NotificationBellProps {
     variant?: 'light' | 'dark'
+    align?: 'left' | 'right'
     className?: string
 }
 
-export function NotificationBell({ variant = 'dark', className = '' }: NotificationBellProps) {
+export function NotificationBell({
+    variant = 'dark',
+    align = 'right',
+    className = '',
+}: NotificationBellProps) {
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const navigate = useNavigate()
@@ -155,7 +160,11 @@ export function NotificationBell({ variant = 'dark', className = '' }: Notificat
 
             {/* Dropdown Popover */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-stone-200/90 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                <div
+                    className={`absolute ${
+                        align === 'left' ? 'left-0 sm:-left-2' : 'right-0'
+                    } mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-stone-200/90 z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150`}
+                >
                     {/* Header Popover */}
                     <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
                         <div className="flex items-center gap-2">
