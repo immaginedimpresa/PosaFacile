@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { useUserStore } from '@/store/userStore'
@@ -11,7 +11,8 @@ interface RootLayoutProps {
 }
 
 export function RootLayout({ children, hideFooter }: RootLayoutProps) {
-    const { setUser, setProfile, loadProfile, setLoading } = useUserStore()
+    const { user, profile, setUser, setProfile, loadProfile, setLoading } = useUserStore()
+    const location = useLocation()
 
     useEffect(() => {
         // Initial session check
@@ -39,13 +40,19 @@ export function RootLayout({ children, hideFooter }: RootLayoutProps) {
         return () => subscription.unsubscribe()
     }, [])
 
+    const userRole = profile?.role || (user as any)?.user_metadata?.role
+    const isStaffOrPro = userRole === 'admin' || userRole === 'professional'
+    const isPortalRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/pro')
+
+    const shouldHideFooter = hideFooter || isPortalRoute || isStaffOrPro
+
     return (
         <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-1">
                 {children || <Outlet />}
             </main>
-            {!hideFooter && <Footer />}
+            {!shouldHideFooter && <Footer />}
         </div>
     )
 }

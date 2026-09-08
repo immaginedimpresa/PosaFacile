@@ -55,14 +55,12 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-        {/* Admin Routes with AdminLayout */}
+        {/* Admin Routes with AdminLayout (NO RootLayout, has own AdminLayout) */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
-              <RootLayout>
-                <AdminLayout />
-              </RootLayout>
+              <AdminLayout />
             </ProtectedRoute>
           }
         >

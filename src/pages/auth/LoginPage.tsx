@@ -24,7 +24,9 @@ export function LoginPage() {
 
             // Check role for redirection
             const profile = useUserStore.getState().profile
-            if (profile?.role === 'professional') {
+            if (profile?.role === 'admin') {
+                navigate('/admin')
+            } else if (profile?.role === 'professional') {
                 navigate('/pro')
             } else {
                 navigate('/dashboard')
