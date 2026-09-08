@@ -147,6 +147,66 @@ export type Database = {
           },
         ]
       }
+      email_outbox: {
+        Row: {
+          attempts: number
+          body: string
+          created_at: string
+          event_type: string | null
+          id: string
+          last_error: string | null
+          link: string | null
+          metadata: Json | null
+          notification_id: string | null
+          provider_message_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          to_email: string
+          to_name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          last_error?: string | null
+          link?: string | null
+          metadata?: Json | null
+          notification_id?: string | null
+          provider_message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          to_email: string
+          to_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          last_error?: string | null
+          link?: string | null
+          metadata?: Json | null
+          notification_id?: string | null
+          provider_message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          to_email?: string
+          to_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           created_at: string | null
@@ -313,12 +373,77 @@ export type Database = {
           },
         ]
       }
+      order_milestones: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          due_at: string | null
+          id: string
+          note: string | null
+          occurred_at: string | null
+          order_id: string
+          payload: Json | null
+          status: string
+          step: string
+          updated_at: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          due_at?: string | null
+          id?: string
+          note?: string | null
+          occurred_at?: string | null
+          order_id: string
+          payload?: Json | null
+          status?: string
+          step: string
+          updated_at?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          due_at?: string | null
+          id?: string
+          note?: string | null
+          occurred_at?: string | null
+          order_id?: string
+          payload?: Json | null
+          status?: string
+          step?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_milestones_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_milestones_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           admin_notes: string | null
           completed_at: string | null
           created_at: string | null
           customer_id: string | null
+          confirmed_calendar_days: number | null
+          confirmed_work_days: number | null
+          duration_breakdown: Json | null
+          duration_confirmed_at: string | null
+          duration_confirmed_by: string | null
+          duration_pro_note: string | null
+          estimated_calendar_days: number | null
+          estimated_work_days: number | null
           delivery_address_id: string | null
           floor_sqm: number | null
           id: string
@@ -348,12 +473,22 @@ export type Database = {
           user_id: string | null
           vat_amount: number | null
           wall_sqm: number | null
+          work_end_date: string | null
+          work_start_date: string | null
         }
         Insert: {
           admin_notes?: string | null
           completed_at?: string | null
           created_at?: string | null
           customer_id?: string | null
+          confirmed_calendar_days?: number | null
+          confirmed_work_days?: number | null
+          duration_breakdown?: Json | null
+          duration_confirmed_at?: string | null
+          duration_confirmed_by?: string | null
+          duration_pro_note?: string | null
+          estimated_calendar_days?: number | null
+          estimated_work_days?: number | null
           delivery_address_id?: string | null
           floor_sqm?: number | null
           id?: string
@@ -383,12 +518,22 @@ export type Database = {
           user_id?: string | null
           vat_amount?: number | null
           wall_sqm?: number | null
+          work_end_date?: string | null
+          work_start_date?: string | null
         }
         Update: {
           admin_notes?: string | null
           completed_at?: string | null
           created_at?: string | null
           customer_id?: string | null
+          confirmed_calendar_days?: number | null
+          confirmed_work_days?: number | null
+          duration_breakdown?: Json | null
+          duration_confirmed_at?: string | null
+          duration_confirmed_by?: string | null
+          duration_pro_note?: string | null
+          estimated_calendar_days?: number | null
+          estimated_work_days?: number | null
           delivery_address_id?: string | null
           floor_sqm?: number | null
           id?: string
@@ -418,6 +563,8 @@ export type Database = {
           user_id?: string | null
           vat_amount?: number | null
           wall_sqm?: number | null
+          work_end_date?: string | null
+          work_start_date?: string | null
         }
         Relationships: [
           {
@@ -451,6 +598,35 @@ export type Database = {
           {
             foreignKeyName: "orders_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_settings_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -870,6 +1046,9 @@ export type Database = {
           city: string | null
           converted_order_id: string | null
           created_at: string | null
+          duration_breakdown: Json | null
+          estimated_calendar_days: number | null
+          estimated_work_days: number | null
           customer_id: string | null
           floor_sqm: number | null
           id: string
@@ -896,6 +1075,9 @@ export type Database = {
           city?: string | null
           converted_order_id?: string | null
           created_at?: string | null
+          duration_breakdown?: Json | null
+          estimated_calendar_days?: number | null
+          estimated_work_days?: number | null
           customer_id?: string | null
           floor_sqm?: number | null
           id?: string
@@ -922,6 +1104,9 @@ export type Database = {
           city?: string | null
           converted_order_id?: string | null
           created_at?: string | null
+          duration_breakdown?: Json | null
+          estimated_calendar_days?: number | null
+          estimated_work_days?: number | null
           customer_id?: string | null
           floor_sqm?: number | null
           id?: string
@@ -1058,6 +1243,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_order_duration: {
+        Args: {
+          p_order_id: string
+          p_work_days: number
+          p_calendar_days: number
+          p_note?: string | null
+        }
+        Returns: undefined
+      }
       distance_km: {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number

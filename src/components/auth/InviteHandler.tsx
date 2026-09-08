@@ -15,10 +15,6 @@ export function InviteHandler() {
         // Get hash from window (more reliable than location.hash for initial loads)
         const hash = window.location.hash
 
-        // Debug logs – you can remove them in production
-        console.log('[InviteHandler] Current path:', location.pathname)
-        console.log('[InviteHandler] Hash detected:', hash)
-
         // Prevent double navigation caused by StrictMode double‑mounting
         if (hasRedirected.current) {
             return
@@ -27,14 +23,18 @@ export function InviteHandler() {
         // Only redirect if we're NOT already on the invite-accept page
         if (location.pathname !== '/invite-accept') {
             // Check if URL contains invite parameters or auth errors
-            if (hash && (hash.includes('type=invite') || hash.includes('error='))) {
-                console.log('[InviteHandler] Redirecting to /invite-accept with hash')
+            const isAuthPage =
+                location.pathname === '/login' ||
+                location.pathname === '/register'
+            if (
+                hash &&
+                (hash.includes('type=invite') ||
+                    (hash.includes('error=') && !isAuthPage))
+            ) {
                 // Use replace instead of navigate to avoid history pollution
                 navigate('/invite-accept' + hash, { replace: true })
                 hasRedirected.current = true
             }
-        } else {
-            console.log('[InviteHandler] Already on invite-accept page, skipping redirect')
         }
     }, [navigate, location.pathname])
 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useAuthSession } from '@/hooks/useAuthSession'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useConfiguratorStore } from '@/store/configuratorStore'
 import { useUserStore } from '@/store/userStore'
@@ -11,7 +12,18 @@ import { Step6Location } from '@/components/configurator/Step6Location'
 import { Step7ProfessionalSelect } from '@/components/configurator/Step7ProfessionalSelect'
 import { Step8CalendarSelect } from '@/components/configurator/Step8CalendarSelect'
 import { Step7Summary as Step9Summary } from '@/components/configurator/Step7Summary'
-import { ArrowLeft, ArrowRight, Check, ShieldCheck, AlertCircle, Trash2, LogIn } from 'lucide-react'
+import {
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    Layers,
+    Trash2,
+    LogIn,
+} from 'lucide-react'
+import { Header } from '@/components/layout/Header'
+import { toast } from 'sonner'
+import './home.css'
+import './storefront.css'
 import { fetchSavedQuotes } from '@/lib/quotesService'
 
 // Il luogo viene chiesto per primo: conoscendo la provincia si può usare la
@@ -29,13 +41,13 @@ const STEPS = [
 ]
 
 export function ConfiguratorPage() {
+    useAuthSession()
     const [searchParams] = useSearchParams()
     const {
         currentStep,
         setCurrentStep,
         nextStep,
         prevStep,
-        setSelectedProduct,
         selectedProduct,
         location,
         projectInfo,
@@ -44,7 +56,7 @@ export function ConfiguratorPage() {
         selectedProfessional,
         selectedDate,
         getTotal,
-        reset
+        reset,
     } = useConfiguratorStore()
     const { user } = useUserStore()
 
@@ -65,10 +77,16 @@ export function ConfiguratorPage() {
             window.removeEventListener('beforeunload', handleBeforeUnload)
             const currentUser = useUserStore.getState().user
             const currentPath = window.location.pathname
-            const isGoingToAuth = currentPath.includes('/login') || currentPath.includes('/register')
+            const isGoingToAuth =
+                currentPath.includes('/login') ||
+                currentPath.includes('/register')
 
             // Se l'utente non è autenticato e lascia la pagina (senza andare al login per autenticarsi), azzera
-            if (!currentUser && !isGoingToAuth) {
+            if (
+                !currentUser &&
+                !isGoingToAuth &&
+                currentPath !== '/configuratore'
+            ) {
                 localStorage.removeItem('posafacile-configurator')
                 useConfiguratorStore.getState().reset()
             }
@@ -81,9 +99,10 @@ export function ConfiguratorPage() {
         if (productParam) {
             try {
                 const product = JSON.parse(decodeURIComponent(productParam))
-                setSelectedProduct(product)
-                if (currentStep < 2) {
-                    setCurrentStep(1) // Start at step 1 but product is pre-selected
+                const store = useConfiguratorStore.getState()
+                store.setSelectedProduct(product)
+                if (store.currentStep < 2) {
+                    store.setCurrentStep(1) // Start at step 1 but product is pre-selected
                 }
             } catch (e) {
                 console.error('Failed to parse product from URL', e)
@@ -92,8 +111,8 @@ export function ConfiguratorPage() {
 
         const quoteIdParam = searchParams.get('quote')
         if (quoteIdParam && user?.id) {
-            fetchSavedQuotes(user.id).then(quotes => {
-                const found = quotes.find(q => q.id === quoteIdParam)
+            fetchSavedQuotes(user.id).then((quotes) => {
+                const found = quotes.find((q) => q.id === quoteIdParam)
                 if (found) {
                     useConfiguratorStore.getState().loadFromSavedQuote(found)
                 }
@@ -106,13 +125,20 @@ export function ConfiguratorPage() {
     const canProceed = (() => {
         switch (currentStep) {
             case 1:
-                return Boolean(location.indirizzo && location.citta && location.provincia && location.cap)
+                return Boolean(
+                    location.indirizzo &&
+                    location.citta &&
+                    location.provincia &&
+                    location.cap,
+                )
             case 2:
                 return Boolean(projectInfo.ambiente && projectInfo.intervento)
             case 3:
                 return Boolean(selectedProduct)
             case 4:
-                return Boolean(dimensions.pavimentoMq > 0 || dimensions.paretiMq > 0)
+                return Boolean(
+                    dimensions.pavimentoMq > 0 || dimensions.paretiMq > 0,
+                )
             case 5:
                 return Boolean(layingType)
             case 6:
@@ -132,7 +158,13 @@ export function ConfiguratorPage() {
         if (!canProceed) return
         if (currentStep < 9) {
             nextStep()
-            window.scrollTo({ top: 0, behavior: 'smooth' })
+            window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                    .matches
+                    ? 'instant'
+                    : 'smooth',
+            })
         } else {
             window.dispatchEvent(new CustomEvent('posafacile-submit-quote'))
         }
@@ -141,229 +173,304 @@ export function ConfiguratorPage() {
     const handlePrev = () => {
         if (currentStep > 1) {
             prevStep()
-            window.scrollTo({ top: 0, behavior: 'smooth' })
+            window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                    .matches
+                    ? 'instant'
+                    : 'smooth',
+            })
         }
     }
 
     const handleJumpToStep = (targetStep: number) => {
         if (targetStep < currentStep) {
             setCurrentStep(targetStep)
-            window.scrollTo({ top: 0, behavior: 'smooth' })
+            window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                    .matches
+                    ? 'instant'
+                    : 'smooth',
+            })
         }
     }
 
     const handleClearQuote = () => {
-        if (window.confirm('Vuoi davvero azzerare tutte le scelte del preventivo?')) {
-            localStorage.removeItem('posafacile-configurator')
-            reset()
-        }
+        toast('Vuoi ricominciare il preventivo?', {
+            description:
+                'Le scelte di questa sessione saranno azzerate. I preventivi già salvati restano nella tua area.',
+            action: {
+                label: 'Ricomincia',
+                onClick: () => {
+                    reset()
+                    window.scrollTo(0, 0)
+                },
+            },
+            cancel: { label: 'Annulla', onClick: () => {} },
+            duration: 10000,
+        })
     }
 
     const renderStep = () => {
         switch (currentStep) {
-            case 1: return <Step6Location />
-            case 2: return <Step1ProjectType />
-            case 3: return <Step2ProductSelect />
-            case 4: return <Step3Dimensions />
-            case 5: return <Step4LayingType />
-            case 6: return <Step5Services />
-            case 7: return <Step7ProfessionalSelect />
-            case 8: return <Step8CalendarSelect />
-            case 9: return <Step9Summary />
-            default: return <Step6Location />
+            case 1:
+                return <Step6Location />
+            case 2:
+                return <Step1ProjectType />
+            case 3:
+                return <Step2ProductSelect />
+            case 4:
+                return <Step3Dimensions />
+            case 5:
+                return <Step4LayingType />
+            case 6:
+                return <Step5Services />
+            case 7:
+                return <Step7ProfessionalSelect />
+            case 8:
+                return <Step8CalendarSelect />
+            case 9:
+                return <Step9Summary />
+            default:
+                return <Step6Location />
         }
     }
 
+    const stepDescriptions = [
+        'Partiamo da casa tua.',
+        'Che cosa immagini?',
+        'La materia del tuo progetto.',
+        'Diamo spazio alle tue idee.',
+        'Il dettaglio che cambia tutto.',
+        'A ogni progetto, i suoi servizi.',
+        'Le persone che fanno la differenza.',
+        'Troviamo il momento giusto.',
+        'Il tuo progetto, in ogni dettaglio.',
+    ]
+    const formattedTotal = new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+    }).format(total)
+
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
-            {/* Top Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
-                <div className="container mx-auto px-4 py-3.5">
-                    <div className="flex items-center justify-between">
-                        <Link to="/catalog" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
-                            <ArrowLeft className="w-5 h-5" />
-                            <span className="hidden sm:inline text-sm font-medium">Torna al catalogo</span>
-                        </Link>
-
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-base sm:text-lg font-bold text-gray-900">Configura il tuo preventivo</h1>
+        <div className="pf-configurator">
+            <Header />
+            <main id="main-content" tabIndex={-1}>
+                <div className="pf-container pf-config-intro">
+                    <nav aria-label="Percorso" className="pf-breadcrumb">
+                        <Link to="/">Home</Link>
+                        <span>/</span>
+                        <span>Il tuo preventivo</span>
+                    </nav>
+                    <div>
+                        <div>
+                            <p className="pf-eyebrow">
+                                LA TUA IDEA, IL NOSTRO PROSSIMO PROGETTO
+                            </p>
+                            <h1>
+                                Facciamo spazio
+                                <br />
+                                <span>alla tua nuova casa.</span>
+                            </h1>
+                        </div>
+                        <p>
+                            Un passo alla volta, tutte le scelte al posto
+                            giusto.
+                            <br />
+                            Costruiamo insieme il tuo preventivo personalizzato.
+                        </p>
+                    </div>
+                </div>
+                <div className="pf-container pf-config-layout">
+                    <aside className="pf-config-sidebar">
+                        <div className="pf-config-progress">
+                            <span>IL TUO PERCORSO</span>
+                            <span>{currentStep} / 9</span>
+                        </div>
+                        <nav aria-label="Passaggi del preventivo">
+                            <ol>
+                                {STEPS.map(({ num, label }) => (
+                                    <li key={num}>
+                                        <button
+                                            aria-current={
+                                                currentStep === num
+                                                    ? 'step'
+                                                    : undefined
+                                            }
+                                            disabled={num >= currentStep}
+                                            onClick={() =>
+                                                handleJumpToStep(num)
+                                            }
+                                            className={
+                                                num === currentStep
+                                                    ? 'is-current'
+                                                    : num < currentStep
+                                                      ? 'is-complete'
+                                                      : ''
+                                            }
+                                        >
+                                            <span>
+                                                {num < currentStep ? (
+                                                    <Check size={13} />
+                                                ) : (
+                                                    String(num).padStart(2, '0')
+                                                )}
+                                            </span>
+                                            {label}
+                                            {num === currentStep && (
+                                                <span className="pf-step-dot" />
+                                            )}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ol>
+                        </nav>
+                        <div className="pf-config-sidebar-note">
+                            <Layers size={24} strokeWidth={1.4} />
+                            <h3>La tua casa, le tue scelte.</h3>
+                            <p>
+                                Puoi tornare ai passaggi precedenti e rivedere
+                                ogni dettaglio prima di confermare.
+                            </p>
+                        </div>
+                    </aside>
+                    <div className="pf-config-workspace">
+                        <div className="pf-config-form-heading">
+                            <div>
+                                <p className="pf-eyebrow">
+                                    PASSO {String(currentStep).padStart(2, '0')}{' '}
+                                    ·{' '}
+                                    {STEPS[
+                                        currentStep - 1
+                                    ]?.label.toUpperCase()}
+                                </p>
+                                <h2>{stepDescriptions[currentStep - 1]}</h2>
+                            </div>
                             <button
-                                type="button"
                                 onClick={handleClearQuote}
-                                title="Azzera preventivo"
-                                className="text-gray-400 hover:text-red-500 p-1 rounded-md transition-colors cursor-pointer"
+                                aria-label="Ricomincia il preventivo"
+                                title="Ricomincia il preventivo"
                             >
-                                <Trash2 size={16} />
+                                <Trash2 size={17} />
                             </button>
                         </div>
-
-                        {total > 0 ? (
-                            <div className="text-right">
-                                <p className="text-xs text-gray-500 font-medium">Totale stimato</p>
-                                <p className="text-base sm:text-lg font-bold text-orange-600">€{total.toFixed(2)}</p>
-                            </div>
-                        ) : (
-                            <div className="w-12 sm:w-20" />
-                        )}
-                    </div>
-                </div>
-
-                {/* Session Persistence Info Strip */}
-                <div className="border-t border-gray-100 bg-stone-50/90 py-1.5 px-4 text-[11px]">
-                    <div className="container mx-auto max-w-3xl flex items-center justify-between">
-                        {user ? (
-                            <div className="flex items-center justify-between w-full text-emerald-700 font-medium">
-                                <span className="flex items-center gap-1.5">
-                                    <ShieldCheck size={14} className="text-emerald-600" />
-                                    <span>Account attivo ({user.email}). Il tuo preventivo resta memorizzato.</span>
-                                </span>
-                                <Link to="/dashboard?tab=quotes" className="text-orange-600 font-bold hover:underline ml-2 flex-shrink-0">
-                                    I Miei Preventivi Salvati →
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-between w-full text-stone-600">
-                                <span className="flex items-center gap-1.5">
-                                    <AlertCircle size={14} className="text-amber-500 flex-shrink-0" />
-                                    <span>Modalità ospite: se abbandoni la pagina il preventivo viene cancellato.</span>
-                                </span>
-                                <Link to="/login?redirect=/configuratore" className="text-orange-600 font-bold hover:underline ml-2">
-                                    Accedi per salvare
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Content Area with Bottom Padding for Fixed Bar */}
-            <div className="container mx-auto px-4 pt-6 pb-28 sm:pb-32 max-w-3xl flex-1">
-                {selectedProduct && currentStep > 1 && (
-                    <div className="mb-6 p-4 bg-white rounded-xl border border-gray-200 flex items-center gap-4 shadow-sm">
-                        {selectedProduct.images[0] && (
-                            <img src={selectedProduct.images[0]} alt="" className="w-16 h-16 rounded-lg object-cover" />
-                        )}
-                        <div className="flex-1">
-                            <p className="font-medium text-stone-900">{selectedProduct.name}</p>
-                            <p className="text-sm font-bold text-orange-600">€{selectedProduct.price_per_sqm.toFixed(2)} / mq</p>
-                        </div>
-                    </div>
-                )}
-
-                {renderStep()}
-            </div>
-
-            {/* Fixed Bottom Navigation & Progress Bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] py-3 px-4 sm:px-6">
-                <div className="container mx-auto max-w-5xl flex items-center justify-between gap-3 sm:gap-6">
-                    {/* Left: Tasto Indietro (o Torna al Catalogo allo Step 1) */}
-                    <div className="flex-shrink-0">
-                        {currentStep > 1 ? (
-                            <button
-                                type="button"
-                                onClick={handlePrev}
-                                className="flex items-center gap-2 px-3.5 sm:px-5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 font-semibold transition-all text-xs sm:text-sm active:scale-95 cursor-pointer shadow-xs"
-                            >
-                                <ArrowLeft className="w-4 h-4 text-stone-500" />
-                                <span className="hidden sm:inline">Indietro</span>
-                            </button>
-                        ) : (
-                            <Link
-                                to="/catalog"
-                                className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 font-medium transition-all text-xs sm:text-sm"
-                            >
-                                <ArrowLeft className="w-4 h-4 text-stone-400" />
-                                <span className="hidden sm:inline">Catalogo</span>
-                            </Link>
-                        )}
-                    </div>
-
-                    {/* Center: Stepper & Progress Indicator */}
-                    <div className="flex flex-col items-center justify-center flex-1 max-w-xl px-1 sm:px-4">
-                        {/* Step Title, Counter and Running Total */}
-                        <div className="flex items-center justify-between w-full mb-1.5">
-                            <div className="flex items-center gap-2 text-xs">
-                                <span className="px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 font-bold text-[11px] whitespace-nowrap">
-                                    Passo {currentStep} di 9
-                                </span>
-                                <span className="font-bold text-stone-900 truncate max-w-[150px] sm:max-w-none text-xs sm:text-sm">
-                                    {STEPS[currentStep - 1]?.label}
-                                </span>
-                            </div>
-
-                            {total > 0 && (
-                                <div className="text-xs font-semibold text-stone-600 hidden xs:flex items-center gap-1">
-                                    <span className="text-stone-400">Totale:</span>
-                                    <span className="font-bold text-orange-600 text-xs sm:text-sm">€{total.toFixed(2)}</span>
-                                </div>
+                        <div className="pf-config-session">
+                            {user ? (
+                                <>
+                                    <span>
+                                        <Check size={14} /> Le tue scelte
+                                        restano memorizzate.
+                                    </span>
+                                    <Link to="/dashboard?tab=quotes">
+                                        I tuoi preventivi →
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <span>
+                                        Stai progettando come ospite. Accedi per
+                                        conservare le tue scelte quando esci.
+                                    </span>
+                                    <Link to="/login?redirect=/configuratore">
+                                        Accedi per salvare →
+                                    </Link>
+                                </>
                             )}
                         </div>
-
-                        {/* Segmented Progress Track with Tooltips */}
-                        <div className="flex items-center gap-1.5 w-full">
-                            {STEPS.map(({ num, label }) => {
-                                const isCurrent = currentStep === num
-                                const isCompleted = currentStep > num
-
-                                return (
-                                    <button
-                                        key={num}
-                                        type="button"
-                                        onClick={() => isCompleted && handleJumpToStep(num)}
-                                        disabled={!isCompleted}
-                                        title={`Passo ${num}: ${label}${isCompleted ? ' (Clicca per tornare)' : ''}`}
-                                        className={`group relative flex-1 h-2 rounded-full transition-all cursor-default ${
-                                            isCurrent
-                                                ? 'bg-orange-500 ring-2 ring-orange-200 ring-offset-1'
-                                                : isCompleted
-                                                    ? 'bg-emerald-500 hover:opacity-85 cursor-pointer'
-                                                    : 'bg-stone-200/90'
-                                        }`}
-                                    >
-                                        {/* Hover Tooltip (Desktop) */}
-                                        <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 hidden md:group-hover:flex items-center gap-1 bg-stone-900 text-white text-[10px] font-semibold px-2 py-0.5 rounded-md shadow-md whitespace-nowrap z-50">
-                                            <span>{num}. {label}</span>
-                                            {isCompleted && <span className="text-emerald-400">✓</span>}
-                                        </span>
-                                    </button>
-                                )
-                            })}
+                        {selectedProduct && currentStep > 1 && (
+                            <div className="pf-config-selected">
+                                {selectedProduct.images[0] && (
+                                    <img
+                                        src={selectedProduct.images[0]}
+                                        alt={selectedProduct.name}
+                                        width="64"
+                                        height="64"
+                                    />
+                                )}
+                                <div>
+                                    <small>IL MATERIALE CHE HAI SCELTO</small>
+                                    <strong>{selectedProduct.name}</strong>
+                                </div>
+                                <span>
+                                    {new Intl.NumberFormat('it-IT', {
+                                        style: 'currency',
+                                        currency: 'EUR',
+                                    }).format(selectedProduct.price_per_sqm)}
+                                    <small> / m²</small>
+                                </span>
+                            </div>
+                        )}
+                        <div className="pf-config-step" key={currentStep}>
+                            {renderStep()}
                         </div>
                     </div>
-
-                    {/* Right: Tasto Continua / Conferma */}
-                    <div className="flex-shrink-0">
-                        {currentStep < 9 ? (
-                            <button
-                                type="button"
-                                onClick={handleNext}
-                                disabled={!canProceed}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
-                            >
-                                <span>Continua</span>
-                                <ArrowRight className="w-4 h-4" />
-                            </button>
-                        ) : !user ? (
-                            <button
-                                type="button"
-                                onClick={handleNext}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-stone-900 hover:bg-black text-white font-bold rounded-xl shadow-md transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
-                            >
-                                <LogIn className="w-4 h-4" />
-                                <span className="hidden sm:inline">Accedi e conferma</span>
-                                <span className="sm:hidden">Accedi</span>
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={handleNext}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
-                            >
-                                <Check className="w-4 h-4" />
-                                <span>Conferma</span>
-                            </button>
-                        )}
+                </div>
+            </main>
+            <div className="pf-config-bottom">
+                <div className="pf-container">
+                    {currentStep > 1 ? (
+                        <button
+                            className="pf-config-back"
+                            aria-label="Passaggio precedente"
+                            onClick={handlePrev}
+                        >
+                            <ArrowLeft size={17} />
+                            <span>Indietro</span>
+                        </button>
+                    ) : (
+                        <Link
+                            to="/catalog"
+                            className="pf-config-back"
+                            aria-label="Torna al catalogo"
+                        >
+                            <ArrowLeft size={17} />
+                            <span>Catalogo</span>
+                        </Link>
+                    )}
+                    <div className="pf-config-bottom-progress">
+                        <span>
+                            Passo {currentStep} di 9{' '}
+                            <strong>{STEPS[currentStep - 1]?.label}</strong>
+                        </span>
+                        <div
+                            role="progressbar"
+                            aria-label="Avanzamento del preventivo"
+                            aria-valuemin={1}
+                            aria-valuemax={9}
+                            aria-valuenow={currentStep}
+                        >
+                            <span
+                                style={{ width: `${(currentStep / 9) * 100}%` }}
+                            />
+                        </div>
                     </div>
+                    {total > 0 && (
+                        <div className="pf-config-total">
+                            <small>Totale stimato · IVA inclusa</small>
+                            <strong>{formattedTotal}</strong>
+                        </div>
+                    )}
+                    <button
+                        className="pf-button pf-button-orange"
+                        onClick={handleNext}
+                        disabled={!canProceed}
+                    >
+                        {currentStep < 9 ? (
+                            <>
+                                Continua <ArrowRight size={17} />
+                            </>
+                        ) : !user ? (
+                            <>
+                                <LogIn size={17} />
+                                <span>Accedi e conferma</span>
+                            </>
+                        ) : (
+                            <>
+                                Conferma <Check size={17} />
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
         </div>

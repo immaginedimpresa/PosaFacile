@@ -1,0 +1,544 @@
+/* Pagina professionisti: eredita tutto da home.css (.pf-home) e aggiunge
+   solo lo scrollytelling e i blocchi che sulla home non esistono. */
+
+/* --- Hero -------------------------------------------------------------- */
+.pf-pro-hero-visual {
+    display: grid;
+    gap: 18px;
+}
+.pf-pro-hero-card {
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    border-radius: 18px;
+    padding: 26px;
+    box-shadow: 0 18px 40px #1c191708;
+}
+.pf-pro-hero-card > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #e7e5e4;
+    padding-bottom: 16px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #716a65;
+}
+.pf-pro-hero-card > header > span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #1c1917;
+}
+.pf-pro-job {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+}
+.pf-pro-job small {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #995b32;
+}
+.pf-pro-job h3 {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    margin-top: 6px;
+}
+.pf-pro-job p {
+    font-size: 12px;
+    color: #716a65;
+    margin-top: 6px;
+    line-height: 1.7;
+}
+.pf-pro-payout {
+    text-align: right;
+    flex-shrink: 0;
+}
+.pf-pro-payout strong {
+    display: block;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+}
+.pf-pro-payout small {
+    font-size: 10px;
+    color: #716a65;
+}
+.pf-pro-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #e7e5e4;
+}
+.pf-pro-meta div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.pf-pro-meta span {
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+    color: #a8a29e;
+}
+.pf-pro-meta strong {
+    font-size: 13px;
+    font-weight: 500;
+}
+.pf-pro-hero-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+}
+.pf-pro-hero-actions > span:first-child {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    background: #1c1917;
+    color: #fff;
+    border-radius: 11px;
+    padding: 13px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.pf-pro-hero-actions > span:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d6d3d1;
+    border-radius: 11px;
+    padding-inline: 16px;
+    font-size: 12px;
+    color: #716a65;
+}
+.pf-pro-hero-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+.pf-pro-hero-strip > div {
+    background: #f5f2ec;
+    border-radius: 14px;
+    padding: 18px;
+}
+.pf-pro-hero-strip strong {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+}
+.pf-pro-hero-strip small {
+    display: block;
+    font-size: 11px;
+    color: #716a65;
+    margin-top: 5px;
+    line-height: 1.6;
+}
+
+/* --- Scrollytelling ---------------------------------------------------- */
+.pf-scrolly {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: 80px;
+    align-items: start;
+}
+.pf-scrolly-steps {
+    display: grid;
+    gap: 0;
+}
+.pf-scrolly-step {
+    padding-block: 22vh;
+    border-left: 2px solid #e7e5e4;
+    padding-left: 34px;
+    position: relative;
+    transition:
+        border-color 0.4s,
+        opacity 0.4s;
+    opacity: 0.35;
+}
+.pf-scrolly-step.is-active {
+    opacity: 1;
+    border-color: #f97316;
+}
+.pf-scrolly-step::before {
+    content: attr(data-step);
+    position: absolute;
+    left: -19px;
+    top: 22vh;
+    width: 36px;
+    height: 36px;
+    border-radius: 100%;
+    background: #fff;
+    border: 2px solid #e7e5e4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #716a65;
+    transition:
+        background 0.4s,
+        border-color 0.4s,
+        color 0.4s;
+}
+.pf-scrolly-step.is-active::before {
+    background: #f97316;
+    border-color: #f97316;
+    color: #1c1917;
+}
+.pf-scrolly-step h3 {
+    font-size: clamp(26px, 2.4vw, 34px);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+}
+.pf-scrolly-step > p {
+    margin-top: 16px;
+    font-size: 15px;
+    line-height: 1.85;
+    color: #57534e;
+    max-width: 430px;
+}
+.pf-scrolly-step ul {
+    margin-top: 20px;
+    display: grid;
+    gap: 10px;
+}
+.pf-scrolly-step li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: #716a65;
+    line-height: 1.7;
+}
+.pf-scrolly-step li svg {
+    color: #ea580c;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+.pf-scrolly-visual {
+    position: sticky;
+    top: 120px;
+    height: min(560px, 70vh);
+    border-radius: 20px;
+    background: #1c1917;
+    color: #fafaf9;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.pf-scrolly-panel {
+    position: absolute;
+    inset: 0;
+    padding: 38px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+        opacity 0.45s ease,
+        transform 0.45s ease;
+    pointer-events: none;
+}
+.pf-scrolly-panel.is-active {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+.pf-scrolly-panel > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 9px;
+    letter-spacing: 0.11em;
+    font-weight: 700;
+    color: #a8a29e;
+}
+.pf-scrolly-panel > header > span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fdba74;
+}
+.pf-scrolly-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+    background: #f9731626;
+    border: 1px solid #f9731640;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fb923c;
+}
+.pf-scrolly-panel h4 {
+    font-size: clamp(24px, 2.3vw, 31px);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+    margin-top: 22px;
+    text-wrap: balance;
+}
+.pf-scrolly-panel > div > p {
+    color: #a8a29e;
+    font-size: 14px;
+    line-height: 1.8;
+    margin-top: 15px;
+    max-width: 400px;
+}
+.pf-scrolly-figures {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+.pf-scrolly-figures > div {
+    background: #ffffff0a;
+    border: 1px solid #44403c;
+    border-radius: 15px;
+    padding: 17px;
+}
+.pf-scrolly-figures span {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #a8a29e;
+}
+.pf-scrolly-figures strong {
+    display: block;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    margin-top: 8px;
+}
+.pf-scrolly-figures small {
+    display: block;
+    font-size: 11px;
+    color: #a8a29e;
+    margin-top: 4px;
+}
+
+/* --- Confronto "prima / con PosaFacile" -------------------------------- */
+.pf-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+}
+.pf-compare > div {
+    border-radius: 18px;
+    padding: 34px;
+    border: 1px solid #e7e5e4;
+}
+.pf-compare > div:first-child {
+    background: #fafaf9;
+}
+.pf-compare > div:last-child {
+    background: #1c1917;
+    border-color: #1c1917;
+    color: #fafaf9;
+}
+.pf-compare h3 {
+    font-size: 19px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    margin-bottom: 22px;
+}
+.pf-compare ul {
+    display: grid;
+    gap: 15px;
+}
+.pf-compare li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+}
+.pf-compare > div:first-child li {
+    color: #716a65;
+}
+.pf-compare > div:first-child svg {
+    color: #a8a29e;
+}
+.pf-compare > div:last-child li {
+    color: #e7e5e4;
+}
+.pf-compare > div:last-child svg {
+    color: #fb923c;
+}
+.pf-compare svg {
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+/* --- Compenso ---------------------------------------------------------- */
+.pf-payout-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 26px;
+}
+.pf-payout-card {
+    border-top: 1px solid #d6d3d1;
+    padding-top: 24px;
+}
+.pf-payout-card svg {
+    color: #ea580c;
+}
+.pf-payout-card h3 {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    margin-top: 20px;
+}
+.pf-payout-card p {
+    margin-top: 12px;
+    color: #716a65;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.pf-payout-note {
+    margin-top: 40px;
+    background: #f5f2ec;
+    border-radius: 16px;
+    padding: 26px 30px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+.pf-payout-note svg {
+    color: #995b32;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.pf-payout-note p {
+    font-size: 13px;
+    line-height: 1.85;
+    color: #57534e;
+}
+.pf-payout-note strong {
+    color: #1c1917;
+    font-weight: 500;
+}
+
+/* --- Requisiti --------------------------------------------------------- */
+.pf-requirements {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 40px;
+}
+.pf-requirements li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #57534e;
+    border-bottom: 1px solid #e7e5e4;
+    padding-bottom: 14px;
+}
+.pf-requirements svg {
+    color: #ea580c;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+/* --- Responsive -------------------------------------------------------- */
+@media (max-width: 1199px) {
+    .pf-scrolly {
+        gap: 50px;
+    }
+    .pf-scrolly-panel {
+        padding: 30px;
+    }
+}
+@media (max-width: 900px) {
+    .pf-pro-hero-strip {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    .pf-pro-hero-strip > div {
+        padding: 14px;
+    }
+    .pf-pro-hero-strip strong {
+        font-size: 19px;
+    }
+    .pf-scrolly {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    /* Su schermo stretto la colonna sticky non ha spazio: le tappe
+       tornano a scorrere in fila, ognuna con il suo pannello. */
+    .pf-scrolly-visual {
+        display: none;
+    }
+    .pf-scrolly-step {
+        padding-block: 30px;
+        opacity: 1;
+    }
+    .pf-scrolly-step::before {
+        top: 30px;
+    }
+    .pf-compare,
+    .pf-payout-grid {
+        grid-template-columns: 1fr;
+    }
+    .pf-requirements {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+@media (max-width: 639px) {
+    .pf-pro-hero-card {
+        padding: 20px;
+    }
+    .pf-pro-job h3 {
+        font-size: 17px;
+    }
+    .pf-pro-payout strong {
+        font-size: 21px;
+    }
+    .pf-pro-meta {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .pf-pro-hero-strip {
+        grid-template-columns: 1fr;
+    }
+    .pf-scrolly-step {
+        padding-left: 24px;
+    }
+    .pf-scrolly-step::before {
+        width: 30px;
+        height: 30px;
+        left: -16px;
+        font-size: 11px;
+    }
+    .pf-compare > div,
+    .pf-payout-note {
+        padding: 24px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .pf-scrolly-step,
+    .pf-scrolly-step::before,
+    .pf-scrolly-panel {
+        transition: none;
+    }
+    .pf-scrolly-step {
+        opacity: 1;
+    }
+}

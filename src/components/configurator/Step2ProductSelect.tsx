@@ -23,6 +23,9 @@ export function Step2ProductSelect() {
             images: (product.images as string[]) || [],
             category: product.category,
             material: product.material,
+            format_width: product.format_width,
+            format_height: product.format_height,
+            lead_time_days: product.lead_time_days,
         })
     }
 

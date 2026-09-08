@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
+import { confirmDuration, setOrderMilestone } from '@/services/orderTimelineService'
+import type { TimelineStepKey } from '@/lib/orderTimeline'
 
 export type JobStatus = 'assigned' | 'accepted' | 'in_progress' | 'completed' | 'cancelled' | 'draft' | 'pending'
 
@@ -14,6 +16,8 @@ export interface Job {
     city?: string
     notes?: string
     created_at: string
+    /** Dati dell'ordine necessari a stimare e confermare la durata del cantiere. */
+    order?: any
 }
 
 export interface Availability {
@@ -31,8 +35,16 @@ interface ProState {
     fetchJobs: () => Promise<void>
     fetchAvailability: (start: Date, end: Date) => Promise<void>
     updateJobStatus: (jobId: string, status: JobStatus) => Promise<void>
+    confirmJobDuration: (jobId: string, workDays: number, calendarDays: number, note: string | null) => Promise<void>
     toggleAvailability: (date: string, status: 'busy' | 'vacation') => Promise<void>
     bulkUpdateAvailability: (dates: string[], status: 'busy' | 'available') => Promise<void>
+}
+
+/** Cambio di stato del lavoro → tappa da chiudere sulla timeline dell'ordine. */
+const JOB_STATUS_MILESTONE: Partial<Record<JobStatus, TimelineStepKey>> = {
+    accepted: 'professional_confirmed',
+    in_progress: 'work_started',
+    completed: 'work_completed',
 }
 
 export const useProStore = create<ProState>((set, get) => ({
@@ -205,6 +217,20 @@ export const useProStore = create<ProState>((set, get) => ({
                     orders (
                         id,
                         installation_address,
+                        installation_date,
+                        work_start_date,
+                        work_end_date,
+                        floor_sqm,
+                        wall_sqm,
+                        laying_type,
+                        project_type,
+                        items,
+                        estimated_work_days,
+                        estimated_calendar_days,
+                        duration_breakdown,
+                        confirmed_work_days,
+                        confirmed_calendar_days,
+                        duration_pro_note,
                         customer:users!orders_customer_id_fkey (
                             first_name,
                             last_name,
@@ -250,6 +276,7 @@ export const useProStore = create<ProState>((set, get) => ({
                 scheduled_date: j.scheduled_date,
                 notes: j.notes,
                 created_at: j.created_at,
+                order: j.orders || null,
                 customer_name: j.orders?.customer ? `${j.orders.customer.first_name || ''} ${j.orders.customer.last_name || ''}`.trim() : (j.orders?.customer?.email || 'Cliente'),
                 address: j.orders?.installation_address?.street || j.orders?.installation_address?.address || '',
                 city: j.orders?.installation_address?.city || ''
@@ -287,6 +314,16 @@ export const useProStore = create<ProState>((set, get) => ({
 
             if (error) throw error
 
+            // La barra di stato che il cliente vede deve muoversi quando il
+            // posatore accetta, apre o chiude il cantiere.
+            const orderId = get().jobs.find(j => j.id === jobId)?.order_id
+            const step = JOB_STATUS_MILESTONE[status]
+            if (orderId && step) {
+                const { data: { user } } = await supabase.auth.getUser()
+                setOrderMilestone(orderId, step, { status: 'done' }, user?.id)
+                    .catch(err => console.warn('Timeline non aggiornata:', err.message))
+            }
+
             // Optimistic update
             set(state => ({
                 jobs: state.jobs.map(j => j.id === jobId ? { ...j, status } : j)
@@ -304,5 +341,30 @@ export const useProStore = create<ProState>((set, get) => ({
         } finally {
             set({ loading: false })
         }
+    },
+
+    /**
+     * Il posatore conferma (o corregge) le giornate stimate in preventivo.
+     * Da qui in poi la pianificazione usa questo numero, non la stima.
+     */
+    confirmJobDuration: async (jobId, workDays, calendarDays, note) => {
+        const job = get().jobs.find(j => j.id === jobId)
+        if (!job?.order_id) throw new Error('Cantiere senza ordine collegato')
+
+        await confirmDuration(job.order_id, workDays, calendarDays, note)
+
+        set(state => ({
+            jobs: state.jobs.map(j => j.id === jobId
+                ? {
+                    ...j,
+                    order: {
+                        ...(j.order || {}),
+                        confirmed_work_days: workDays,
+                        confirmed_calendar_days: calendarDays,
+                        duration_pro_note: note,
+                    },
+                }
+                : j),
+        }))
     }
 }))

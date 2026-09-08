@@ -18,6 +18,7 @@ import { AdminNotificationsPage } from '@/pages/admin/AdminNotificationsPage'
 import { CustomerDashboard } from '@/pages/private/CustomerDashboard'
 import { CustomerOrderDetailPage } from '@/pages/private/CustomerOrderDetailPage'
 import HomePage from '@/pages/public/HomePage'
+import { ProfessionalsPage } from '@/pages/public/ProfessionalsPage'
 import { ScrollToTop } from '@/components/layout/ScrollToTop'
 import { ProLayout } from '@/components/layouts/ProLayout'
 import { DashboardPage } from '@/pages/pro/DashboardPage'
@@ -114,6 +115,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/catalog" element={<CatalogPage />} />
+          <Route path="/professionisti" element={<ProfessionalsPage />} />
           <Route path="/products/:slug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CheckoutPage />} />
           <Route

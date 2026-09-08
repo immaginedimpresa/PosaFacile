@@ -8,8 +8,7 @@ export function Step6Location() {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Dove vuoi eseguire i lavori?</h3>
-                <p className="text-gray-500">Partiamo da qui: sapendo la zona possiamo calcolare il preventivo sulla tariffa reale del posatore che la copre</p>
+                <p className="text-gray-500">Indica la zona per trovare i professionisti disponibili e calcolare la posa sulla loro tariffa.</p>
             </div>
 
             {/* Address Form */}

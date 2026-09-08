@@ -1,0 +1,1377 @@
+.pf-storefront,
+.pf-configurator {
+    color: #1c1917;
+    background: #fff;
+}
+:is(.pf-storefront, .pf-configurator) button {
+    cursor: pointer;
+}
+:is(.pf-storefront, .pf-configurator) button:disabled {
+    cursor: not-allowed;
+}
+:is(.pf-storefront, .pf-configurator)
+    :is(a, button, input, select):focus-visible {
+    outline: 2px solid #ea580c;
+    outline-offset: 4px;
+}
+.pf-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 10px;
+    color: #716a65;
+    margin-bottom: 26px;
+}
+.pf-breadcrumb a:hover {
+    color: #c2410c;
+}
+.pf-catalog-intro {
+    background: #f5f2ec;
+    border-bottom: 1px solid #e7e5e4;
+}
+.pf-catalog-intro-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    align-items: center;
+    gap: 80px;
+    padding-block: 30px 44px;
+}
+.pf-catalog-intro .pf-eyebrow,
+.pf-config-intro .pf-eyebrow {
+    color: #995b32;
+    font-size: 9px;
+    margin-bottom: 16px;
+}
+.pf-catalog-intro h1,
+.pf-config-intro h1 {
+    font-size: clamp(38px, 4vw, 56px);
+    letter-spacing: -0.055em;
+    font-weight: 500;
+    line-height: 1.08;
+}
+.pf-catalog-intro h1 span,
+.pf-config-intro h1 span {
+    color: #c2410c;
+}
+.pf-catalog-intro-grid > div > p:last-child {
+    color: #716a65;
+    font-size: 14px;
+    max-width: 420px;
+    line-height: 1.8;
+    margin-top: 19px;
+}
+.pf-catalog-intro-photo {
+    position: relative;
+    height: 260px;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+.pf-catalog-intro-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.pf-catalog-intro-photo > span {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    position: absolute;
+    bottom: 17px;
+    left: 17px;
+    right: 17px;
+    padding: 13px 15px;
+    border: 1px solid #ffffff40;
+    background: #fffffff0;
+    border-radius: 10px;
+    font-size: 11px;
+}
+.pf-catalog-main {
+    padding-block: 35px 70px;
+}
+.pf-catalog-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 30px;
+}
+.pf-catalog-search {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid #d6d3d1;
+    border-radius: 12px;
+    min-width: 0;
+    width: 420px;
+    height: 50px;
+    padding-inline: 16px;
+}
+.pf-catalog-search > svg {
+    color: #a8a29e;
+    flex-shrink: 0;
+}
+.pf-catalog-search input {
+    width: 100%;
+    min-width: 0;
+    font-size: 13px;
+    outline: none;
+    background: transparent;
+}
+.pf-catalog-search button {
+    padding: 4px;
+    color: #716a65;
+}
+.pf-catalog-search:focus-within {
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px #f9731615;
+}
+.pf-category-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-block: 25px 35px;
+    padding-bottom: 4px;
+}
+.pf-category-tabs button {
+    flex-shrink: 0;
+    padding: 10px 19px;
+    border: 1px solid #e7e5e4;
+    border-radius: 30px;
+    color: #57534e;
+    font-size: 12px;
+    transition:
+        background 0.2s,
+        border-color 0.2s;
+}
+.pf-category-tabs button:hover {
+    border-color: #a8a29e;
+}
+.pf-category-tabs button.is-active {
+    background: #1c1917;
+    color: #fff;
+    border-color: #1c1917;
+}
+.pf-catalog-layout {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 38px;
+    align-items: start;
+}
+.pf-filter-panel {
+    position: sticky;
+    top: 104px;
+}
+.pf-catalog-filters {
+    border: 1px solid #e7e5e4;
+    border-radius: 16px;
+    padding: 21px;
+}
+.pf-filter-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.pf-filter-heading h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.pf-filter-heading button {
+    color: #716a65;
+    padding: 5px;
+}
+.pf-catalog-filters fieldset {
+    margin-top: 23px;
+    border-top: 1px solid #e7e5e4;
+    padding-top: 19px;
+}
+.pf-catalog-filters legend {
+    float: left;
+    width: 100%;
+    font-size: 10px;
+    font-weight: 500;
+    margin-bottom: 17px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #716a65;
+}
+.pf-catalog-filters fieldset > label {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    color: #57534e;
+    margin-bottom: 13px;
+    cursor: pointer;
+    clear: both;
+}
+.pf-catalog-filters :is(input[type='radio'], input[type='checkbox']) {
+    width: 15px;
+    height: 15px;
+    accent-color: #ea580c;
+    flex-shrink: 0;
+}
+.pf-price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    clear: both;
+}
+.pf-price-inputs > label {
+    min-width: 0;
+}
+.pf-price-inputs label > span {
+    font-size: 9px;
+    color: #716a65;
+}
+.pf-price-inputs > span {
+    font-size: 10px;
+    color: #a8a29e;
+    margin-top: 18px;
+}
+.pf-price-inputs input {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 9px;
+    margin-top: 5px;
+    border: 1px solid #e7e5e4;
+    border-radius: 8px;
+    font-size: 12px;
+    background: #fafaf9;
+}
+.pf-filter-error {
+    font-size: 10px;
+    color: #be123c;
+    line-height: 1.6;
+    margin-top: 10px;
+}
+.pf-availability {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    margin-top: 24px;
+    padding-top: 21px;
+    border-top: 1px solid #e7e5e4;
+    font-size: 11px;
+    cursor: pointer;
+}
+.pf-availability input {
+    margin-top: 2px;
+}
+.pf-availability small {
+    display: block;
+    margin-top: 4px;
+    color: #716a65;
+    font-size: 9px;
+}
+.pf-filter-note {
+    background: #f5f2ec;
+    border-radius: 10px;
+    font-size: 10px;
+    line-height: 1.8;
+    color: #716a65;
+    padding: 14px;
+    margin-top: 24px;
+}
+.pf-results-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 24px;
+    min-height: 34px;
+}
+.pf-results-toolbar > span {
+    font-size: 11px;
+    color: #716a65;
+}
+.pf-results-toolbar > div {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+.pf-sort {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    color: #716a65;
+}
+.pf-sort select {
+    font-size: 11px;
+    color: #44403c;
+    background: transparent;
+    padding: 6px 0;
+    cursor: pointer;
+    max-width: 155px;
+}
+.pf-mobile-filter-toggle {
+    display: none;
+}
+.pf-product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px 20px;
+}
+.pf-product-card {
+    min-width: 0;
+    display: block;
+}
+.pf-product-image {
+    aspect-ratio: 1 / 1.1;
+    overflow: hidden;
+    border-radius: 13px;
+    background: #f5f2ec;
+    position: relative;
+    border: 1px solid #e7e5e470;
+}
+.pf-product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s;
+}
+.pf-product-card:hover img {
+    transform: scale(1.04);
+}
+.pf-product-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    height: 100%;
+    color: #a8a29e;
+}
+.pf-product-placeholder > span {
+    font-size: 11px;
+}
+.pf-product-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #ffffffed;
+    border-radius: 20px;
+    padding: 6px 9px;
+    font-size: 9px;
+    color: #57534e;
+}
+.pf-product-arrow {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    transition: background 0.2s;
+}
+.pf-product-card:hover .pf-product-arrow {
+    background: #f97316;
+}
+.pf-product-meta {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 15px;
+    color: #716a65;
+    font-size: 9px;
+}
+.pf-product-meta > span:first-child {
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+.pf-product-card h3 {
+    font-size: 16px;
+    line-height: 1.4;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin-top: 7px;
+}
+.pf-product-card > p {
+    color: #716a65;
+    font-size: 11px;
+    margin-top: 5px;
+}
+.pf-product-price {
+    display: flex;
+    justify-content: space-between;
+    gap: 7px;
+    align-items: center;
+    border-top: 1px solid #e7e5e4;
+    padding-top: 13px;
+    margin-top: 15px;
+}
+.pf-product-price > span:first-child {
+    font-size: 18px;
+    font-weight: 500;
+}
+.pf-product-price small {
+    font-size: 10px;
+    color: #716a65;
+    font-weight: 400;
+}
+.pf-product-price > span:last-child {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    font-size: 9px;
+    color: #716a65;
+}
+.pf-product-skeleton > div {
+    aspect-ratio: 1 / 1.1;
+    border-radius: 13px;
+    background: #f5f2ec;
+}
+.pf-product-skeleton > span {
+    display: block;
+    background: #f5f2ec;
+    height: 13px;
+    margin-top: 15px;
+    border-radius: 4px;
+    width: 80%;
+}
+.pf-product-skeleton > span:last-child {
+    width: 45%;
+}
+.pf-catalog-empty {
+    border: 1px solid #e7e5e4;
+    border-radius: 16px;
+    padding: 70px 25px;
+    text-align: center;
+    background: #fafaf9;
+}
+.pf-catalog-empty > svg {
+    margin: 0 auto 22px;
+    color: #a8a29e;
+}
+.pf-catalog-empty h2 {
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+}
+.pf-catalog-empty p {
+    color: #716a65;
+    max-width: 360px;
+    font-size: 13px;
+    line-height: 1.8;
+    margin: 12px auto 25px;
+}
+.pf-catalog-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 25px;
+    padding: 38px;
+    background: #f5f2ec;
+    border-radius: 16px;
+    margin-top: 60px;
+}
+.pf-catalog-bottom .pf-eyebrow {
+    color: #995b32;
+    font-size: 9px;
+}
+.pf-catalog-bottom h2 {
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    margin-top: 12px;
+}
+.pf-catalog-bottom p:last-child {
+    font-size: 12px;
+    color: #716a65;
+    margin-top: 8px;
+}
+/* The configurator shares the storefront shell; individual steps retain their logic. */
+.pf-configurator {
+    background: #f5f2ec;
+    padding-bottom: 86px;
+}
+.pf-config-intro {
+    padding-block: 29px 40px;
+}
+.pf-config-intro > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 30px;
+}
+.pf-config-intro h1 {
+    font-size: 46px;
+}
+.pf-config-intro > div > p {
+    color: #716a65;
+    font-size: 12px;
+    line-height: 1.8;
+}
+.pf-config-layout {
+    display: grid;
+    grid-template-columns: 235px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+    padding-bottom: 70px;
+}
+.pf-config-sidebar {
+    position: sticky;
+    top: 104px;
+}
+.pf-config-progress {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #716a65;
+    padding: 4px 10px 20px;
+}
+.pf-config-sidebar ol {
+    display: grid;
+    gap: 5px;
+}
+.pf-config-sidebar li button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #a8a29e;
+    text-align: left;
+}
+.pf-config-sidebar li button > span:first-child {
+    width: 25px;
+    height: 25px;
+    border: 1px solid #d6d3d1;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 9px;
+}
+.pf-config-sidebar li .is-current {
+    background: #fff;
+    color: #1c1917;
+    font-weight: 500;
+    box-shadow: 0 3px 8px #1c191703;
+}
+.pf-config-sidebar li .is-current > span:first-child {
+    background: #f97316;
+    border-color: #f97316;
+    color: #1c1917;
+}
+.pf-step-dot {
+    margin-left: auto;
+    width: 5px;
+    height: 5px;
+    background: #f97316;
+    border-radius: 50%;
+}
+.pf-config-sidebar li .is-complete {
+    color: #57534e;
+}
+.pf-config-sidebar li .is-complete:hover {
+    background: #e7e5e4;
+}
+.pf-config-sidebar li .is-complete > span:first-child {
+    background: #1c1917;
+    border-color: #1c1917;
+    color: #fff;
+}
+.pf-config-sidebar-note {
+    border-top: 1px solid #d6d3d1;
+    padding: 22px 12px 0;
+    margin-top: 25px;
+    color: #716a65;
+}
+.pf-config-sidebar-note svg {
+    color: #995b32;
+    margin-bottom: 13px;
+}
+.pf-config-sidebar-note h3 {
+    color: #57534e;
+    font-weight: 500;
+    font-size: 12px;
+}
+.pf-config-sidebar-note p {
+    font-size: 11px;
+    line-height: 1.8;
+    margin-top: 8px;
+}
+.pf-config-workspace {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    border-radius: 18px;
+    padding: 32px;
+    min-width: 0;
+}
+.pf-config-form-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.pf-config-form-heading .pf-eyebrow {
+    color: #995b32;
+    font-size: 9px;
+}
+.pf-config-form-heading h2 {
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+    margin-top: 12px;
+}
+.pf-config-form-heading > button {
+    color: #a8a29e;
+    padding: 10px;
+    border-radius: 8px;
+}
+.pf-config-form-heading > button:hover {
+    background: #fff1f2;
+    color: #be123c;
+}
+.pf-config-session {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 13px 15px;
+    background: #f5f2ec;
+    border-radius: 9px;
+    font-size: 10px;
+    color: #716a65;
+    margin-block: 25px;
+    line-height: 1.6;
+}
+.pf-config-session > span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.pf-config-session a {
+    color: #9a3412;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+.pf-config-selected {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    border-radius: 12px;
+    margin-bottom: 25px;
+}
+.pf-config-selected img {
+    width: 55px;
+    height: 55px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.pf-config-selected > div {
+    min-width: 0;
+    flex: 1;
+}
+.pf-config-selected > div small {
+    display: block;
+    font-size: 8px;
+    color: #716a65;
+    letter-spacing: 0.07em;
+}
+.pf-config-selected strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 6px;
+}
+.pf-config-selected > span {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.pf-config-selected > span small {
+    font-size: 10px;
+    color: #716a65;
+    font-weight: 400;
+}
+.pf-config-step {
+    min-height: 260px;
+}
+.pf-config-step :is(.text-gray-900, .text-gray-800) {
+    color: #292524;
+}
+.pf-config-step :is(.text-gray-700, .text-gray-600) {
+    color: #57534e;
+}
+.pf-config-step .text-gray-500 {
+    color: #716a65;
+}
+.pf-config-step .text-gray-400 {
+    color: #716a65;
+}
+.pf-config-step .bg-gray-50 {
+    background: #fafaf9;
+}
+.pf-config-step .bg-gray-100 {
+    background: #f5f2ec;
+}
+.pf-config-step .bg-gray-200 {
+    background: #e7e5e4;
+}
+.pf-config-step .border-gray-200 {
+    border-color: #e7e5e4;
+}
+.pf-config-step .border-gray-300 {
+    border-color: #d6d3d1;
+}
+.pf-config-step
+    :is(
+        input:not([type='checkbox']):not([type='radio']):not([type='range']),
+        select,
+        textarea
+    ) {
+    background-color: #fafaf9;
+    border-color: #e7e5e4;
+    border-radius: 10px;
+    font-size: 13px;
+}
+.pf-config-step :is(input[type='checkbox'], input[type='radio']) {
+    accent-color: #ea580c;
+}
+.pf-config-step h3 {
+    font-weight: 500;
+    font-size: 17px;
+    letter-spacing: -0.02em;
+}
+.pf-config-step p {
+    line-height: 1.75;
+}
+.pf-config-step button {
+    transition:
+        background 0.2s,
+        border-color 0.2s;
+}
+.pf-config-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: #fffffff5;
+    backdrop-filter: blur(16px);
+    border-top: 1px solid #e7e5e4;
+    padding-block: 15px;
+}
+.pf-config-bottom > div {
+    display: flex;
+    align-items: center;
+    gap: 27px;
+}
+.pf-config-back {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #e7e5e4;
+    border-radius: 10px;
+    padding: 13px 16px;
+    color: #57534e;
+    font-size: 12px;
+}
+.pf-config-bottom-progress {
+    width: 240px;
+    margin-right: auto;
+}
+.pf-config-bottom-progress > span {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #716a65;
+    font-size: 10px;
+}
+.pf-config-bottom-progress strong {
+    color: #44403c;
+    font-weight: 500;
+}
+.pf-config-bottom-progress > div {
+    background: #e7e5e4;
+    height: 4px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+.pf-config-bottom-progress > div > span {
+    display: block;
+    height: 100%;
+    background: #f97316;
+    transition: width 0.3s;
+}
+.pf-config-total {
+    text-align: right;
+}
+.pf-config-total small {
+    display: block;
+    color: #716a65;
+    font-size: 9px;
+}
+.pf-config-total strong {
+    display: block;
+    font-weight: 500;
+    font-size: 23px;
+    letter-spacing: -0.03em;
+}
+.pf-config-bottom .pf-button {
+    min-width: 160px;
+}
+.pf-config-bottom .pf-button:disabled {
+    opacity: 0.4;
+    transform: none;
+    box-shadow: none;
+}
+@media (max-width: 1100px) {
+    .pf-catalog-layout {
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 25px;
+    }
+    .pf-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .pf-catalog-intro-grid {
+        gap: 45px;
+    }
+    .pf-config-layout {
+        grid-template-columns: 190px minmax(0, 1fr);
+        gap: 25px;
+    }
+    .pf-config-workspace {
+        padding: 25px;
+    }
+    .pf-config-form-heading h2 {
+        font-size: 27px;
+    }
+}
+@media (max-width: 800px) {
+    .pf-catalog-intro-grid {
+        gap: 25px;
+    }
+    .pf-catalog-intro h1 {
+        font-size: 38px;
+    }
+    .pf-catalog-toolbar > a {
+        display: none;
+    }
+    .pf-catalog-search {
+        width: 100%;
+    }
+    .pf-catalog-layout {
+        display: flex;
+        flex-direction: column;
+    }
+    .pf-filter-panel {
+        display: none;
+        position: static;
+        width: 100%;
+    }
+    .pf-filter-panel.is-open {
+        display: block;
+    }
+    .pf-catalog-results {
+        width: 100%;
+    }
+    .pf-mobile-filter-toggle {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 11px;
+        padding: 7px 10px;
+        border: 1px solid #e7e5e4;
+        border-radius: 7px;
+    }
+    .pf-catalog-bottom {
+        padding: 28px;
+    }
+    .pf-catalog-bottom h2 {
+        font-size: 27px;
+    }
+    .pf-config-intro > div > p {
+        max-width: 260px;
+    }
+    .pf-config-intro h1 {
+        font-size: 39px;
+    }
+    .pf-config-sidebar {
+        display: none;
+    }
+    .pf-config-layout {
+        grid-template-columns: 1fr;
+    }
+    .pf-config-bottom-progress {
+        width: 190px;
+    }
+    .pf-config-total {
+        display: none;
+    }
+}
+@media (max-width: 639px) {
+    .pf-catalog-intro-grid {
+        grid-template-columns: 1fr;
+        padding-block: 25px 30px;
+        gap: 23px;
+    }
+    .pf-breadcrumb {
+        margin-bottom: 22px;
+    }
+    .pf-catalog-intro h1 {
+        font-size: 43px;
+    }
+    .pf-catalog-intro-photo {
+        height: 190px;
+        margin-top: 0;
+    }
+    .pf-catalog-intro-grid > div > p:last-child {
+        font-size: 13px;
+        margin-top: 15px;
+    }
+    .pf-catalog-main {
+        padding-block: 25px 40px;
+    }
+    .pf-category-tabs {
+        margin-block: 20px 23px;
+        gap: 6px;
+    }
+    .pf-category-tabs button {
+        padding: 9px 15px;
+        font-size: 11px;
+    }
+    .pf-results-toolbar {
+        flex-wrap: wrap;
+        gap: 13px;
+        margin-bottom: 20px;
+    }
+    .pf-results-toolbar > span {
+        width: 100%;
+        font-size: 11px;
+    }
+    .pf-results-toolbar > div {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .pf-product-grid {
+        gap: 25px 14px;
+    }
+    .pf-product-image {
+        border-radius: 10px;
+    }
+    .pf-product-meta {
+        font-size: 8px;
+        margin-top: 12px;
+    }
+    .pf-product-card h3 {
+        font-size: 14px;
+    }
+    .pf-product-card > p {
+        font-size: 10px;
+    }
+    .pf-product-price > span:first-child {
+        font-size: 17px;
+    }
+    .pf-product-price > span:last-child {
+        display: none;
+    }
+    .pf-product-badge {
+        top: 8px;
+        left: 8px;
+        font-size: 8px;
+        padding: 5px 7px;
+    }
+    .pf-product-arrow {
+        width: 29px;
+        height: 29px;
+        bottom: 8px;
+        right: 8px;
+    }
+    .pf-catalog-bottom {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 38px;
+    }
+    .pf-catalog-bottom h2 {
+        font-size: 29px;
+    }
+    .pf-catalog-bottom p:last-child {
+        line-height: 1.7;
+    }
+    .pf-catalog-empty {
+        padding: 40px 20px;
+    }
+    .pf-catalog-empty h2 {
+        font-size: 25px;
+    }
+    .pf-configurator {
+        padding-bottom: calc(85px + env(safe-area-inset-bottom));
+    }
+    .pf-config-intro {
+        padding-block: 24px 27px;
+    }
+    .pf-config-intro > div {
+        display: block;
+    }
+    .pf-config-intro h1 {
+        font-size: 39px;
+    }
+    .pf-config-intro > div > p {
+        max-width: none;
+        font-size: 12px;
+        margin-top: 17px;
+    }
+    .pf-config-layout {
+        padding-bottom: 38px;
+    }
+    .pf-config-workspace {
+        padding: 22px 17px;
+        border-radius: 14px;
+    }
+    .pf-config-form-heading h2 {
+        font-size: 26px;
+    }
+    .pf-config-form-heading {
+        gap: 10px;
+    }
+    .pf-config-form-heading > button {
+        padding: 7px;
+    }
+    .pf-config-session {
+        display: block;
+        font-size: 10px;
+        padding: 12px;
+        margin-block: 20px;
+    }
+    .pf-config-session a {
+        display: inline-block;
+        margin-top: 7px;
+    }
+    .pf-config-step h3 {
+        font-size: 16px;
+    }
+    .pf-config-step .p-6 {
+        padding: 17px;
+    }
+    .pf-config-step .p-4 {
+        padding: 13px;
+    }
+    .pf-config-step .text-sm {
+        font-size: 12px;
+    }
+    .pf-config-step p {
+        font-size: 12px;
+    }
+    .pf-config-selected {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .pf-config-selected > span {
+        width: 100%;
+        font-size: 13px;
+    }
+    .pf-config-bottom {
+        padding-block: 12px calc(12px + env(safe-area-inset-bottom));
+    }
+    .pf-config-bottom > div {
+        gap: 12px;
+    }
+    .pf-config-back {
+        padding: 12px;
+    }
+    .pf-config-back > span {
+        display: none;
+    }
+    .pf-config-bottom-progress {
+        min-width: 0;
+        width: auto;
+        flex: 1;
+    }
+    .pf-config-bottom-progress > span {
+        display: block;
+        font-size: 9px;
+    }
+    .pf-config-bottom-progress strong {
+        display: none;
+    }
+    .pf-config-bottom .pf-button {
+        min-width: 0;
+        font-size: 12px;
+        padding: 13px 17px;
+        min-height: 44px;
+        gap: 9px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    :is(.pf-storefront, .pf-configurator) *,
+    :is(.pf-storefront, .pf-configurator) *::before,
+    :is(.pf-storefront, .pf-configurator) *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+/* The quote is a viewport-sized workspace: only a long step needs to scroll. */
+.pf-configurator {
+    height: 100dvh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
+}
+.pf-configurator > header {
+    flex-shrink: 0;
+}
+.pf-configurator #mobile-navigation {
+    position: absolute;
+    inset: 100% 0 auto;
+}
+.pf-configurator > main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.pf-config-intro {
+    flex-shrink: 0;
+    padding-block: 21px 24px;
+}
+.pf-config-intro .pf-breadcrumb {
+    display: none;
+}
+.pf-config-intro .pf-eyebrow {
+    margin-bottom: 9px;
+    font-size: 8px;
+}
+.pf-config-intro h1 {
+    font-size: 30px;
+    line-height: 1.2;
+}
+.pf-config-intro h1 br {
+    display: none;
+}
+.pf-config-intro h1 span::before {
+    content: ' ';
+}
+.pf-config-intro > div > p {
+    font-size: 11px;
+}
+.pf-config-layout {
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 21px;
+    align-items: stretch;
+}
+.pf-config-sidebar {
+    position: static;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+.pf-config-progress {
+    padding-bottom: 13px;
+}
+.pf-config-sidebar ol {
+    gap: 3px;
+}
+.pf-config-sidebar li button {
+    padding-block: 8px;
+}
+.pf-config-sidebar-note {
+    margin-top: 17px;
+    padding-top: 17px;
+}
+.pf-config-workspace {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 24px 28px;
+    overflow: hidden;
+}
+.pf-config-form-heading {
+    flex-shrink: 0;
+}
+.pf-config-form-heading h2 {
+    font-size: 26px;
+    margin-top: 7px;
+}
+.pf-config-session {
+    flex-shrink: 0;
+    margin-block: 17px;
+    padding: 10px 13px;
+}
+.pf-config-selected {
+    flex-shrink: 0;
+    padding: 9px 12px;
+    margin-bottom: 17px;
+}
+.pf-config-selected img {
+    width: 40px;
+    height: 40px;
+}
+.pf-config-step {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #d6d3d1 transparent;
+    padding: 3px 8px 8px 3px;
+}
+.pf-config-step > .space-y-6 > :not(:last-child) {
+    margin-block-end: 17px;
+}
+.pf-config-step > .space-y-8 > :not(:last-child) {
+    margin-block-end: 22px;
+}
+.pf-config-step .p-6 {
+    padding: 19px;
+}
+.pf-config-step .p-4 {
+    padding: 13px;
+}
+.pf-config-step h3 {
+    font-size: 16px;
+}
+.pf-config-step p.text-gray-500 {
+    font-size: 13px;
+    line-height: 1.6;
+}
+.pf-config-step
+    input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.pf-config-bottom {
+    position: static;
+    flex-shrink: 0;
+    padding-block: 12px;
+}
+.pf-config-bottom .pf-button {
+    min-height: 47px;
+    padding-block: 12px;
+}
+@media (max-height: 850px) and (min-width: 801px) {
+    .pf-config-sidebar-note {
+        display: none;
+    }
+    .pf-config-intro {
+        padding-block: 14px 18px;
+    }
+    .pf-config-intro .pf-eyebrow {
+        margin-bottom: 6px;
+    }
+    .pf-config-workspace {
+        padding: 19px 24px;
+    }
+    .pf-config-form-heading h2 {
+        font-size: 23px;
+    }
+    .pf-config-session {
+        margin-block: 13px;
+    }
+}
+@media (max-width: 800px) {
+    .pf-config-intro > div > p {
+        display: none;
+    }
+    .pf-config-layout {
+        display: flex;
+    }
+    .pf-config-workspace {
+        width: 100%;
+    }
+    .pf-config-step .grid-cols-3 {
+        gap: 12px;
+    }
+}
+@media (max-width: 639px) {
+    .pf-configurator > header > div:first-of-type {
+        height: 62px;
+    }
+    .pf-config-intro {
+        padding-block: 15px;
+    }
+    .pf-config-intro .pf-eyebrow {
+        display: none;
+    }
+    .pf-config-intro h1 {
+        font-size: 24px;
+        max-width: 330px;
+        line-height: 1.15;
+    }
+    .pf-config-layout {
+        width: calc(100% - 24px);
+        padding-bottom: 12px;
+    }
+    .pf-config-workspace {
+        padding: 17px 14px;
+    }
+    .pf-config-form-heading h2 {
+        font-size: 23px;
+    }
+    .pf-config-form-heading .pf-eyebrow {
+        font-size: 8px;
+    }
+    .pf-config-session {
+        display: flex;
+        margin-block: 12px;
+        padding: 8px 10px;
+    }
+    .pf-config-session > span {
+        display: none;
+    }
+    .pf-config-session a {
+        margin-top: 0;
+        font-size: 10px;
+    }
+    .pf-config-step {
+        padding: 2px 5px 6px 2px;
+    }
+    .pf-config-step .p-6 {
+        padding: 14px;
+    }
+    .pf-config-step > .space-y-6 > :not(:last-child) {
+        margin-block-end: 13px;
+    }
+    .pf-config-step h3 {
+        font-size: 14px;
+    }
+    .pf-config-step p.text-gray-500 {
+        font-size: 11px;
+    }
+    .pf-config-selected {
+        flex-wrap: nowrap;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .pf-config-selected > span {
+        width: auto;
+        font-size: 12px;
+    }
+    .pf-config-selected > div small {
+        display: none;
+    }
+    .pf-config-selected strong {
+        margin-top: 0;
+        font-size: 11px;
+    }
+    .pf-config-selected img {
+        width: 32px;
+        height: 32px;
+    }
+    .pf-config-bottom {
+        padding-block: 10px calc(10px + env(safe-area-inset-bottom));
+    }
+    .pf-config-bottom .pf-button {
+        min-height: 42px;
+        padding-block: 11px;
+    }
+}

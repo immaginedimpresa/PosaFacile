@@ -1,118 +1,481 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, ShieldCheck, Sparkles, PhoneCall, CheckCircle } from 'lucide-react'
-import { TileFloorHero } from '@/components/home/TileFloorHero'
-import { BrandPartners } from '@/components/home/BrandPartners'
-import { HeroBeforeAfter } from '@/components/home/HeroBeforeAfter'
+import {
+    ArrowDown,
+    ArrowUpRight,
+    Check,
+    CheckCheck,
+    ChevronLeft,
+    ChevronRight,
+    ClipboardList,
+    Layers,
+    MapPin,
+    MessageCircle,
+    PackageCheck,
+    Ruler,
+    Sparkles,
+} from 'lucide-react'
 import { InstantEstimator } from '@/components/home/InstantEstimator'
-import { BentoFeatures } from '@/components/home/BentoFeatures'
-import { RealProjectsCarousel } from '@/components/home/RealProjectsCarousel'
-import { HowItWorks } from '@/components/home/HowItWorks'
-import { TestimonialsCarousel } from '@/components/home/TestimonialsCarousel'
 import { HomeFAQ } from '@/components/home/HomeFAQ'
+import './home.css'
+
+const environments = [
+    {
+        name: 'Naturale, come te.',
+        mood: 'Caldo & naturale',
+        image: '/images/living-naturale.jpg',
+        alt: 'Soggiorno luminoso con pavimento effetto legno, poltrone chiare e dettagli naturali',
+        swatch: 'wood',
+        detail: 'Toni caldi. Texture da vivere.',
+        number: '01',
+    },
+    {
+        name: 'Spazio all’essenziale.',
+        mood: 'Minimal & contemporaneo',
+        image: '/images/living-contemporaneo.jpg',
+        alt: 'Interno contemporaneo con superfici neutre e arredi essenziali',
+        swatch: 'stone',
+        detail: 'Linee pulite. Nuove prospettive.',
+        number: '02',
+    },
+    {
+        name: 'Il tuo lato elegante.',
+        mood: 'Morbido & sofisticato',
+        image: '/images/living-elegante.jpg',
+        alt: 'Living elegante con divano chiaro, materiali caldi e luce naturale',
+        swatch: 'marble',
+        detail: 'Luce, materia e carattere.',
+        number: '03',
+    },
+]
 
 export default function HomePage() {
+    const [active, setActive] = useState(0)
+    const environment = environments[active]
     return (
-        <div className="bg-background min-h-screen font-sans">
-            {/* 1. HERO 3D INTERACTIVE ROOM */}
-            <TileFloorHero />
-
-            {/* 2. LIVE STATS STRIP */}
-            <section className="bg-[#f5f2ec] pb-16 pt-2 border-b border-stone-200/60">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6">
-                    <dl className="grid grid-cols-2 gap-x-6 gap-y-8 border-t border-[#14171a]/10 pt-10 md:grid-cols-4">
-                        {[
-                            { valore: '10.000+ m²', voce: 'Pavimenti posati con successo', icon: '✨' },
-                            { valore: '500+', voce: 'Posatori certificati e assicurati', icon: '👷' },
-                            { valore: '4,9 / 5', voce: 'Punteggio su oltre 1.800 recensioni', icon: '⭐' },
-                            { valore: '10 Anni', voce: 'Garanzia su fornitura e posa', icon: '🛡️' },
-                        ].map(({ valore, voce, icon }) => (
-                            <div key={voce} className="flex flex-col">
-                                <span className="text-2xl mb-1">{icon}</span>
-                                <dt className="font-display text-3xl font-extrabold tracking-tight text-[#14171a] md:text-4xl">
-                                    {valore}
-                                </dt>
-                                <dd className="mt-1 text-xs sm:text-sm text-[#6b7178] font-medium leading-relaxed">
-                                    {voce}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
-            </section>
-
-            {/* 3. PARTNER BRANDS TRUST TICKER */}
-            <BrandPartners />
-
-            {/* 4. BEFORE & AFTER INTERACTIVE AI SLIDER */}
-            <HeroBeforeAfter />
-
-            {/* 5. INSTANT ESTIMATOR / CALCOLATORE RAPIDO */}
-            <InstantEstimator />
-
-            {/* 6. BENTO GRID FEATURES */}
-            <BentoFeatures />
-
-            {/* 7. REAL PROJECTS SHOWCASE CAROUSEL */}
-            <RealProjectsCarousel />
-
-            {/* 8. HOW IT WORKS 4-STEP WORKFLOW */}
-            <HowItWorks />
-
-            {/* 9. TESTIMONIALS & REVIEWS CAROUSEL */}
-            <TestimonialsCarousel />
-
-            {/* 10. FAQ ACCORDION */}
-            <HomeFAQ />
-
-            {/* 11. ULTIMATE CTA BANNER */}
-            <section className="py-24 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-black/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="container px-4 sm:px-6 mx-auto text-center relative z-10 max-w-4xl">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-md px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white mb-6 border border-white/30">
-                        <Sparkles size={14} />
-                        Preventivo Gratuito in 2 Minuti
-                    </div>
-
-                    <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold font-display text-white mb-6 tracking-tight leading-tight">
-                        Pronto a trasformare la tua casa?
-                    </h2>
-
-                    <p className="text-lg sm:text-xl text-orange-100 mb-10 max-w-2xl mx-auto leading-relaxed">
-                        Configura il tuo preventivo personalizzato: piastrelle, posa e trasporto inclusi al centesimo. Nessun vincolo, blocchi il prezzo per 30 giorni.
+        <div className="pf-home">
+            <section
+                className="pf-hero pf-container"
+                aria-labelledby="hero-title"
+            >
+                <div className="pf-hero-copy">
+                    <p className="pf-eyebrow">
+                        <span className="pf-status-dot" /> DALL’IDEA ALL’ULTIMA
+                        PIASTRELLA
                     </p>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+                    <h1 id="hero-title">
+                        Casa tua.
+                        <br />
+                        Un nuovo
+                        <br />
+                        <span>punto di vista.</span>
+                    </h1>
+                    <p className="pf-hero-description">
+                        Il pavimento che immagini, la posa che ti serve.
+                        <br className="hidden sm:block" /> Materiali e
+                        professionisti in un unico posto, con un preventivo
+                        costruito intorno a te.
+                    </p>
+                    <div className="pf-hero-actions">
                         <Link
+                            className="pf-button pf-button-orange"
                             to="/configuratore"
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 h-14 px-10 text-base sm:text-lg font-bold rounded-full bg-white text-orange-600 hover:bg-orange-50 transition-all shadow-2xl hover:scale-105"
                         >
-                            Calcola il Preventivo Online
-                            <ArrowRight size={20} />
+                            Calcola il tuo preventivo <ArrowUpRight size={19} />
                         </Link>
-                        <Link
-                            to="/catalog"
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-14 px-8 text-base font-semibold rounded-full border-2 border-white/80 text-white hover:bg-white/15 transition-all"
-                        >
-                            Sfoglia il Catalogo Prodotti
-                        </Link>
+                        <a className="pf-text-link" href="#ispirazioni">
+                            Trova il tuo stile <ArrowDown size={16} />
+                        </a>
                     </div>
-
-                    {/* Trust assurances footer */}
-                    <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-orange-100 font-medium">
-                        <span className="flex items-center gap-1.5">
-                            <ShieldCheck size={16} /> Garanzia 10 anni sulla posa
+                    <div className="pf-hero-assurances">
+                        <span>
+                            <Check size={15} /> Preventivo gratuito
                         </span>
-                        <span className="flex items-center gap-1.5">
-                            <CheckCircle size={16} /> Posatori assicurati fino a 1M€
+                        <span>
+                            <Check size={15} /> Senza impegno
                         </span>
-                        <span className="flex items-center gap-1.5">
-                            <PhoneCall size={16} /> Supporto clienti dedicato 7/7
+                    </div>
+                    <a href="#come-funziona" className="pf-hero-note">
+                        <span className="pf-note-icon">
+                            <Layers size={21} />
+                        </span>
+                        <span>
+                            Tu scegli come viverla.
+                            <br />
+                            <strong>Noi ti aiutiamo a realizzarla.</strong>
+                        </span>
+                        <ArrowDown size={17} />
+                    </a>
+                </div>
+                <div className="pf-hero-visual">
+                    <div className="pf-hero-photo">
+                        {environments.map((item, index) => (
+                            <img
+                                key={item.image}
+                                src={item.image}
+                                alt={item.alt}
+                                className={active === index ? 'is-active' : ''}
+                                fetchPriority={index === 0 ? 'high' : 'auto'}
+                                loading={index === 0 ? 'eager' : 'lazy'}
+                                aria-hidden={active !== index}
+                                width="1600"
+                                height="1200"
+                            />
+                        ))}
+                        <div className="pf-photo-top">
+                            <span>
+                                <Sparkles size={14} /> LA TUA PROSSIMA
+                                ISPIRAZIONE
+                            </span>
+                            <span>{environment.number} / 03</span>
+                        </div>
+                        <div className="pf-photo-caption" aria-live="polite">
+                            <span>SPAZI DA IMMAGINARE</span>
+                            <h2>{environment.name}</h2>
+                            <p>{environment.detail}</p>
+                        </div>
+                        <div className="pf-photo-arrows">
+                            <button
+                                aria-label="Ambiente precedente"
+                                onClick={() => setActive((active + 2) % 3)}
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                            <button
+                                aria-label="Ambiente successivo"
+                                onClick={() => setActive((active + 1) % 3)}
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                    <div className="pf-material-selector">
+                        <span>
+                            Che atmosfera
+                            <br />
+                            <strong>ti somiglia?</strong>
+                        </span>
+                        <div>
+                            {environments.map((item, index) => (
+                                <button
+                                    key={item.mood}
+                                    aria-label={item.mood}
+                                    aria-pressed={active === index}
+                                    className={`pf-swatch ${item.swatch} ${active === index ? 'is-selected' : ''}`}
+                                    onClick={() => setActive(index)}
+                                >
+                                    {active === index && <Check size={18} />}
+                                </button>
+                            ))}
+                        </div>
+                        <span className="pf-selected-mood">
+                            {environment.mood}
+                            <small>Esplora gli ambienti</small>
                         </span>
                     </div>
                 </div>
             </section>
+            <div className="pf-service-strip">
+                <div className="pf-container">
+                    {[
+                        {
+                            icon: Layers,
+                            title: 'Materiali da scegliere',
+                            text: 'Il tuo stile, dal catalogo',
+                        },
+                        {
+                            icon: Ruler,
+                            title: 'Costi da capire',
+                            text: 'Un preventivo, voce per voce',
+                        },
+                        {
+                            icon: MapPin,
+                            title: 'Posatori da conoscere',
+                            text: 'Professionisti nella tua zona',
+                        },
+                        {
+                            icon: PackageCheck,
+                            title: 'Un progetto da seguire',
+                            text: 'Tutto nella tua area personale',
+                        },
+                    ].map(({ icon: Icon, title, text }) => (
+                        <div key={title}>
+                            <Icon size={24} strokeWidth={1.5} />
+                            <span>
+                                <strong>{title}</strong>
+                                <small>{text}</small>
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <section id="come-funziona" className="pf-section pf-container">
+                <div className="pf-section-heading">
+                    <div>
+                        <p className="pf-eyebrow">MENO PENSIERI, PIÙ CASA</p>
+                        <h2>
+                            Un bel risultato.
+                            <br />
+                            Un percorso semplice.
+                        </h2>
+                    </div>
+                    <p>
+                        Materiali, preventivo e posa: finalmente insieme.
+                        <br />
+                        Ogni scelta al posto giusto, dall’inizio alla fine.
+                    </p>
+                </div>
+                <div className="pf-steps">
+                    {[
+                        {
+                            number: '01',
+                            icon: Layers,
+                            title: 'Trova il tuo pavimento',
+                            text: 'Esplora il catalogo e scegli il materiale che dà carattere ai tuoi spazi.',
+                            link: '/catalog',
+                            action: 'Esplora il catalogo',
+                        },
+                        {
+                            number: '02',
+                            icon: ClipboardList,
+                            title: 'Dai forma al progetto',
+                            text: 'Indica zona, superficie e servizi. Scopri le singole voci del tuo preventivo.',
+                            link: '/configuratore',
+                            action: 'Crea il preventivo',
+                        },
+                        {
+                            number: '03',
+                            icon: PackageCheck,
+                            title: 'Facciamo spazio al nuovo',
+                            text: 'Scegli il professionista e la data disponibile, poi segui il lavoro dalla tua area.',
+                            link: '/configuratore',
+                            action: 'Calcola il preventivo',
+                        },
+                    ].map(
+                        ({ number, icon: Icon, title, text, link, action }) => (
+                            <article key={number} className="pf-step">
+                                <div className="pf-step-top">
+                                    <span>{number}</span>
+                                    <Icon size={28} strokeWidth={1.4} />
+                                </div>
+                                <h3>{title}</h3>
+                                <p>{text}</p>
+                                <Link to={link}>
+                                    {action}
+                                    <ArrowUpRight size={17} />
+                                </Link>
+                            </article>
+                        ),
+                    )}
+                </div>
+            </section>
+            <section id="ispirazioni" className="pf-inspiration">
+                <div className="pf-container pf-section">
+                    <div className="pf-section-heading">
+                        <div>
+                            <p className="pf-eyebrow">
+                                IL PROSSIMO PASSO PARTE DA UN’IDEA
+                            </p>
+                            <h2>
+                                Spazi diversi.
+                                <br />
+                                La stessa voglia di casa.
+                            </h2>
+                        </div>
+                        <Link className="pf-text-link" to="/catalog">
+                            Scopri tutti i materiali <ArrowUpRight size={19} />
+                        </Link>
+                    </div>
+                    <div className="pf-inspiration-grid">
+                        {environments.map((item, index) => (
+                            <Link
+                                to="/catalog"
+                                key={item.name}
+                                className="pf-inspiration-card"
+                            >
+                                <div>
+                                    <img
+                                        src={item.image}
+                                        alt={item.alt}
+                                        loading="lazy"
+                                        width="800"
+                                        height="1000"
+                                    />
+                                    <span className="pf-image-tag">
+                                        ISPIRAZIONE {item.number}
+                                    </span>
+                                    <span className="pf-round-arrow">
+                                        <ArrowUpRight size={23} />
+                                    </span>
+                                </div>
+                                <p>
+                                    {
+                                        [
+                                            'IL CALORE DI OGNI GIORNO',
+                                            'L’EQUILIBRIO DELLE FORME',
+                                            'DETTAGLI CHE FANNO CASA',
+                                        ][index]
+                                    }
+                                </p>
+                                <h3>{item.mood}</h3>
+                            </Link>
+                        ))}
+                    </div>
+                    <p className="pf-image-disclaimer">
+                        Ambienti di ispirazione. Scopri materiali e
+                        disponibilità nel catalogo.
+                    </p>
+                </div>
+            </section>
+            <InstantEstimator />
+            <section className="pf-project-section">
+                <div className="pf-container pf-project-grid">
+                    <div className="pf-project-copy">
+                        <p className="pf-eyebrow">DAL PREVENTIVO ALLA POSA</p>
+                        <h2>
+                            Il progetto avanza.
+                            <br />
+                            Tu hai tutto
+                            <br />
+                            <span>sotto controllo.</span>
+                        </h2>
+                        <p>
+                            Le informazioni che contano, in un unico spazio.
+                            Ritrova i preventivi, consulta gli aggiornamenti e
+                            resta in contatto con il tuo professionista.
+                        </p>
+                        <ul>
+                            <li>
+                                <CheckCheck size={20} /> Preventivi salvati e
+                                dettagli dell’ordine
+                            </li>
+                            <li>
+                                <CheckCheck size={20} /> Date e avanzamento dei
+                                lavori
+                            </li>
+                            <li>
+                                <CheckCheck size={20} /> Chat e foto del tuo
+                                progetto
+                            </li>
+                        </ul>
+                        <Link
+                            to="/register"
+                            className="pf-button pf-button-light"
+                        >
+                            Crea la tua area personale{' '}
+                            <ArrowUpRight size={18} />
+                        </Link>
+                    </div>
+                    <div className="pf-project-preview">
+                        <div className="pf-preview-header">
+                            <span>
+                                <span className="pf-status-dot" /> IL TUO SPAZIO
+                                PERSONALE
+                            </span>
+                            <span>Anteprima</span>
+                        </div>
+                        <div className="pf-preview-title">
+                            <div>
+                                <small>PROGETTO CASA</small>
+                                <h3>Il tuo nuovo soggiorno</h3>
+                            </div>
+                            <span className="pf-preview-icon">
+                                <Layers size={25} />
+                            </span>
+                        </div>
+                        <div className="pf-preview-image">
+                            <img
+                                src="/images/living-naturale.jpg"
+                                alt="Esempio di ambiente associato a un progetto"
+                                loading="lazy"
+                                width="800"
+                                height="400"
+                            />
+                            <span>Ogni dettaglio, al suo posto.</span>
+                        </div>
+                        <ol className="pf-timeline">
+                            <li className="is-complete">
+                                <span>
+                                    <Check size={14} />
+                                </span>
+                                <div>
+                                    <strong>Il progetto prende forma</strong>
+                                    <small>
+                                        Materiali e servizi riepilogati
+                                    </small>
+                                </div>
+                                <Check size={16} />
+                            </li>
+                            <li className="is-current">
+                                <span>2</span>
+                                <div>
+                                    <strong>Prepariamo la posa</strong>
+                                    <small>
+                                        Professionista e calendario del lavoro
+                                    </small>
+                                </div>
+                            </li>
+                            <li>
+                                <span>3</span>
+                                <div>
+                                    <strong>È il momento di viverlo</strong>
+                                    <small>Avanzamento e completamento</small>
+                                </div>
+                            </li>
+                        </ol>
+                        <div className="pf-preview-message">
+                            <MessageCircle size={19} />
+                            <span>
+                                Un filo diretto con chi realizza il tuo
+                                progetto.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <HomeFAQ />
+            <section className="pf-final-cta pf-container">
+                <div className="pf-final-grid" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                </div>
+                <div>
+                    <p className="pf-eyebrow">
+                        LE BELLE IDEE MERITANO IL PRIMO PASSO
+                    </p>
+                    <h2>
+                        Il prossimo cambiamento?
+                        <br />
+                        Comincia da casa tua.
+                    </h2>
+                    <p>
+                        Raccontaci il tuo progetto. Al resto diamo forma
+                        insieme.
+                    </p>
+                    <Link
+                        to="/configuratore"
+                        className="pf-button pf-button-dark"
+                    >
+                        Calcola il tuo preventivo <ArrowUpRight size={20} />
+                    </Link>
+                    <span className="pf-final-note">
+                        Gratuito. Personalizzato. Senza impegno.
+                    </span>
+                </div>
+            </section>
+            <div className="pf-mobile-cta">
+                <span>
+                    Una nuova idea di casa.
+                    <small>Il tuo preventivo, senza impegno.</small>
+                </span>
+                <Link to="/configuratore">
+                    Preventivo <ArrowUpRight size={17} />
+                </Link>
+            </div>
         </div>
     )
 }

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Database } from '@/types/supabase'
+import { estimateLayingDuration, type DurationEstimate } from '@/lib/layingDuration'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -21,6 +22,11 @@ export interface SelectedProduct {
     images: string[]
     category: Product['category']
     material: Product['material']
+    /** Formato in mm: determina la resa di posa, quindi i giorni di cantiere. */
+    format_width?: number | null
+    format_height?: number | null
+    /** Giorni di approvvigionamento: spostano la prima data utile, non la durata. */
+    lead_time_days?: number | null
 }
 
 // Step 3: Dimensions
@@ -155,6 +161,7 @@ export interface ConfiguratorState {
     getSubtotal: () => number
     getVat: () => number
     getTotal: () => number
+    getDurationEstimate: () => DurationEstimate
 
     // Reset
     reset: () => void
@@ -221,7 +228,10 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                     price_per_sqm: Number(quote.product.price_per_sqm) || 0,
                     images: quote.product.images || [],
                     category: quote.product.category || 'floor',
-                    material: quote.product.material || 'Gres porcellanato'
+                    material: quote.product.material || 'Gres porcellanato',
+                    format_width: quote.product.format_width ?? null,
+                    format_height: quote.product.format_height ?? null,
+                    lead_time_days: quote.product.lead_time_days ?? null,
                 } : null
 
                 const servicesObj = typeof quote.services === 'object' && quote.services !== null
@@ -342,6 +352,25 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
 
             getTotal: () => {
                 return get().getSubtotal() + get().getVat()
+            },
+
+            /**
+             * Giornate di cantiere stimate sui dati del configuratore.
+             * È la stima che finisce in preventivo e che il professionista
+             * conferma o corregge quando accetta l'incarico.
+             */
+            getDurationEstimate: () => {
+                const { dimensions, layingType, projectInfo, selectedProduct, services } = get()
+                return estimateLayingDuration({
+                    floorSqm: dimensions.pavimentoMq,
+                    wallSqm: dimensions.paretiMq,
+                    layingType,
+                    ambiente: projectInfo.ambiente,
+                    intervento: projectInfo.intervento,
+                    tileWidthMm: selectedProduct?.format_width,
+                    tileHeightMm: selectedProduct?.format_height,
+                    services,
+                })
             },
 
             reset: () => set(initialState),

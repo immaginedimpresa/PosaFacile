@@ -1,70 +1,81 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Layers } from 'lucide-react'
 import type { Database } from '@/types/supabase'
 
 type Product = Database['public']['Tables']['products']['Row']
-
-interface ProductCardProps {
-    product: Product
+const categories: Record<string, string> = {
+    floor: 'Pavimento',
+    wall: 'Rivestimento',
+    outdoor: 'Esterno',
+    mosaic: 'Mosaico',
+}
+const materials: Record<string, string> = {
+    gres: 'Gres porcellanato',
+    ceramic: 'Ceramica',
+    cotto: 'Cotto',
+    natural_stone: 'Pietra naturale',
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product }: { product: Product }) {
+    const [imageError, setImageError] = useState(false)
     const images = Array.isArray(product.images) ? product.images : []
-    const mainImage = images.length > 0 ? (images[0] as string) : 'https://placehold.co/400x400?text=No+Image'
-
+    const mainImage = typeof images[0] === 'string' ? images[0] : null
     return (
-        <Link to={`/products/${product.slug}`} className="group block h-full">
-            <div className="relative h-full bg-white rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                {/* Image Container */}
-                <div className="aspect-square bg-gray-100 overflow-hidden relative">
+        <Link to={`/products/${product.slug}`} className="pf-product-card">
+            <div className="pf-product-image">
+                {mainImage && !imageError ? (
                     <img
                         src={mainImage}
                         alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        loading="lazy"
+                        width="600"
+                        height="600"
+                        onError={() => setImageError(true)}
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-
-                    {/* Badge */}
-                    {product.lead_time_days && product.lead_time_days <= 3 && (
-                        <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 text-xs font-bold uppercase tracking-wider rounded-sm shadow-sm">
-                            Spedizione Rapida
-                        </span>
-                    )}
-
-                    {/* Quick Action */}
-                    <div className="absolute bottom-4 right-4 translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <div className="bg-white text-black p-3 rounded-full shadow-lg">
-                            <ArrowRight size={20} />
-                        </div>
+                ) : (
+                    <div className="pf-product-placeholder">
+                        <Layers size={42} strokeWidth={1} />
+                        <span>Immagine in arrivo</span>
                     </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5">
-                    <div className="flex justify-between items-start mb-2">
-                        <div>
-                            <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wide">{product.category}</p>
-                            <h3 className="font-display font-bold text-lg text-gray-900 leading-tight group-hover:text-primary transition-colors">
-                                {product.name}
-                            </h3>
-                        </div>
-                    </div>
-
-                    <div className="flex items-end justify-between mt-4">
-                        <div>
-                            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-                                € {product.price_per_sqm}
-                            </span>
-                            <span className="text-xs text-gray-400 font-medium ml-1">/ mq</span>
-                        </div>
-
-                        {product.tileable_image_url && (
-                            <div className="flex items-center gap-1 text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
-                                <Sparkles size={12} /> AI Ready
-                            </div>
-                        )}
-                    </div>
-                </div>
+                )}
+                {(product.stock_qty ?? 0) > 0 && (
+                    <span className="pf-product-badge">Disponibile</span>
+                )}
+                <span className="pf-product-arrow">
+                    <ArrowUpRight size={21} />
+                </span>
+            </div>
+            <div className="pf-product-meta">
+                <span>
+                    {product.category
+                        ? categories[product.category] || product.category
+                        : 'Materiale'}
+                </span>
+                {product.format_width && product.format_height ? (
+                    <span>
+                        {product.format_width / 10} ×{' '}
+                        {product.format_height / 10} cm
+                    </span>
+                ) : null}
+            </div>
+            <h3>{product.name}</h3>
+            <p>
+                {product.material
+                    ? materials[product.material]
+                    : 'Scopri tutti i dettagli'}
+            </p>
+            <div className="pf-product-price">
+                <span>
+                    {new Intl.NumberFormat('it-IT', {
+                        style: 'currency',
+                        currency: 'EUR',
+                    }).format(product.price_per_sqm)}
+                    <small> / m²</small>
+                </span>
+                <span>
+                    Scopri <ArrowUpRight size={13} />
+                </span>
             </div>
         </Link>
     )

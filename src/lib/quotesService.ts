@@ -34,6 +34,9 @@ export interface SavedQuoteItem {
         images: string[]
         category?: string
         material?: string
+        format_width?: number | null
+        format_height?: number | null
+        lead_time_days?: number | null
     } | null
     professional?: {
         id: string
@@ -72,6 +75,8 @@ export async function saveCurrentQuote(
             ? state.selectedDate.toISOString().split('T')[0]
             : state.location.dataPreferita || null
 
+        const durata = state.getDurationEstimate()
+
         const quotePayload = {
             customer_id: userId,
             name: quoteName,
@@ -93,6 +98,11 @@ export async function saveCurrentQuote(
             total: state.getTotal(),
             ai_result_image: state.aiResultImage || null,
             status: 'draft',
+            // La durata stimata viaggia con il preventivo: chi lo riapre dal
+            // proprio account ritrova le stesse giornate di cantiere.
+            estimated_work_days: durata.workDays,
+            estimated_calendar_days: durata.calendarDays,
+            duration_breakdown: durata,
             updated_at: new Date().toISOString()
         }
 
@@ -104,7 +114,7 @@ export async function saveCurrentQuote(
                 .eq('customer_id', userId)
                 .select(`
                     *,
-                    product:products(id, name, price_per_sqm, images, category, material)
+                    product:products(id, name, price_per_sqm, images, category, material, format_width, format_height, lead_time_days)
                 `)
                 .single()
 
@@ -119,7 +129,7 @@ export async function saveCurrentQuote(
                 } as any)
                 .select(`
                     *,
-                    product:products(id, name, price_per_sqm, images, category, material)
+                    product:products(id, name, price_per_sqm, images, category, material, format_width, format_height, lead_time_days)
                 `)
                 .single()
 
@@ -141,7 +151,7 @@ export async function fetchSavedQuotes(userId: string): Promise<SavedQuoteItem[]
             .from('saved_quotes')
             .select(`
                 *,
-                product:products(id, name, price_per_sqm, images, category, material)
+                product:products(id, name, price_per_sqm, images, category, material, format_width, format_height, lead_time_days)
             `)
             .eq('customer_id', userId)
             .order('created_at', { ascending: false })

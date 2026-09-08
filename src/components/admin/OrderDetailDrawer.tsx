@@ -11,11 +11,16 @@ import {
     Clock,
     UserCheck,
     FileText,
-    AlertCircle
+    AlertCircle,
+    ListChecks
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ORDER_STATUSES, type OrderStatus, orderStatusLabel, orderStatusColor } from '@/lib/orderStatus'
 import { JobChat } from '@/components/chat/JobChat'
+import { OrderTimelineManager } from '@/components/admin/OrderTimelineManager'
+import { syncMilestonesWithStatus } from '@/services/orderTimelineService'
+import { DurationCard } from '@/components/orders/DurationCard'
+import { durationForOrder } from '@/lib/orderDuration'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 
@@ -43,7 +48,7 @@ export function OrderDetailDrawer({
     const [selectedProId, setSelectedProId] = useState<string>('')
     const [pros, setPros] = useState<any[]>([])
     const [saving, setSaving] = useState(false)
-    const [activeTab, setActiveTab] = useState<'details' | 'chat'>('details')
+    const [activeTab, setActiveTab] = useState<'details' | 'timeline' | 'chat'>('details')
 
     useEffect(() => {
         if (!orderId || !isOpen) {
@@ -138,6 +143,10 @@ export function OrderDetailDrawer({
                         })
                 }
             }
+
+            // 3. Allinea la timeline al nuovo stato, senza toccare le tappe
+            //    che l'admin ha già gestito a mano.
+            await syncMilestonesWithStatus(orderId, status, user?.id)
 
             toast.success('Ordine aggiornato con successo!')
             onUpdated()
@@ -255,6 +264,18 @@ export function OrderDetailDrawer({
                                 <FileText size={15} />
                                 <span>Dettagli & Modifica</span>
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('timeline')}
+                                className={`py-3 text-xs sm:text-sm font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                                    activeTab === 'timeline'
+                                        ? 'border-orange-500 text-orange-600'
+                                        : 'border-transparent text-stone-500 hover:text-stone-800'
+                                }`}
+                            >
+                                <ListChecks size={15} />
+                                <span>Timeline & Durata</span>
+                            </button>
                             {jobId && (
                                 <button
                                     type="button"
@@ -279,7 +300,23 @@ export function OrderDetailDrawer({
                                     <p className="text-sm font-medium">Caricamento ordine in corso...</p>
                                 </div>
                             ) : order ? (
-                                activeTab === 'details' ? (
+                                activeTab === 'timeline' ? (
+                                    <div className="space-y-6">
+                                        <OrderTimelineManager
+                                            orderId={order.id}
+                                            order={order}
+                                            actorId={user?.id}
+                                            onUpdated={onUpdated}
+                                        />
+                                        <DurationCard
+                                            estimate={durationForOrder(order)}
+                                            confirmedWorkDays={order.confirmed_work_days}
+                                            confirmedCalendarDays={order.confirmed_calendar_days}
+                                            proNote={order.duration_pro_note}
+                                            showPhases
+                                        />
+                                    </div>
+                                ) : activeTab === 'details' ? (
                                     <div className="space-y-6">
                                         {/* Gestione Stato & Avanzamento */}
                                         <div className="bg-stone-50 rounded-2xl p-5 border border-stone-200 space-y-4">

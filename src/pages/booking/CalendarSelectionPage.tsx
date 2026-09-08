@@ -6,7 +6,9 @@ import { it } from 'date-fns/locale'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useBookingStore } from '@/store/bookingStore'
-import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, AlertCircle, Clock } from 'lucide-react'
+import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, AlertCircle, Clock, Truck } from 'lucide-react'
+import { earliestStartDate, materialWaitDays } from '@/lib/layingDuration'
+import { fetchLogisticsSettings, DEFAULT_LOGISTICS, type LogisticsSettings } from '@/services/settingsService'
 import 'react-day-picker/dist/style.css'
 
 export function CalendarSelectionPage() {
@@ -23,7 +25,13 @@ export function CalendarSelectionPage() {
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const [busyDates, setBusyDates] = useState<Date[]>([])
     const [jobDates, setJobDates] = useState<Date[]>([])
+    const [logistics, setLogistics] = useState<LogisticsSettings>(DEFAULT_LOGISTICS)
     const [loading, setLoading] = useState(true)
+
+    // Tempi di approvvigionamento impostati dall'admin.
+    useEffect(() => {
+        fetchLogisticsSettings().then(setLogistics)
+    }, [])
 
     useEffect(() => {
         if (!selectedProfessional || selectedProfessional.id !== professionalId) {
@@ -71,12 +79,20 @@ export function CalendarSelectionPage() {
         }
     }
 
+    const leadInput = {
+        materialLeadDays: logistics.materialLeadDays,
+        shippingTransitDays: logistics.shippingTransitDays,
+    }
+    /** Prima data in cui il materiale può essere in cantiere. */
+    const primaDataUtile = earliestStartDate(leadInput)
+    const giorniAttesa = materialWaitDays(leadInput)
+
     const handleDayClick = (date: Date) => {
         // Check se è disponibile
         const isOccupied = [...busyDates, ...jobDates].some(d => isSameDay(d, date))
-        const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
 
-        if (isOccupied || isPast) {
+        // Prima che il materiale arrivi non c'è niente da posare.
+        if (isOccupied || date < primaDataUtile) {
             return // Non selezionabile
         }
 
@@ -143,6 +159,17 @@ export function CalendarSelectionPage() {
                     </p>
                 </div>
 
+                {/* Perché le prime date non sono selezionabili */}
+                <div className="mb-8 flex items-start gap-3 rounded-xl border border-amber-200/70 bg-amber-50/70 p-4">
+                    <Truck className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+                    <p className="text-sm font-medium leading-relaxed text-amber-900">
+                        Le prime date non sono selezionabili perché il materiale deve arrivare in
+                        cantiere: servono <strong>{giorniAttesa} giorni</strong> fra ordine,
+                        spedizione e consegna. La prima data disponibile è il{' '}
+                        <strong>{format(primaDataUtile, 'd MMMM yyyy', { locale: it })}</strong>.
+                    </p>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Calendar */}
                     <motion.div
@@ -163,7 +190,7 @@ export function CalendarSelectionPage() {
                             modifiers={modifiers}
                             modifiersStyles={modifiersStyles}
                             locale={it}
-                            disabled={{ before: new Date() }}
+                            disabled={{ before: primaDataUtile }}
                             footer={
                                 <div className="mt-4 space-y-2 text-sm">
                                     <div className="flex items-center gap-2">

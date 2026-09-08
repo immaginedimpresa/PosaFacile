@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useProStore, type JobStatus } from '@/store/proStore'
 import { ArrowLeft, MapPin, Calendar, CheckCircle, Play, AlertTriangle, Hammer, User, Clock } from 'lucide-react'
 import { PhotoUpload } from '@/components/pro/jobs/PhotoUpload'
+import { DurationConfirm } from '@/components/pro/jobs/DurationConfirm'
 import { JobChat } from '@/components/chat/JobChat'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -175,6 +176,11 @@ export function JobDetailPage() {
                     )}
                 </div>
             </div>
+
+            {/* Giornate di cantiere: il posatore conferma o corregge la stima */}
+            {job.status !== 'cancelled' && job.status !== 'completed' && (
+                <DurationConfirm job={job} />
+            )}
 
             {/* Chat with Admin / Customer Section */}
             <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">

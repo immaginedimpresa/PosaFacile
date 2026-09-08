@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { saveCurrentQuote } from '@/lib/quotesService'
+import { DurationCard } from '@/components/orders/DurationCard'
+import { estimateEndDate, formatDays } from '@/lib/layingDuration'
 
 export function Step7Summary() {
     const navigate = useNavigate()
@@ -22,6 +24,7 @@ export function Step7Summary() {
         getSubtotal,
         getVat,
         getTotal,
+        getDurationEstimate,
         aiResultImage,
         selectedProfessional,
         selectedDate,
@@ -41,11 +44,17 @@ export function Step7Summary() {
     const subtotal = getSubtotal()
     const vat = getVat()
     const total = getTotal()
+    // Durata stimata del cantiere: entra nel preventivo e viene poi
+    // confermata (o corretta) dal professionista che accetta l'incarico.
+    const durata = getDurationEstimate()
 
     // Determine the actual date to use (Calendar selection > Initial preference)
     const effectiveDate = selectedDate
         ? format(new Date(selectedDate), 'yyyy-MM-dd')
         : location.dataPreferita
+
+    const fineLavoriDate = effectiveDate ? estimateEndDate(effectiveDate, durata) : null
+    const fineLavori = fineLavoriDate ? format(fineLavoriDate, 'yyyy-MM-dd') : null
 
     const handleSubmit = async () => {
         if (!agreed) {
@@ -157,7 +166,14 @@ export function Step7Summary() {
                         material_total: materialCost,
                         laying_total: layingCost,
                         services_total: total - materialCost - layingCost,
-                        scheduled_time_slot: effectiveDate
+                        scheduled_time_slot: effectiveDate,
+                        estimated_work_days: durata.workDays,
+                        estimated_calendar_days: durata.calendarDays,
+                        // Congelata: una futura taratura delle rese non deve
+                        // cambiare la durata già promessa a questo cliente.
+                        duration_breakdown: durata,
+                        work_start_date: effectiveDate,
+                        work_end_date: fineLavori,
                     } as any)
                     .select()
                     .single()
@@ -204,7 +220,12 @@ export function Step7Summary() {
                             material_total: materialCost,
                             laying_total: layingCost,
                             services_total: total - materialCost - layingCost,
-                            scheduled_time_slot: effectiveDate
+                            scheduled_time_slot: effectiveDate,
+                            estimated_work_days: durata.workDays,
+                            estimated_calendar_days: durata.calendarDays,
+                            duration_breakdown: durata,
+                            work_start_date: effectiveDate,
+                            work_end_date: fineLavori,
                         } as any)
                         .select()
                         .single()
@@ -323,9 +344,18 @@ export function Step7Summary() {
                     <Calendar className="w-4 h-4 text-gray-400" />
                     <span className="text-sm">
                         {effectiveDate || 'Da definire'}
+                        {fineLavoriDate && ` → ${format(fineLavoriDate, 'dd/MM/yyyy')}`}
                     </span>
                 </div>
+                {durata.calendarDays > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                        Cantiere di {formatDays(durata.calendarDays)}, da confermare con il posatore.
+                    </p>
+                )}
             </div>
+
+            {/* Durata stimata del cantiere */}
+            <DurationCard estimate={durata} showPhases />
 
             {/* Price Breakdown */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">

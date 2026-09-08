@@ -1,205 +1,347 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/supabase'
 import { ProductCard } from '@/components/catalog/ProductCard'
 import { FilterSidebar } from '@/components/catalog/FilterSidebar'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { LoadingSpinner } from '@/components/ui/spinner'
-import { Search, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
+import {
+    catalogCategories,
+    initialCatalogFilters,
+    type CatalogFilters,
+} from '@/lib/catalogFilters'
+import {
+    ArrowUpRight,
+    Search,
+    SlidersHorizontal,
+    X,
+    ArrowUpDown,
+    Layers,
+    RotateCcw,
+} from 'lucide-react'
+import './home.css'
+import './storefront.css'
 
 type Product = Database['public']['Tables']['products']['Row']
 
 export function CatalogPage() {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(false)
+    const [retry, setRetry] = useState(0)
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
-
-    // Unified Filter State
-    const [filters, setFilters] = useState({
-        search: '',
-        category: null as string | null,
-        minPrice: '',
-        maxPrice: '',
-        availableOnly: false,
-        sort: 'newest' as 'newest' | 'price_asc' | 'price_desc' | 'name_asc'
-    })
+    const [filters, setFilters] = useState<CatalogFilters>(
+        initialCatalogFilters,
+    )
 
     useEffect(() => {
         let mounted = true
-
         async function fetchProducts() {
             setLoading(true)
-            let query = supabase.from('products').select('*').eq('status', 'active')
-
-            // 1. Text Search
-            if (filters.search) {
-                query = query.ilike('name', `%${filters.search}%`)
+            setError(false)
+            try {
+                let query = supabase
+                    .from('products')
+                    .select('*')
+                    .eq('status', 'active')
+                if (filters.search.trim())
+                    query = query.ilike('name', `%${filters.search.trim()}%`)
+                if (filters.category)
+                    query = query.eq('category', filters.category)
+                if (filters.minPrice)
+                    query = query.gte(
+                        'price_per_sqm',
+                        Math.max(0, Number(filters.minPrice)),
+                    )
+                if (filters.maxPrice)
+                    query = query.lte(
+                        'price_per_sqm',
+                        Math.max(0, Number(filters.maxPrice)),
+                    )
+                if (filters.availableOnly) query = query.gt('stock_qty', 0)
+                switch (filters.sort) {
+                    case 'price_asc':
+                        query = query.order('price_per_sqm', {
+                            ascending: true,
+                        })
+                        break
+                    case 'price_desc':
+                        query = query.order('price_per_sqm', {
+                            ascending: false,
+                        })
+                        break
+                    case 'name_asc':
+                        query = query.order('name', { ascending: true })
+                        break
+                    default:
+                        query = query.order('created_at', { ascending: false })
+                }
+                const { data, error: queryError } = await query
+                if (queryError) throw queryError
+                if (mounted) setProducts(data || [])
+            } catch {
+                if (mounted) {
+                    setError(true)
+                    setProducts([])
+                }
+            } finally {
+                if (mounted) setLoading(false)
             }
-
-            // 2. Category Filter
-            if (filters.category) {
-                query = query.eq('category', filters.category as any)
-            }
-
-            // 3. Price Range
-            if (filters.minPrice) {
-                query = query.gte('price', parseFloat(filters.minPrice))
-            }
-            if (filters.maxPrice) {
-                query = query.lte('price', parseFloat(filters.maxPrice))
-            }
-
-            // 4. Availability
-            if (filters.availableOnly) {
-                query = query.gt('stock_quantity', 0)
-            }
-
-            // 5. Sorting
-            switch (filters.sort) {
-                case 'price_asc':
-                    query = query.order('price', { ascending: true })
-                    break
-                case 'price_desc':
-                    query = query.order('price', { ascending: false })
-                    break
-                case 'name_asc':
-                    query = query.order('name', { ascending: true })
-                    break
-                case 'newest':
-                default:
-                    query = query.order('created_at', { ascending: false })
-                    break
-            }
-
-            const { data, error } = await query
-
-            if (mounted && !error && data) {
-                setProducts(data)
-            }
-            if (mounted) setLoading(false)
         }
-
-        const timer = setTimeout(() => {
-            fetchProducts()
-        }, 300)
-
+        const timer = setTimeout(fetchProducts, 300)
         return () => {
             mounted = false
             clearTimeout(timer)
         }
-    }, [filters])
+    }, [filters, retry])
+
+    const filterCount =
+        Number(Boolean(filters.category)) +
+        Number(Boolean(filters.minPrice || filters.maxPrice)) +
+        Number(filters.availableOnly)
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold font-display text-gray-900">Catalogo</h1>
-                    <p className="text-gray-500 mt-1">Esplora la nostra collezione esclusiva</p>
+        <div className="pf-storefront">
+            <section className="pf-catalog-intro">
+                <div className="pf-container pf-catalog-intro-grid">
+                    <div>
+                        <nav aria-label="Percorso" className="pf-breadcrumb">
+                            <Link to="/">Home</Link>
+                            <span>/</span>
+                            <span>Materiali</span>
+                        </nav>
+                        <p className="pf-eyebrow">
+                            LA MATERIA DEI TUOI DESIDERI
+                        </p>
+                        <h1>
+                            Il tuo stile.
+                            <br />
+                            <span>La superficie giusta.</span>
+                        </h1>
+                        <p>
+                            Texture, colori e possibilità. Trova il materiale
+                            che parla di te e trasformalo in un progetto, posa
+                            inclusa.
+                        </p>
+                    </div>
+                    <div className="pf-catalog-intro-photo">
+                        <img
+                            src="/images/living-contemporaneo.jpg"
+                            alt="Ambiente contemporaneo dai toni caldi e dalle superfici naturali"
+                            width="800"
+                            height="500"
+                        />
+                        <span>
+                            <Layers size={15} /> Ogni bella casa inizia da qui.
+                        </span>
+                    </div>
                 </div>
-
-                {/* Mobile Filter Toggle */}
-                <Button
-                    variant="outline"
-                    className="lg:hidden w-full flex gap-2"
-                    onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
+            </section>
+            <section
+                className="pf-container pf-catalog-main"
+                aria-label="Catalogo materiali"
+            >
+                <div className="pf-catalog-toolbar">
+                    <div className="pf-catalog-search">
+                        <Search size={19} />
+                        <input
+                            aria-label="Cerca un materiale"
+                            placeholder="Cerca il tuo prossimo pavimento…"
+                            value={filters.search}
+                            onChange={(event) =>
+                                setFilters((previous) => ({
+                                    ...previous,
+                                    search: event.target.value,
+                                }))
+                            }
+                        />
+                        {filters.search && (
+                            <button
+                                aria-label="Cancella ricerca"
+                                onClick={() =>
+                                    setFilters((previous) => ({
+                                        ...previous,
+                                        search: '',
+                                    }))
+                                }
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                    <Link to="/configuratore" className="pf-text-link">
+                        Hai già un’idea? Crea il preventivo{' '}
+                        <ArrowUpRight size={17} />
+                    </Link>
+                </div>
+                <div
+                    className="pf-category-tabs"
+                    aria-label="Categorie materiali"
                 >
-                    <SlidersHorizontal size={16} /> Filtri e Ricerca
-                </Button>
-            </div>
-
-            {/* Mobile Filters Drawer (Simple overlay implementation) */}
-            {mobileFiltersOpen && (
-                <div className="fixed inset-0 z-50 bg-black/50 lg:hidden" onClick={() => setMobileFiltersOpen(false)}>
-                    <div
-                        className="absolute right-0 top-0 bottom-0 w-80 bg-white p-6 shadow-xl overflow-y-auto"
-                        onClick={e => e.stopPropagation()}
+                    {catalogCategories.map((category) => (
+                        <button
+                            key={category.label}
+                            aria-pressed={filters.category === category.id}
+                            className={
+                                filters.category === category.id
+                                    ? 'is-active'
+                                    : ''
+                            }
+                            onClick={() =>
+                                setFilters((previous) => ({
+                                    ...previous,
+                                    category: category.id,
+                                }))
+                            }
+                        >
+                            {category.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="pf-catalog-layout">
+                    <aside
+                        className={
+                            mobileFiltersOpen
+                                ? 'pf-filter-panel is-open'
+                                : 'pf-filter-panel'
+                        }
+                        id="catalog-filters"
                     >
                         <FilterSidebar
                             filters={filters}
                             setFilters={setFilters}
-                            onClose={() => setMobileFiltersOpen(false)}
                         />
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                {/* Desktop Filters Sidebar */}
-                <div className="hidden lg:block">
-                    <div className="sticky top-24">
-                        <div className="mb-6 relative">
-                            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Cerca prodotto..."
-                                className="pl-9 h-10 border-gray-200 focus:border-primary focus:ring-primary"
-                                value={filters.search}
-                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                            />
-                        </div>
-                        <FilterSidebar filters={filters} setFilters={setFilters} className="border rounded-xl p-6 bg-white shadow-sm" />
-                    </div>
-                </div>
-
-                {/* Product Grid */}
-                <div className="lg:col-span-3">
-                    {/* Top Bar: Sort & Count */}
-                    <div className="flex justify-between items-center mb-6 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <span className="text-sm text-gray-500 font-medium">
-                            {products.length} {products.length === 1 ? 'prodotto' : 'prodotti'} trovati
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                            <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                            <label className="text-sm text-gray-500 hidden sm:block">Ordina per:</label>
-                            <select
-                                className="text-sm border-gray-200 rounded-md focus:border-primary focus:ring-primary bg-white py-1.5 pl-3 pr-8 shadow-sm cursor-pointer"
-                                value={filters.sort}
-                                onChange={(e) => setFilters(prev => ({ ...prev, sort: e.target.value as any }))}
-                            >
-                                <option value="newest">Novità</option>
-                                <option value="price_asc">Prezzo: Basso → Alto</option>
-                                <option value="price_desc">Prezzo: Alto → Basso</option>
-                                <option value="name_asc">Nome: A → Z</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="flex justify-center items-center h-64">
-                            <LoadingSpinner className="h-10 w-10 text-primary" />
-                        </div>
-                    ) : products.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {products.map((product) => (
-                                <ProductCard key={product.id} product={product} />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50">
-                            <div className="bg-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                <Search className="text-gray-300 h-8 w-8" />
+                    </aside>
+                    <div className="pf-catalog-results">
+                        <div className="pf-results-toolbar">
+                            <span role="status">
+                                {loading
+                                    ? 'Cerchiamo la tua prossima ispirazione…'
+                                    : error
+                                      ? 'Catalogo non disponibile'
+                                      : `${products.length} ${products.length === 1 ? 'materiale da scoprire' : 'materiali da scoprire'}`}
+                            </span>
+                            <div>
+                                <button
+                                    className="pf-mobile-filter-toggle"
+                                    aria-expanded={mobileFiltersOpen}
+                                    aria-controls="catalog-filters"
+                                    onClick={() =>
+                                        setMobileFiltersOpen(!mobileFiltersOpen)
+                                    }
+                                >
+                                    <SlidersHorizontal size={16} /> Filtri
+                                    {filterCount > 0 && ` (${filterCount})`}
+                                </button>
+                                <div className="pf-sort">
+                                    <ArrowUpDown size={14} />
+                                    <select
+                                        aria-label="Ordina materiali"
+                                        value={filters.sort}
+                                        onChange={(event) =>
+                                            setFilters((previous) => ({
+                                                ...previous,
+                                                sort: event.target
+                                                    .value as CatalogFilters['sort'],
+                                            }))
+                                        }
+                                    >
+                                        <option value="newest">Novità</option>
+                                        <option value="price_asc">
+                                            Prezzo crescente
+                                        </option>
+                                        <option value="price_desc">
+                                            Prezzo decrescente
+                                        </option>
+                                        <option value="name_asc">
+                                            Nome A–Z
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
-                            <h3 className="text-lg font-medium text-gray-900">Nessun prodotto trovato</h3>
-                            <p className="text-gray-500 mt-1 max-w-xs mx-auto">Prova a modificare i filtri o cerca un altro termine.</p>
-                            <Button
-                                variant="outline"
-                                onClick={() => setFilters({
-                                    search: '',
-                                    category: null,
-                                    minPrice: '',
-                                    maxPrice: '',
-                                    availableOnly: false,
-                                    sort: 'newest'
-                                })}
-                                className="mt-6"
-                            >
-                                Rimuovi tutti i filtri
-                            </Button>
                         </div>
-                    )}
+                        {loading ? (
+                            <div
+                                className="pf-product-grid"
+                                aria-busy="true"
+                                aria-label="Caricamento materiali"
+                            >
+                                {Array.from({ length: 6 }, (_, index) => (
+                                    <div
+                                        className="pf-product-skeleton"
+                                        key={index}
+                                    >
+                                        <div />
+                                        <span />
+                                        <span />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : error ? (
+                            <div className="pf-catalog-empty">
+                                <Layers size={34} />
+                                <h2>Un attimo, torniamo subito.</h2>
+                                <p>
+                                    Non riusciamo a caricare i materiali.
+                                    Riprova tra poco.
+                                </p>
+                                <button
+                                    className="pf-button pf-button-dark"
+                                    onClick={() =>
+                                        setRetry((previous) => previous + 1)
+                                    }
+                                >
+                                    Riprova <RotateCcw size={16} />
+                                </button>
+                            </div>
+                        ) : products.length > 0 ? (
+                            <div className="pf-product-grid">
+                                {products.map((product) => (
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="pf-catalog-empty">
+                                <Search size={34} />
+                                <h2>Facciamo spazio ad altre possibilità.</h2>
+                                <p>
+                                    Nessun materiale corrisponde alla tua
+                                    ricerca. Prova una categoria diversa o
+                                    modifica il budget.
+                                </p>
+                                <button
+                                    className="pf-button pf-button-dark"
+                                    onClick={() =>
+                                        setFilters(initialCatalogFilters)
+                                    }
+                                >
+                                    Azzera i filtri <RotateCcw size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+                <div className="pf-catalog-bottom">
+                    <div>
+                        <p className="pf-eyebrow">
+                            IL MATERIALE È SOLO L’INIZIO
+                        </p>
+                        <h2>Immaginalo già a casa tua.</h2>
+                        <p>
+                            Aggiungi metratura, servizi e professionista al tuo
+                            progetto.
+                        </p>
+                    </div>
+                    <Link
+                        to="/configuratore"
+                        className="pf-button pf-button-orange"
+                    >
+                        Calcola il tuo preventivo <ArrowUpRight size={18} />
+                    </Link>
+                </div>
+            </section>
         </div>
     )
 }

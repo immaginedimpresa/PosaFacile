@@ -11,9 +11,19 @@ import {
     Mail,
     Phone,
     MapPin,
-    CheckCircle2
+    CheckCircle2,
+    Truck,
+    CalendarClock
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+    fetchLogisticsSettings,
+    saveLogisticsSettings,
+    DEFAULT_LOGISTICS,
+    type LogisticsSettings,
+} from '@/services/settingsService'
+import { useAuth } from '@/hooks/useAuth'
+import { earliestStartDate, materialWaitDays } from '@/lib/layingDuration'
 
 interface PlatformSettings {
     // Tariffe Posa
@@ -61,8 +71,12 @@ const DEFAULT_SETTINGS: PlatformSettings = {
 const SETTINGS_STORAGE_KEY = 'posafacile_platform_settings'
 
 export function AdminSettingsPage() {
+    const { user } = useAuth()
     const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS)
-    const [activeTab, setActiveTab] = useState<'pricing' | 'company' | 'notifications'>('pricing')
+    // La logistica sta sul database, non in localStorage: deve poter bloccare
+    // le date nel calendario che vede il cliente.
+    const [logistics, setLogistics] = useState<LogisticsSettings>(DEFAULT_LOGISTICS)
+    const [activeTab, setActiveTab] = useState<'pricing' | 'logistics' | 'company' | 'notifications'>('pricing')
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
@@ -76,6 +90,10 @@ export function AdminSettingsPage() {
         }
     }, [])
 
+    useEffect(() => {
+        fetchLogisticsSettings(true).then(setLogistics)
+    }, [])
+
     const activeNotificationsCount = useMemo(() => {
         let count = 0
         if (settings.emailNotifyNewOrder) count++
@@ -84,15 +102,16 @@ export function AdminSettingsPage() {
         return count
     }, [settings])
 
-    const handleSave = (e?: React.FormEvent) => {
+    const handleSave = async (e?: React.FormEvent) => {
         if (e) e.preventDefault()
         setSaving(true)
         try {
             localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+            await saveLogisticsSettings(logistics, user?.id)
             toast.success('Impostazioni della piattaforma salvate con successo!')
         } catch (err: any) {
             console.error(err)
-            toast.error('Errore durante il salvataggio delle impostazioni')
+            toast.error(err.message || 'Errore durante il salvataggio delle impostazioni')
         } finally {
             setSaving(false)
         }
@@ -218,6 +237,19 @@ export function AdminSettingsPage() {
                 >
                     <DollarSign size={16} className={activeTab === 'pricing' ? 'text-orange-500' : ''} />
                     <span>Tariffario Posa & IVA</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('logistics')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                        activeTab === 'logistics'
+                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
+                    }`}
+                >
+                    <Truck size={16} className={activeTab === 'logistics' ? 'text-orange-500' : ''} />
+                    <span>Logistica & Disponibilità</span>
                 </button>
 
                 <button
@@ -390,6 +422,90 @@ export function AdminSettingsPage() {
                                     <Save size={16} />
                                     <span>Salva Modifiche Tariffe</span>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'logistics' && (
+                    <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
+                        <div className="p-6 border-b border-stone-100 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                <Truck size={20} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-bold text-stone-900">Tempi di Approvvigionamento</h2>
+                                <p className="text-xs text-stone-500">
+                                    Determinano da quando in poi il cliente può scegliere una data di posa nel calendario
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                                        Giorni dall&apos;ordine alla spedizione
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={180}
+                                        value={logistics.materialLeadDays}
+                                        onChange={e => setLogistics({
+                                            ...logistics,
+                                            materialLeadDays: Math.max(0, parseInt(e.target.value, 10) || 0),
+                                        })}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
+                                    />
+                                    <p className="text-[11px] text-stone-400 mt-1.5">
+                                        Tempo che serve per ordinare al fornitore e far partire la merce dal magazzino.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                                        Giorni di trasporto fino al cantiere
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={60}
+                                        value={logistics.shippingTransitDays}
+                                        onChange={e => setLogistics({
+                                            ...logistics,
+                                            shippingTransitDays: Math.max(0, parseInt(e.target.value, 10) || 0),
+                                        })}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
+                                    />
+                                    <p className="text-[11px] text-stone-400 mt-1.5">
+                                        Consegna del corriere all&apos;indirizzo di posa.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Effetto immediato del valore impostato */}
+                            <div className="rounded-2xl bg-stone-50 border border-stone-200/70 p-5 flex items-start gap-3.5">
+                                <CalendarClock size={20} className="text-orange-600 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-bold text-stone-900">
+                                        Con questi valori il cliente non può scegliere le prossime{' '}
+                                        {materialWaitDays(logistics)} giornate.
+                                    </p>
+                                    <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                                        Un ordine fatto oggi avrebbe come prima data di posa selezionabile il{' '}
+                                        <strong className="text-stone-900">
+                                            {earliestStartDate(logistics).toLocaleDateString('it-IT', {
+                                                weekday: 'long',
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric',
+                                            })}
+                                        </strong>
+                                        . Se il prodotto scelto a catalogo ha un approvvigionamento più lungo
+                                        (campo <em>lead time</em> della scheda prodotto), vince quello.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

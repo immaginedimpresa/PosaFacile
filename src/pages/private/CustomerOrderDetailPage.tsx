@@ -7,6 +7,12 @@ import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { ArrowLeft, MapPin, Calendar, Clock, User, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { OrderTimeline } from '@/components/orders/OrderTimeline'
+import { DurationCard } from '@/components/orders/DurationCard'
+import { customerTimeline, type ResolvedStep } from '@/lib/orderTimeline'
+import { fetchOrderMilestones } from '@/services/orderTimelineService'
+import { durationForOrder, effectiveDuration } from '@/lib/orderDuration'
+import { estimateEndDate } from '@/lib/layingDuration'
 
 interface OrderDetail {
     id: string
@@ -33,6 +39,7 @@ export function CustomerOrderDetailPage() {
     const navigate = useNavigate()
     const { user } = useAuth()
     const [order, setOrder] = useState<OrderDetail | null>(null)
+    const [steps, setSteps] = useState<ResolvedStep[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -67,6 +74,11 @@ export function CustomerOrderDetailPage() {
             }
 
             setOrder(typedData)
+
+            // La timeline è un arricchimento: un errore qui non deve far
+            // fallire il caricamento dell'ordine.
+            const milestones = await fetchOrderMilestones(id)
+            setSteps(customerTimeline(typedData.status, milestones))
         } catch (error) {
             console.error('Error fetching order:', error)
             navigate('/dashboard') // Redirect if error/not found
@@ -87,6 +99,12 @@ export function CustomerOrderDetailPage() {
     }
 
     if (!order) return null
+
+    const durata = durationForOrder(order)
+    // La data di fine segue le giornate confermate dal posatore, se ci sono.
+    const durataValida = effectiveDuration(order)
+    const inizioLavori = (order as any).work_start_date || order.installation_date
+    const fineLavori = inizioLavori ? estimateEndDate(inizioLavori, durataValida) : null
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -116,6 +134,9 @@ export function CustomerOrderDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content: Details */}
                 <div className="lg:col-span-2 space-y-6">
+
+                    {/* Barra di stato: dove si trova l'ordine adesso */}
+                    <OrderTimeline steps={steps} />
 
                     {/* Order Items Details */}
                     {order.items && order.items.map((item: any, index: number) => (
@@ -248,6 +269,14 @@ export function CustomerOrderDetailPage() {
                                 </p>
                             </div>
                             <div>
+                                <p className="text-sm text-gray-500 mb-1">Fine Lavori Prevista</p>
+                                <p className="font-semibold text-lg">
+                                    {fineLavori
+                                        ? format(fineLavori, 'EEEE d MMMM yyyy', { locale: it })
+                                        : 'Da definire'}
+                                </p>
+                            </div>
+                            <div>
                                 <p className="text-sm text-gray-500 mb-1">Fascia Oraria</p>
                                 <div className="flex items-center gap-2">
                                     <Clock size={18} className="text-gray-400" />
@@ -263,6 +292,13 @@ export function CustomerOrderDetailPage() {
 
                 {/* Sidebar: Summary */}
                 <div className="space-y-6">
+                    <DurationCard
+                        estimate={durata}
+                        confirmedWorkDays={(order as any).confirmed_work_days}
+                        confirmedCalendarDays={(order as any).confirmed_calendar_days}
+                        proNote={(order as any).duration_pro_note}
+                    />
+
                     <div className="bg-gray-50 border rounded-xl p-6">
                         <h3 className="font-bold text-lg mb-4 text-gray-900">Riepilogo Costi</h3>
                         <div className="space-y-3 mb-4">

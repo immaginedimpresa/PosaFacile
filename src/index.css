@@ -141,3 +141,15 @@ textarea,
 [contenteditable="true"] {
   caret-color: auto;
 }
+/* Shared header geometry across storefront, configurator and authentication. */
+.pf-header-container {
+  width: calc(100% - 40px);
+  max-width: 1280px;
+  margin-inline: auto;
+}
+@media (min-width: 768px) {
+  .pf-header-container { width: calc(100% - 64px); }
+}
+@media (min-width: 1280px) {
+  .pf-header-container { width: calc(100% - 96px); }
+}

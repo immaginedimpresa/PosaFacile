@@ -1,96 +1,205 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowUpRight, Check, Loader2, MailCheck } from 'lucide-react'
 import { useUserStore } from '@/store/userStore'
-import { FadeIn } from '@/components/ui/motion'
-import { Logo } from '@/components/ui/Logo'
+import { supabase } from '@/lib/supabase'
+import { AuthLayout } from '@/components/auth/AuthLayout'
+import { PasswordField } from '@/components/auth/PasswordField'
+import { authPageLink, getSafeAuthRedirect } from '@/lib/authNavigation'
 
 export function RegisterPage() {
     const navigate = useNavigate()
-    const { signUp } = useUserStore()
+    const [params] = useSearchParams()
+    const redirect = getSafeAuthRedirect(params.get('redirect'))
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [confirmation, setConfirmation] = useState(false)
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        const data = new FormData(event.currentTarget)
+        const firstName = String(data.get('firstName') || '').trim()
+        const lastName = String(data.get('lastName') || '').trim()
+        if (!firstName || !lastName) {
+            setError('Inserisci nome e cognome per creare il tuo account.')
+            return
+        }
         setLoading(true)
         setError(null)
-        const formData = new FormData(e.currentTarget)
-        const email = formData.get('email') as string
-        const password = formData.get('password') as string
-        const firstName = formData.get('firstName') as string
-        const lastName = formData.get('lastName') as string
-
-        // Simplification: We assume customer role by default. 
-        // Pros register via a different flow or select role here if we add that field.
-        const role = 'customer'
-
         try {
-            await signUp(email, password, { first_name: firstName, last_name: lastName, role })
-
-            // Note: Supabase might require email confirmation unless disabled in project settings.
-            // If auto-confirm is on, sign-in might be needed or handled automatically.
-            // For MVP we assume we can redirect or show success.
-            alert('Registrazione completata! Controlla la tua email o accedi se la conferma è disabilitata.')
-            navigate('/login')
-        } catch (err: any) {
-            console.error(err)
-            setError('Errore durante la registrazione. ' + (err.message || ''))
+            const { data: result, error: signupError } =
+                await supabase.auth.signUp({
+                    email: email.trim(),
+                    password,
+                    options: {
+                        data: {
+                            first_name: firstName,
+                            last_name: lastName,
+                            role: 'customer',
+                        },
+                        emailRedirectTo: `${window.location.origin}${authPageLink('login', redirect)}`,
+                    },
+                })
+            if (signupError) throw signupError
+            if (result.session) {
+                const store = useUserStore.getState()
+                store.setUser(result.session.user)
+                await store.loadProfile(result.session.user.id)
+                navigate(redirect || '/dashboard', { replace: true })
+            } else {
+                setConfirmation(true)
+                setPassword('')
+            }
+        } catch {
+            setError(
+                'Non siamo riusciti a creare l’account. Controlla i dati e riprova. Se sei già registrato, accedi o recupera la password.',
+            )
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <FadeIn className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-                <div className="text-center mb-8">
-                    <div className="flex justify-center mb-5">
-                        <Link to="/" className="inline-block group">
-                            <Logo size="md" variant="default" />
+        <AuthLayout mode="register" redirect={redirect}>
+            {confirmation ? (
+                <div className="pf-auth-confirmation" role="status">
+                    <MailCheck size={40} strokeWidth={1.5} />
+                    <p className="pf-eyebrow">MANCA SOLO UN PICCOLO PASSO</p>
+                    <h1>Ci vediamo nella tua email.</h1>
+                    <p>
+                        Controlla la casella <strong>{email}</strong> e segui il
+                        link di conferma, se richiesto. Poi potrai accedere al
+                        tuo spazio. Se hai già un account con questa email, usa
+                        l’accesso.
+                    </p>
+                    <Link
+                        to={authPageLink('login', redirect)}
+                        className="pf-button pf-button-orange"
+                    >
+                        Vai all’accesso <ArrowUpRight size={18} />
+                    </Link>
+                    <small>
+                        Non trovi il messaggio? Controlla anche lo spam.
+                    </small>
+                </div>
+            ) : (
+                <>
+                    <div className="pf-auth-form-heading">
+                        <p className="pf-eyebrow">
+                            LE BELLE IDEE COMINCIANO QUI
+                        </p>
+                        <h1>Fai spazio ai tuoi progetti.</h1>
+                        <p>
+                            Crea il tuo account gratuito e ritrova ogni scelta,
+                            dal primo preventivo al lavoro finito.
+                        </p>
+                    </div>
+                    {error && (
+                        <div className="pf-auth-error" role="alert">
+                            {error}
+                        </div>
+                    )}
+                    <form onSubmit={handleSubmit} className="pf-auth-form">
+                        <div className="pf-auth-name-grid">
+                            <div className="pf-auth-field">
+                                <label htmlFor="register-first-name">
+                                    Nome
+                                </label>
+                                <input
+                                    id="register-first-name"
+                                    name="firstName"
+                                    autoComplete="given-name"
+                                    required
+                                    placeholder="Il tuo nome"
+                                    disabled={loading}
+                                />
+                            </div>
+                            <div className="pf-auth-field">
+                                <label htmlFor="register-last-name">
+                                    Cognome
+                                </label>
+                                <input
+                                    id="register-last-name"
+                                    name="lastName"
+                                    autoComplete="family-name"
+                                    required
+                                    placeholder="Il tuo cognome"
+                                    disabled={loading}
+                                />
+                            </div>
+                        </div>
+                        <div className="pf-auth-field">
+                            <label htmlFor="register-email">
+                                Indirizzo email
+                            </label>
+                            <input
+                                id="register-email"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                value={email}
+                                onChange={(event) =>
+                                    setEmail(event.target.value)
+                                }
+                                placeholder="nome@esempio.it"
+                                disabled={loading}
+                            />
+                        </div>
+                        <PasswordField
+                            id="register-password"
+                            value={password}
+                            onChange={setPassword}
+                            newPassword
+                            disabled={loading}
+                        />
+                        <button
+                            type="submit"
+                            className="pf-button pf-button-orange pf-auth-submit"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2
+                                        size={17}
+                                        className="animate-spin"
+                                    />{' '}
+                                    Creiamo il tuo spazio…
+                                </>
+                            ) : (
+                                <>
+                                    Crea il tuo account gratuito{' '}
+                                    <ArrowUpRight size={18} />
+                                </>
+                            )}
+                        </button>
+                    </form>
+                    <div className="pf-auth-free">
+                        <span>
+                            <Check size={14} /> Nessuna carta richiesta
+                        </span>
+                        <span>
+                            <Check size={14} /> Nessun obbligo di acquisto
+                        </span>
+                    </div>
+                    <p className="pf-auth-switch">
+                        Hai già un account?{' '}
+                        <Link to={authPageLink('login', redirect)}>
+                            Accedi al tuo spazio <ArrowUpRight size={13} />
                         </Link>
+                    </p>
+                    <div className="pf-auth-next">
+                        <span>IL PROSSIMO PASSO</span>
+                        <p>
+                            {redirect?.startsWith('/configuratore')
+                                ? 'Dopo l’accesso, riprendi il tuo preventivo dal punto in cui lo hai lasciato.'
+                                : 'Esplora i materiali, crea il tuo primo preventivo e salva le idee che vuoi realizzare.'}
+                        </p>
                     </div>
-                    <h1 className="text-3xl font-bold font-display text-gray-900 mb-2">Registrati</h1>
-                    <p className="text-gray-500 text-sm">Inizia il tuo progetto con PosaFacile</p>
-                </div>
-
-                {error && (
-                    <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-6">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                            <Input name="firstName" required placeholder="Mario" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cognome</label>
-                            <Input name="lastName" required placeholder="Rossi" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <Input type="email" name="email" required placeholder="mario.rossi@example.com" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <Input type="password" name="password" required placeholder="••••••••" minLength={6} />
-                    </div>
-
-                    <Button type="submit" className="w-full h-12 text-lg" disabled={loading}>
-                        {loading ? 'Registrazione...' : 'Crea Account'}
-                    </Button>
-                </form>
-
-                <div className="mt-6 text-center text-sm text-gray-500">
-                    Hai già un account? <Link to="/login" className="text-primary font-bold hover:underline">Accedi</Link>
-                </div>
-            </FadeIn>
-        </div>
+                </>
+            )}
+        </AuthLayout>
     )
 }

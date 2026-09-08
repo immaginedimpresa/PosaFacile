@@ -212,7 +212,7 @@ export function AddressAutocomplete({ value, onChange }: AddressAutocompleteProp
                 <div className="col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">CAP</label>
                     <input
-                        type="text" maxLength={5}
+                        type="text" maxLength={5} aria-label="CAP" inputMode="numeric"
                         className={inputClass}
                         value={value.cap}
                         onChange={e => onChange({ cap: e.target.value.replace(/\D/g, '').slice(0, 5) })}
