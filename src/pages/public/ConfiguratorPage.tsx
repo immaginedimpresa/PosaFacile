@@ -254,89 +254,91 @@ export function ConfiguratorPage() {
             </div>
 
             {/* Fixed Bottom Navigation & Progress Bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] py-3 px-4 sm:px-6">
-                <div className="container mx-auto max-w-5xl flex items-center justify-between gap-2 sm:gap-4">
-                    {/* Left: Tasto Indietro */}
-                    <div>
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] py-3 px-4 sm:px-6">
+                <div className="container mx-auto max-w-5xl flex items-center justify-between gap-3 sm:gap-6">
+                    {/* Left: Tasto Indietro (o Torna al Catalogo allo Step 1) */}
+                    <div className="flex-shrink-0">
                         {currentStep > 1 ? (
                             <button
                                 type="button"
                                 onClick={handlePrev}
-                                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-100/80 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
+                                className="flex items-center gap-2 px-3.5 sm:px-5 py-2.5 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 font-semibold transition-all text-xs sm:text-sm active:scale-95 cursor-pointer shadow-xs"
                             >
-                                <ArrowLeft className="w-4 h-4" />
+                                <ArrowLeft className="w-4 h-4 text-stone-500" />
                                 <span className="hidden sm:inline">Indietro</span>
                             </button>
                         ) : (
-                            <div className="w-9 sm:w-20" />
+                            <Link
+                                to="/catalog"
+                                className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 font-medium transition-all text-xs sm:text-sm"
+                            >
+                                <ArrowLeft className="w-4 h-4 text-stone-400" />
+                                <span className="hidden sm:inline">Catalogo</span>
+                            </Link>
                         )}
                     </div>
 
-                    {/* Center: I Passaggi (Desktop) */}
-                    <div className="hidden md:flex items-center justify-center gap-1 lg:gap-1.5 overflow-x-auto py-1">
-                        {STEPS.map(({ num, label }) => {
-                            const isActive = currentStep === num
-                            const isCompleted = currentStep > num
+                    {/* Center: Stepper & Progress Indicator */}
+                    <div className="flex flex-col items-center justify-center flex-1 max-w-xl px-1 sm:px-4">
+                        {/* Step Title, Counter and Running Total */}
+                        <div className="flex items-center justify-between w-full mb-1.5">
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className="px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 font-bold text-[11px] whitespace-nowrap">
+                                    Passo {currentStep} di 9
+                                </span>
+                                <span className="font-bold text-stone-900 truncate max-w-[150px] sm:max-w-none text-xs sm:text-sm">
+                                    {STEPS[currentStep - 1]?.label}
+                                </span>
+                            </div>
 
-                            return (
-                                <button
-                                    key={num}
-                                    type="button"
-                                    onClick={() => isCompleted && handleJumpToStep(num)}
-                                    disabled={!isCompleted}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
-                                        isActive
-                                            ? 'bg-orange-50 text-orange-600 font-bold border border-orange-200 shadow-xs'
-                                            : isCompleted
-                                                ? 'text-gray-700 hover:bg-gray-100 cursor-pointer'
-                                                : 'text-gray-400 opacity-60 cursor-default'
-                                    }`}
-                                >
-                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                        isActive
-                                            ? 'bg-orange-500 text-white shadow-xs shadow-orange-500/30'
-                                            : isCompleted
-                                                ? 'bg-emerald-500 text-white'
-                                                : 'bg-gray-200 text-gray-500'
-                                    }`}>
-                                        {isCompleted ? <Check className="w-3 h-3" /> : num}
-                                    </span>
-                                    <span className="hidden lg:inline">{label}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
-
-                    {/* Center: I Passaggi (Mobile) */}
-                    <div className="flex md:hidden flex-col items-center flex-1 px-2">
-                        <div className="text-xs font-semibold text-gray-800 flex items-center gap-1">
-                            <span className="text-orange-600 font-bold">{currentStep}/9</span>
-                            <span className="truncate max-w-[130px]">{STEPS[currentStep - 1]?.label}</span>
+                            {total > 0 && (
+                                <div className="text-xs font-semibold text-stone-600 hidden xs:flex items-center gap-1">
+                                    <span className="text-stone-400">Totale:</span>
+                                    <span className="font-bold text-orange-600 text-xs sm:text-sm">€{total.toFixed(2)}</span>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex items-center gap-1 mt-1.5 w-full max-w-[140px]">
-                            {STEPS.map(({ num }) => (
-                                <div
-                                    key={num}
-                                    className={`h-1.5 rounded-full flex-1 transition-all ${
-                                        num === currentStep
-                                            ? 'bg-orange-500'
-                                            : num < currentStep
-                                                ? 'bg-emerald-500'
-                                                : 'bg-gray-200'
-                                    }`}
-                                />
-                            ))}
+
+                        {/* Segmented Progress Track with Tooltips */}
+                        <div className="flex items-center gap-1.5 w-full">
+                            {STEPS.map(({ num, label }) => {
+                                const isCurrent = currentStep === num
+                                const isCompleted = currentStep > num
+
+                                return (
+                                    <button
+                                        key={num}
+                                        type="button"
+                                        onClick={() => isCompleted && handleJumpToStep(num)}
+                                        disabled={!isCompleted}
+                                        title={`Passo ${num}: ${label}${isCompleted ? ' (Clicca per tornare)' : ''}`}
+                                        className={`group relative flex-1 h-2 rounded-full transition-all cursor-default ${
+                                            isCurrent
+                                                ? 'bg-orange-500 ring-2 ring-orange-200 ring-offset-1'
+                                                : isCompleted
+                                                    ? 'bg-emerald-500 hover:opacity-85 cursor-pointer'
+                                                    : 'bg-stone-200/90'
+                                        }`}
+                                    >
+                                        {/* Hover Tooltip (Desktop) */}
+                                        <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 hidden md:group-hover:flex items-center gap-1 bg-stone-900 text-white text-[10px] font-semibold px-2 py-0.5 rounded-md shadow-md whitespace-nowrap z-50">
+                                            <span>{num}. {label}</span>
+                                            {isCompleted && <span className="text-emerald-400">✓</span>}
+                                        </span>
+                                    </button>
+                                )
+                            })}
                         </div>
                     </div>
 
                     {/* Right: Tasto Continua / Conferma */}
-                    <div>
+                    <div className="flex-shrink-0">
                         {currentStep < 9 ? (
                             <button
                                 type="button"
                                 onClick={handleNext}
                                 disabled={!canProceed}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-md shadow-orange-500/20 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
+                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
                             >
                                 <span>Continua</span>
                                 <ArrowRight className="w-4 h-4" />
@@ -345,7 +347,7 @@ export function ConfiguratorPage() {
                             <button
                                 type="button"
                                 onClick={handleNext}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-stone-900 hover:bg-black text-white font-semibold rounded-xl shadow-md transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
+                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-stone-900 hover:bg-black text-white font-bold rounded-xl shadow-md transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
                             >
                                 <LogIn className="w-4 h-4" />
                                 <span className="hidden sm:inline">Accedi e conferma</span>
@@ -355,7 +357,7 @@ export function ConfiguratorPage() {
                             <button
                                 type="button"
                                 onClick={handleNext}
-                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md shadow-emerald-600/20 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
+                                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md shadow-emerald-600/20 transition-all text-xs sm:text-sm active:scale-95 cursor-pointer"
                             >
                                 <Check className="w-4 h-4" />
                                 <span>Conferma</span>
