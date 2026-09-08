@@ -19,16 +19,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     const { user, role, loading } = useAuth()
     const location = useLocation()
 
-    console.log('[ProtectedRoute Debug]', {
-        path: location.pathname,
-        loading,
-        userEmail: user?.email,
-        currentRole: role,
-        roleType: typeof role,
-        requiredRoles: allowedRoles,
-        match: role && allowedRoles?.includes(role)
-    })
-
     if (loading) {
         return <LoadingSpinner />
     }

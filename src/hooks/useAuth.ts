@@ -21,6 +21,31 @@ interface UseAuthReturn extends AuthState {
     isCustomer: boolean
 }
 
+/**
+ * Il ruolo si legge da public.users, non dai metadata del JWT.
+ *
+ * `user_metadata` e' modificabile dall'utente stesso con una updateUser:
+ * usarlo per decidere cosa mostrare significa lasciare che chiunque apra
+ * l'interfaccia di amministrazione. La colonna `role` e' protetta da un
+ * trigger che impedisce di auto-assegnarsi un ruolo.
+ *
+ * In caso di errore si assume il ruolo meno privilegiato.
+ */
+async function fetchUserRole(userId: string): Promise<UserRole> {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle()
+
+        if (error || !data?.role) return 'customer'
+        return data.role as UserRole
+    } catch {
+        return 'customer'
+    }
+}
+
 export function useAuth(): UseAuthReturn {
     const [state, setState] = useState<AuthState>({
         user: null,
@@ -40,9 +65,8 @@ export function useAuth(): UseAuthReturn {
                 if (!mounted) return
 
                 if (session?.user) {
-                    // In a clean architecture, the role should be in metadata
-                    // We fallback to 'customer' only if not present
-                    const role = (session.user.user_metadata?.role as UserRole) || 'customer'
+                    const role = await fetchUserRole(session.user.id)
+                    if (!mounted) return
                     setState({
                         user: session.user,
                         session,
@@ -70,12 +94,13 @@ export function useAuth(): UseAuthReturn {
             if (!mounted) return
 
             if (session?.user) {
-                const role = (session.user.user_metadata?.role as UserRole) || 'customer'
-                setState({
-                    user: session.user,
-                    session,
-                    role,
-                    loading: false,
+                // La sessione c'e' gia': si mostra il caricamento finche' il
+                // ruolo non arriva, per non far lampeggiare la schermata
+                // sbagliata a chi ha un ruolo diverso da 'customer'.
+                setState(s => ({ ...s, user: session.user, session, loading: true }))
+                fetchUserRole(session.user.id).then(role => {
+                    if (!mounted) return
+                    setState({ user: session.user, session, role, loading: false })
                 })
             } else {
                 setState({
