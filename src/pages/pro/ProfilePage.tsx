@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { Building2, Mail, Phone, FileText, MapPin, Save, Loader2, Map, Search, X } from 'lucide-react'
+import { Mail, Phone, FileText, MapPin, Save, Loader2, Map, Search, X, UserCircle, Briefcase, Award } from 'lucide-react'
 import { ITALIAN_PROVINCES } from '@/lib/provinces'
+import { toast } from 'sonner'
 
 interface ProfessionalProfile {
     company_name: string
@@ -102,13 +103,13 @@ export function ProfilePage() {
         }
     }
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const handleSave = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault()
         if (!user) return
 
         setSaving(true)
+        const toastId = toast.loading('Salvataggio profilo in corso...')
         try {
-            // Update profile
             const { error: profileError } = await supabase
                 .from('professional_profiles')
                 .update(profile)
@@ -116,7 +117,6 @@ export function ProfilePage() {
 
             if (profileError) throw profileError
 
-            // Update zones: delete all and re-insert
             const { error: deleteError } = await supabase
                 .from('professional_zones')
                 .delete()
@@ -137,10 +137,10 @@ export function ProfilePage() {
                 if (insertError) throw insertError
             }
 
-            alert('Profilo aggiornato con successo!')
+            toast.success('Profilo e zone operative aggiornati con successo!', { id: toastId })
         } catch (error: any) {
             console.error('Error updating profile:', error)
-            alert('Errore durante il salvataggio: ' + error.message)
+            toast.error('Errore durante il salvataggio: ' + error.message, { id: toastId })
         } finally {
             setSaving(false)
         }
@@ -148,148 +148,188 @@ export function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center p-12">
-                <Loader2 className="animate-spin text-orange-500" size={32} />
+            <div className="container mx-auto px-4 py-16 max-w-5xl text-center">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto mb-4">
+                    <Loader2 className="animate-spin text-orange-500" size={28} />
+                </div>
+                <h2 className="text-xl font-bold text-stone-900">Caricamento Profilo...</h2>
+                <p className="text-stone-500 text-sm mt-1">Stiamo recuperando le tue informazioni aziendali.</p>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-900">Il Mio Profilo</h1>
+        <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 flex-shrink-0">
+                        <UserCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">Profilo Professionista</h1>
+                        <p className="text-stone-500 text-sm mt-0.5">Gestisci la tua anagrafica, i dati fiscali e le zone operative coperte</p>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => handleSave()}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold shadow-md shadow-orange-500/20 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    Salva Modifiche
+                </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
-                {/* Personal Info */}
+            <form onSubmit={handleSave} className="space-y-8">
+                {/* Personal & Professional Info */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
+                    className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6 sm:p-8"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-                            <Building2 size={24} />
+                    <div className="flex items-center gap-3.5 mb-6 pb-4 border-b border-stone-100">
+                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
+                            <Briefcase size={20} />
                         </div>
-                        <h2 className="text-lg font-semibold text-gray-900">Informazioni Personali</h2>
+                        <div>
+                            <h2 className="text-base font-bold text-stone-900">Informazioni Personali & Esperienza</h2>
+                            <p className="text-xs text-stone-500">I recapiti del referente tecnico o titolare</p>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Nome Completo Referente</label>
                             <input
                                 type="text"
                                 value={profile.full_name}
                                 onChange={e => setProfile({ ...profile, full_name: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="Mario Rossi"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Email di Accesso (Non Modificabile)</label>
                             <div className="relative">
-                                <Mail className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                                <Mail className="absolute left-3.5 top-3 text-stone-400" size={18} />
                                 <input
                                     type="email"
                                     value={user?.email || ''}
                                     disabled
-                                    className="w-full pl-10 pr-3 py-2 border rounded-lg bg-gray-50 text-gray-500"
+                                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-100/70 text-stone-500 text-sm font-medium cursor-not-allowed"
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Telefono / WhatsApp Reperibilità</label>
                             <div className="relative">
-                                <Phone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                                <Phone className="absolute left-3.5 top-3 text-stone-400" size={18} />
                                 <input
                                     type="tel"
                                     value={profile.phone}
                                     onChange={e => setProfile({ ...profile, phone: e.target.value })}
-                                    className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                    placeholder="+39 340 0000000"
+                                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Anni di Esperienza</label>
-                            <input
-                                type="number"
-                                min="0"
-                                value={profile.years_experience}
-                                onChange={e => setProfile({ ...profile, years_experience: parseInt(e.target.value) || 0 })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                            />
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Anni di Esperienza nel Settore</label>
+                            <div className="relative">
+                                <Award className="absolute left-3.5 top-3 text-stone-400" size={18} />
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={profile.years_experience}
+                                    onChange={e => setProfile({ ...profile, years_experience: parseInt(e.target.value) || 0 })}
+                                    placeholder="10"
+                                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Bio / Presentazione</label>
+                    <div className="mt-5">
+                        <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Presentazione Aziendale / Specializzazioni</label>
                         <textarea
                             rows={3}
                             value={profile.bio}
                             onChange={e => setProfile({ ...profile, bio: e.target.value })}
-                            placeholder="Descrivi brevemente la tua attività e le tue competenze..."
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                            placeholder="Descrivi brevemente le tue specializzazioni: posa parquet, grandi formati, pavimenti continui..."
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none resize-none leading-relaxed"
                         />
                     </div>
                 </motion.div>
 
                 {/* Company & Fiscal Info */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
+                    transition={{ delay: 0.05 }}
+                    className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6 sm:p-8"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-orange-50 p-2 rounded-lg text-orange-600">
-                            <FileText size={24} />
+                    <div className="flex items-center gap-3.5 mb-6 pb-4 border-b border-stone-100">
+                        <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 flex-shrink-0">
+                            <FileText size={20} />
                         </div>
-                        <h2 className="text-lg font-semibold text-gray-900">Dati Fiscali</h2>
+                        <div>
+                            <h2 className="text-base font-bold text-stone-900">Dati Fiscali & Fatturazione Elettronica</h2>
+                            <p className="text-xs text-stone-500">Necessari per la liquidazione compensi e conformità SDI</p>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Ragione Sociale</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Ragione Sociale / Denominazione</label>
                             <input
                                 type="text"
                                 value={profile.company_name}
                                 onChange={e => setProfile({ ...profile, company_name: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="Rossi Pavimenti S.r.l."
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Partita IVA</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Partita IVA</label>
                             <input
                                 type="text"
                                 value={profile.vat_number}
                                 onChange={e => setProfile({ ...profile, vat_number: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="IT01234567890"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Codice Fiscale</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Codice Fiscale</label>
                             <input
                                 type="text"
                                 value={profile.fiscal_code}
-                                onChange={e => setProfile({ ...profile, fiscal_code: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                onChange={e => setProfile({ ...profile, fiscal_code: e.target.value.toUpperCase() })}
+                                placeholder="RSSMRA80A01H501U"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none uppercase"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Codice SDI</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Codice Univoco Destinatario SDI</label>
                             <input
                                 type="text"
+                                maxLength={7}
                                 value={profile.sdi_code}
-                                onChange={e => setProfile({ ...profile, sdi_code: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                onChange={e => setProfile({ ...profile, sdi_code: e.target.value.toUpperCase() })}
+                                placeholder="M5UXCR1 (o 0000000)"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none uppercase"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">PEC</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Indirizzo Posta PEC</label>
                             <input
                                 type="email"
                                 value={profile.pec}
                                 onChange={e => setProfile({ ...profile, pec: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="azienda@pec.it"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                     </div>
@@ -297,55 +337,62 @@ export function ProfilePage() {
 
                 {/* Billing Address */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
+                    transition={{ delay: 0.1 }}
+                    className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6 sm:p-8"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-green-50 p-2 rounded-lg text-green-600">
-                            <MapPin size={24} />
+                    <div className="flex items-center gap-3.5 mb-6 pb-4 border-b border-stone-100">
+                        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 flex-shrink-0">
+                            <MapPin size={20} />
                         </div>
-                        <h2 className="text-lg font-semibold text-gray-900">Sede Legale / Fatturazione</h2>
+                        <div>
+                            <h2 className="text-base font-bold text-stone-900">Sede Legale & Operativa</h2>
+                            <p className="text-xs text-stone-500">Indirizzo registrato della società o ditta individuale</p>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                         <div className="md:col-span-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Indirizzo</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Indirizzo e Civico</label>
                             <input
                                 type="text"
                                 value={profile.billing_address}
                                 onChange={e => setProfile({ ...profile, billing_address: e.target.value })}
-                                placeholder="Via/Piazza, Civico"
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="Via dei Maestri Artigiani 42"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">CAP</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">CAP</label>
                             <input
                                 type="text"
+                                maxLength={5}
                                 value={profile.billing_cap}
                                 onChange={e => setProfile({ ...profile, billing_cap: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="20121"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                         <div className="md:col-span-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Città</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Città</label>
                             <input
                                 type="text"
                                 value={profile.billing_city}
                                 onChange={e => setProfile({ ...profile, billing_city: e.target.value })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                placeholder="Milano"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
                         <div className="md:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Provincia</label>
+                            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Provincia</label>
                             <input
                                 type="text"
                                 maxLength={2}
                                 value={profile.billing_province}
                                 onChange={e => setProfile({ ...profile, billing_province: e.target.value.toUpperCase() })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none uppercase"
+                                placeholder="MI"
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none uppercase text-center"
                             />
                         </div>
                     </div>
@@ -353,121 +400,140 @@ export function ProfilePage() {
 
                 {/* Work Zones */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
+                    transition={{ delay: 0.15 }}
+                    className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6 sm:p-8"
                 >
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="bg-purple-50 p-2 rounded-lg text-purple-600">
-                            <Map size={24} />
+                    <div className="flex items-center gap-3.5 mb-6 pb-4 border-b border-stone-100">
+                        <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 flex-shrink-0">
+                            <Map size={20} />
                         </div>
-                        <h2 className="text-lg font-semibold text-gray-900">Zone di Lavoro</h2>
+                        <div>
+                            <h2 className="text-base font-bold text-stone-900">Province & Raggio Operativo</h2>
+                            <p className="text-xs text-stone-500">Seleziona le aree in cui sei disponibile ad effettuare posa e collaudi</p>
+                        </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Province Coperte
-                        </label>
-
                         {/* Selected Zones Display */}
-                        {selectedZones.length > 0 && (
-                            <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-sm font-semibold text-green-700">Selezionate ({selectedZones.length}):</span>
+                        {selectedZones.length > 0 ? (
+                            <div className="mb-4 p-4 bg-orange-50/50 border border-orange-200/70 rounded-2xl">
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-orange-800">
+                                        Zone Selezionate ({selectedZones.length})
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedZones([])}
+                                        className="text-xs text-stone-500 hover:text-rose-600 transition-colors font-semibold"
+                                    >
+                                        Deseleziona tutte
+                                    </button>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     {selectedZones.map(code => {
                                         const prov = ITALIAN_PROVINCES.find(p => p.code === code)
                                         return (
-                                            <button
+                                            <span
                                                 key={code}
-                                                type="button"
-                                                onClick={() => setSelectedZones(selectedZones.filter(z => z !== code))}
-                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-green-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition-colors"
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-orange-300 rounded-xl text-xs font-bold text-stone-800 shadow-2xs"
                                             >
-                                                {code} - {prov?.name}
-                                                <X size={14} />
-                                            </button>
+                                                <span className="text-orange-600 font-black">{code}</span>
+                                                <span>{prov?.name || code}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedZones(selectedZones.filter(z => z !== code))}
+                                                    className="hover:bg-rose-50 hover:text-rose-600 rounded p-0.5 transition-colors"
+                                                >
+                                                    <X size={13} />
+                                                </button>
+                                            </span>
                                         )
                                     })}
                                 </div>
+                            </div>
+                        ) : (
+                            <div className="mb-4 p-4 bg-amber-50/70 border border-amber-200/70 rounded-2xl text-xs text-amber-900 font-medium">
+                                ⚠️ Non hai ancora selezionato alcuna provincia. Seleziona almeno una provincia per ricevere le assegnazioni di cantieri nella tua zona.
                             </div>
                         )}
 
                         {/* Search Bar */}
                         <div className="relative mb-3">
-                            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                            <Search className="absolute left-3.5 top-3 text-stone-400" size={18} />
                             <input
                                 type="text"
-                                placeholder="Cerca provincia..."
+                                placeholder="Filtra province per nome o sigla (es. Milano, MI, Roma...)"
                                 value={provinceSearch}
                                 onChange={e => setProvinceSearch(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
                             />
                         </div>
 
-                        <div className="border rounded-lg p-3 max-h-60 overflow-y-auto bg-gray-50">
-                            <div className="grid grid-cols-2 gap-2">
+                        <div className="border border-stone-200 rounded-2xl p-3 max-h-60 overflow-y-auto bg-stone-50/40">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {ITALIAN_PROVINCES
                                     .filter(prov =>
                                         provinceSearch === '' ||
                                         prov.name.toLowerCase().includes(provinceSearch.toLowerCase()) ||
                                         prov.code.toLowerCase().includes(provinceSearch.toLowerCase())
                                     )
-                                    .map(prov => (
-                                        <label key={prov.code} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedZones.includes(prov.code)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedZones([...selectedZones, prov.code])
-                                                    } else {
-                                                        setSelectedZones(selectedZones.filter(z => z !== prov.code))
-                                                    }
-                                                }}
-                                                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                                            />
-                                            <span className="text-sm text-gray-700">{prov.code} - {prov.name}</span>
-                                        </label>
-                                    ))}
+                                    .map(prov => {
+                                        const isChecked = selectedZones.includes(prov.code)
+                                        return (
+                                            <label
+                                                key={prov.code}
+                                                className={`flex items-center gap-2.5 p-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                                                    isChecked 
+                                                        ? 'bg-orange-50 text-orange-950 border border-orange-200/60' 
+                                                        : 'hover:bg-white text-stone-700'
+                                                }`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedZones([...selectedZones, prov.code])
+                                                        } else {
+                                                            setSelectedZones(selectedZones.filter(z => z !== prov.code))
+                                                        }
+                                                    }}
+                                                    className="rounded border-stone-300 text-orange-500 focus:ring-orange-500 w-4 h-4"
+                                                />
+                                                <span className="font-bold text-stone-900">{prov.code}</span>
+                                                <span className="truncate text-stone-600">{prov.name}</span>
+                                            </label>
+                                        )
+                                    })}
                             </div>
                         </div>
-                        {selectedZones.length === 0 && (
-                            <p className="text-sm text-amber-600 mt-2">
-                                ⚠️ Seleziona almeno una provincia per ricevere lavori nella tua zona
-                            </p>
-                        )}
                     </div>
                 </motion.div>
 
-                {/* Save Button */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="flex justify-end"
-                >
+                {/* Bottom Save Bar */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-200">
                     <button
                         type="submit"
                         disabled={saving}
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="inline-flex items-center gap-2 px-8 py-3.5 bg-stone-900 hover:bg-black text-white rounded-xl text-sm font-black shadow-md active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
                     >
                         {saving ? (
                             <>
-                                <Loader2 size={20} className="animate-spin" />
-                                Salvataggio...
+                                <Loader2 size={18} className="animate-spin" />
+                                Salvataggio Profilo...
                             </>
                         ) : (
                             <>
-                                <Save size={20} />
-                                Salva Modifiche
+                                <Save size={18} />
+                                Salva Tutte le Modifiche
                             </>
                         )}
                     </button>
-                </motion.div>
+                </div>
             </form>
         </div>
     )
 }
+

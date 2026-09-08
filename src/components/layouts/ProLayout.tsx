@@ -1,105 +1,149 @@
-import { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Hammer, UserCircle, Calendar, LogOut, Menu, X } from 'lucide-react'
+import {
+    LayoutDashboard,
+    Hammer,
+    UserCircle,
+    Calendar,
+    LogOut,
+    Store,
+    ArrowUpRight,
+    HardHat
+} from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 export function ProLayout() {
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const location = useLocation()
-    const { signOut } = useAuth()
+    const { user, signOut } = useAuth()
 
     const navigation = [
-        { name: 'Dashboard', href: '/pro', icon: LayoutDashboard },
+        { name: 'Dashboard', href: '/pro', icon: LayoutDashboard, exact: true },
         { name: 'I miei Lavori', href: '/pro/jobs', icon: Hammer },
         { name: 'Calendario', href: '/pro/calendar', icon: Calendar },
-        { name: 'Profilo', href: '/pro/profile', icon: UserCircle },
+        { name: 'Profilo & Zone', href: '/pro/profile', icon: UserCircle },
     ]
 
+    const isActive = (path: string, exact?: boolean) => {
+        if (exact) {
+            return location.pathname === path
+        }
+        return location.pathname.startsWith(path)
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="flex min-h-screen bg-stone-50/70 text-stone-900">
             {/* Sidebar Desktop */}
-            <div className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
-                <div className="p-6 border-b border-gray-100 flex items-center gap-2">
-                    <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold">P</div>
-                    <span className="text-lg font-bold text-gray-900">PosaFacile Pro</span>
+            <aside className="w-64 bg-stone-900 text-stone-200 flex-shrink-0 hidden lg:flex flex-col border-r border-stone-800 shadow-xl z-20 sticky top-0 h-screen">
+                {/* Brand Header */}
+                <div className="p-5 border-b border-stone-800/80 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-lg shadow-md shadow-orange-500/20">
+                            P
+                        </div>
+                        <div>
+                            <span className="font-extrabold text-white text-base tracking-tight block">
+                                PosaFacile
+                            </span>
+                            <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest block -mt-0.5">
+                                Portale Posatori
+                            </span>
+                        </div>
+                    </div>
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Posatore online" />
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
+                {/* Navigation Items */}
+                <nav className="flex-1 px-3 py-5 space-y-1.5 overflow-y-auto">
+                    <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                        Menu Posatore
+                    </div>
                     {navigation.map((item) => {
                         const Icon = item.icon
-                        const isActive = location.pathname === item.href
+                        const active = isActive(item.href, item.exact)
                         return (
                             <Link
                                 key={item.name}
                                 to={item.href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${isActive
-                                    ? 'bg-orange-50 text-orange-600'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                    }`}
+                                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
+                                    active
+                                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                        : 'text-stone-400 hover:text-white hover:bg-stone-800/70'
+                                }`}
                             >
-                                <Icon size={20} />
-                                {item.name}
+                                <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-stone-400'}`} />
+                                <span>{item.name}</span>
                             </Link>
                         )
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-gray-100">
-                    <button
-                        onClick={signOut}
-                        className="flex items-center gap-3 px-4 py-3 text-red-600 rounded-xl font-medium hover:bg-red-50 w-full transition-colors"
+                {/* Sidebar Footer */}
+                <div className="p-4 border-t border-stone-800/80 bg-stone-950/40 space-y-3">
+                    <Link
+                        to="/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-stone-400 hover:text-white hover:bg-stone-800/50 transition-colors"
                     >
-                        <LogOut size={20} />
-                        Esci
-                    </button>
-                </div>
-            </div>
+                        <span className="flex items-center gap-2">
+                            <Store className="w-4 h-4 text-orange-400" />
+                            <span>Vedi Piattaforma</span>
+                        </span>
+                        <ArrowUpRight className="w-3.5 h-3.5 opacity-60" />
+                    </Link>
 
-            {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 px-4 flex items-center justify-between">
-                <div className="font-bold text-gray-900">PosaFacile Pro</div>
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                    {isMobileMenuOpen ? <X /> : <Menu />}
-                </button>
-            </div>
-
-            {/* Mobile Menu Overlay */}
-            {isMobileMenuOpen && (
-                <div className="fixed inset-0 z-30 bg-black/50 md:hidden pt-16" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="bg-white p-4 space-y-2 h-full w-3/4" onClick={e => e.stopPropagation()}>
-                        {navigation.map((item) => {
-                            const Icon = item.icon
-                            const isActive = location.pathname === item.href
-                            return (
-                                <Link
-                                    key={item.name}
-                                    to={item.href}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-4 rounded-xl font-medium text-lg ${isActive
-                                        ? 'bg-orange-50 text-orange-600'
-                                        : 'text-gray-600'
-                                        }`}
-                                >
-                                    <Icon size={24} />
-                                    {item.name}
-                                </Link>
-                            )
-                        })}
-                        <div className="border-t pt-2 mt-4">
-                            <button
-                                onClick={signOut}
-                                className="flex items-center gap-3 px-4 py-4 text-red-600 font-medium w-full"
-                            >
-                                <LogOut size={24} />
-                                Esci
-                            </button>
+                    <div className="flex items-center justify-between px-2 pt-2 border-t border-stone-800/60">
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="w-7 h-7 rounded-lg bg-stone-800 flex items-center justify-center text-stone-400 shrink-0">
+                                <HardHat className="w-4 h-4 text-orange-400" />
+                            </div>
+                            <div className="overflow-hidden">
+                                <div className="text-xs font-semibold text-stone-200 truncate">
+                                    {user?.email?.split('@')[0] || 'Posatore'}
+                                </div>
+                                <div className="text-[10px] text-emerald-400 font-semibold truncate">
+                                    Account Attivo
+                                </div>
+                            </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={() => signOut()}
+                            className="p-1.5 text-stone-400 hover:text-rose-400 hover:bg-stone-800/80 rounded-lg transition-colors cursor-pointer"
+                            title="Disconnetti"
+                        >
+                            <LogOut size={16} />
+                        </button>
                     </div>
                 </div>
-            )}
+            </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 overflow-auto md:p-8 p-4 pt-20 md:pt-8 w-full">
+            {/* Mobile Bottom Navigation */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-stone-900 border-t border-stone-800 z-50 shadow-2xl px-2 py-1">
+                <nav className="flex items-center justify-around py-1">
+                    {navigation.map((item) => {
+                        const Icon = item.icon
+                        const active = isActive(item.href, item.exact)
+                        return (
+                            <Link
+                                key={item.name}
+                                to={item.href}
+                                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-lg text-[10px] font-medium transition-colors ${
+                                    active
+                                        ? 'text-orange-400 font-bold bg-orange-500/15'
+                                        : 'text-stone-400 hover:text-stone-200'
+                                }`}
+                            >
+                                <Icon className={`w-4 h-4 mb-0.5 ${active ? 'text-orange-400' : 'text-stone-400'}`} />
+                                <span className="truncate">{item.name.replace(' & Zone', '')}</span>
+                            </Link>
+                        )
+                    })}
+                </nav>
+            </div>
+
+            {/* Main Content Area */}
+            <main className="flex-1 overflow-y-auto pb-24 lg:pb-8">
                 <Outlet />
             </main>
         </div>
