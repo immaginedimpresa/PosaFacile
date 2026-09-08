@@ -27,7 +27,7 @@ export function AdminProductsPage() {
     const [categoryFilter, setCategoryFilter] = useState<ProductCategory | undefined>()
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
-    const { products, loading, error, total, deleteProduct, refetch } = useProducts({
+    const { products, loading, error, total, deleteProduct, updateProduct, createProduct, refetch } = useProducts({
         search: search || undefined,
         status: statusFilter,
         category: categoryFilter,
@@ -217,31 +217,66 @@ export function AdminProductsPage() {
                                                 {product.stock_qty != null ? `${product.stock_qty} mq` : '-'}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusInfo.color}`}>
-                                                    {statusInfo.label}
-                                                </span>
+                                                <select
+                                                    value={product.status || 'draft'}
+                                                    onChange={async (e) => {
+                                                        const newStatus = e.target.value as ProductStatus
+                                                        await updateProduct(product.id, { status: newStatus })
+                                                        refetch()
+                                                    }}
+                                                    className={`px-2.5 py-1 text-xs font-semibold rounded-full border border-stone-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-orange-500 ${statusInfo.color}`}
+                                                >
+                                                    <option value="active">Attivo</option>
+                                                    <option value="draft">Bozza</option>
+                                                    <option value="out_of_stock">Esaurito</option>
+                                                    <option value="discontinued">Sospeso</option>
+                                                </select>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center justify-end gap-2">
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            const newSku = `${product.sku}-COPY-${Math.floor(100 + Math.random() * 900)}`
+                                                            const { id, created_at, updated_at, ...rest } = product as any
+                                                            const { error } = await createProduct({
+                                                                ...rest,
+                                                                name: `${product.name} (Copia)`,
+                                                                sku: newSku,
+                                                                status: 'draft'
+                                                            })
+                                                            if (error) {
+                                                                alert(`Errore durante la duplicazione: ${error.message}`)
+                                                            } else {
+                                                                refetch()
+                                                            }
+                                                        }}
+                                                        className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+                                                        title="Duplica prodotto"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </button>
                                                     <Link
                                                         to={`/admin/products/${product.id}`}
-                                                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-colors"
                                                         title="Modifica"
                                                     >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                         </svg>
                                                     </Link>
                                                     <button
                                                         onClick={() => handleDelete(product.id, product.name)}
                                                         disabled={deletingId === product.id}
-                                                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                                                         title="Elimina"
                                                     >
                                                         {deletingId === product.id ? (
-                                                            <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                                                         ) : (
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                             </svg>
                                                         )}

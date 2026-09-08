@@ -20,10 +20,13 @@ import {
 } from 'lucide-react'
 import {
     type CustomerSummary,
-    fetchCustomers
+    fetchCustomers,
+    deleteCustomer
 } from '@/services/customersService'
 import { CustomerDetailDrawer } from '@/components/admin/CustomerDetailDrawer'
 import { CustomerEditModal } from '@/components/admin/CustomerEditModal'
+import { CreateCustomerModal } from '@/components/admin/CreateCustomerModal'
+import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function AdminCustomersPage() {
@@ -41,6 +44,8 @@ export function AdminCustomersPage() {
     // Modali e Drawer
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
     const [editingCustomer, setEditingCustomer] = useState<CustomerSummary | null>(null)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
     const [copiedEmail, setCopiedEmail] = useState<string | null>(null)
 
     const loadData = async (isManualRefresh = false) => {
@@ -63,6 +68,26 @@ export function AdminCustomersPage() {
     useEffect(() => {
         loadData()
     }, [])
+
+    // Eliminazione cliente
+    const handleDeleteCustomer = async (customer: CustomerSummary) => {
+        const name = [customer.first_name, customer.last_name].filter(Boolean).join(' ') || customer.email
+        if (!window.confirm(`Sei sicuro di voler eliminare definitivamente il cliente "${name}"?\nVerranno eliminati anche i preventivi e i dati associati.`)) {
+            return
+        }
+
+        setDeletingId(customer.id)
+        try {
+            await deleteCustomer(customer.id)
+            toast.success(`Cliente "${name}" eliminato con successo`)
+            setCustomers(prev => prev.filter(c => c.id !== customer.id))
+        } catch (err: any) {
+            console.error(err)
+            toast.error(err.message || 'Errore durante l\'eliminazione del cliente')
+        } finally {
+            setDeletingId(null)
+        }
+    }
 
     // Copia rapida email negli appunti
     const handleCopyEmail = (email: string) => {
@@ -222,6 +247,15 @@ export function AdminCustomersPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
+                    >
+                        <Plus size={16} />
+                        <span>Nuovo Cliente</span>
+                    </button>
+
                     <button
                         type="button"
                         onClick={() => loadData(true)}
@@ -550,6 +584,15 @@ export function AdminCustomersPage() {
                                                     >
                                                         <Edit3 size={16} />
                                                     </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteCustomer(customer)}
+                                                        disabled={deletingId === customer.id}
+                                                        className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+                                                        title="Elimina cliente"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -568,6 +611,15 @@ export function AdminCustomersPage() {
                 onClose={() => setSelectedCustomerId(null)}
                 onEdit={cust => {
                     setEditingCustomer(cust)
+                }}
+            />
+
+            {/* Modal Creazione Nuovo Cliente */}
+            <CreateCustomerModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => {
+                    loadData(true)
                 }}
             />
 

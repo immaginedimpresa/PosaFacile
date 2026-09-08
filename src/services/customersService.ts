@@ -331,7 +331,9 @@ export async function updateCustomerProfile(
 
     // 2. Aggiorna customers (dati aziendali/fiscali/note)
     const customerPayload: any = { id: customerId }
-    if (data.customer_type !== undefined) customerPayload.customer_type = data.customer_type
+    if (data.customer_type !== undefined) {
+        customerPayload.customer_type = data.customer_type === 'company' ? 'business' : 'private'
+    }
     if (data.company_name !== undefined) customerPayload.company_name = data.company_name
     if (data.vat_number !== undefined) customerPayload.vat_number = data.vat_number
     if (data.fiscal_code !== undefined) customerPayload.fiscal_code = data.fiscal_code
@@ -344,3 +346,71 @@ export async function updateCustomerProfile(
 
     if (customerError) throw customerError
 }
+
+/**
+ * Crea un nuovo cliente dall'area amministrativa.
+ */
+export async function createCustomer(data: {
+    first_name: string
+    last_name: string
+    email: string
+    phone?: string
+    customer_type: 'private' | 'company'
+    company_name?: string
+    vat_number?: string
+    fiscal_code?: string
+    admin_notes?: string
+}): Promise<string> {
+    const userId = crypto.randomUUID()
+
+    // 1. Inserisci in public.users
+    const { error: userError } = await supabase
+        .from('users')
+        .insert({
+            id: userId,
+            email: data.email.toLowerCase().trim(),
+            first_name: data.first_name.trim(),
+            last_name: data.last_name.trim(),
+            phone: data.phone?.trim() || null,
+            role: 'customer',
+            status: 'active',
+            created_at: new Date().toISOString()
+        })
+
+    if (userError) throw userError
+
+    // 2. Inserisci in public.customers
+    const { error: customerError } = await supabase
+        .from('customers')
+        .upsert({
+            id: userId,
+            customer_type: data.customer_type === 'company' ? 'business' : 'private',
+            company_name: data.customer_type === 'company' ? data.company_name?.trim() || null : null,
+            vat_number: data.customer_type === 'company' ? data.vat_number?.trim() || null : null,
+            fiscal_code: data.fiscal_code?.trim().toUpperCase() || null,
+            admin_notes: data.admin_notes?.trim() || null,
+            is_active: true
+        })
+
+    if (customerError) throw customerError
+
+    return userId
+}
+
+/**
+ * Elimina un cliente e i dati collegati.
+ */
+export async function deleteCustomer(customerId: string): Promise<void> {
+    try {
+        const { error: fnError } = await supabase.functions.invoke('delete-user', {
+            body: { userId: customerId }
+        })
+        if (fnError) throw fnError
+    } catch {
+        // Fallback: eliminazione diretta dal database
+        await supabase.from('customers').delete().eq('id', customerId)
+        const { error: userDeleteError } = await supabase.from('users').delete().eq('id', customerId)
+        if (userDeleteError) throw userDeleteError
+    }
+}
+
