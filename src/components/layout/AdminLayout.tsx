@@ -9,8 +9,10 @@ import {
     Settings,
     ArrowUpRight,
     Shield,
-    Store
+    Store,
+    Bell
 } from 'lucide-react'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
@@ -19,6 +21,7 @@ const navItems = [
     { path: '/admin/professionals', icon: Briefcase, label: 'Professionisti' },
     { path: '/admin/markup', icon: Percent, label: 'Markup' },
     { path: '/admin/customers', icon: Users, label: 'Clienti' },
+    { path: '/admin/notifications', icon: Bell, label: 'Notifiche' },
     { path: '/admin/settings', icon: Settings, label: 'Impostazioni' },
 ]
 
@@ -51,7 +54,10 @@ export function AdminLayout() {
                             </span>
                         </div>
                     </div>
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sistema online" />
+                    <div className="flex items-center gap-2">
+                        <NotificationBell variant="dark" />
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sistema online" />
+                    </div>
                 </div>
 
                 {/* Navigation Items */}

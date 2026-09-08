@@ -7,9 +7,11 @@ import {
     LogOut,
     Store,
     ArrowUpRight,
-    HardHat
+    HardHat,
+    Bell
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function ProLayout() {
     const location = useLocation()
@@ -19,6 +21,7 @@ export function ProLayout() {
         { name: 'Dashboard', href: '/pro', icon: LayoutDashboard, exact: true },
         { name: 'I miei Lavori', href: '/pro/jobs', icon: Hammer },
         { name: 'Calendario', href: '/pro/calendar', icon: Calendar },
+        { name: 'Notifiche', href: '/pro/notifications', icon: Bell },
         { name: 'Profilo & Zone', href: '/pro/profile', icon: UserCircle },
     ]
 
@@ -48,7 +51,10 @@ export function ProLayout() {
                             </span>
                         </div>
                     </div>
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Posatore online" />
+                    <div className="flex items-center gap-2">
+                        <NotificationBell variant="dark" />
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Posatore online" />
+                    </div>
                 </div>
 
                 {/* Navigation Items */}

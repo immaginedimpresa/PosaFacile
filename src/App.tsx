@@ -14,6 +14,7 @@ import { AdminMarkupPage } from '@/pages/admin/AdminMarkupPage'
 import { AdminOrdersPage } from '@/pages/admin/AdminOrdersPage'
 import { AdminCustomersPage } from '@/pages/admin/AdminCustomersPage'
 import { AdminSettingsPage } from '@/pages/admin/AdminSettingsPage'
+import { AdminNotificationsPage } from '@/pages/admin/AdminNotificationsPage'
 import { CustomerDashboard } from '@/pages/private/CustomerDashboard'
 import { CustomerOrderDetailPage } from '@/pages/private/CustomerOrderDetailPage'
 import HomePage from '@/pages/public/HomePage'
@@ -24,6 +25,7 @@ import { JobsPage } from '@/pages/pro/JobsPage'
 import { JobDetailPage } from '@/pages/pro/JobDetailPage'
 import { CalendarPage } from '@/pages/pro/CalendarPage'
 import { ProfilePage } from '@/pages/pro/ProfilePage'
+import { ProNotificationsPage } from '@/pages/pro/ProNotificationsPage'
 
 // Booking Pages
 import { ProfessionalSelectionPage } from '@/pages/booking/ProfessionalSelectionPage'
@@ -72,6 +74,7 @@ function App() {
           <Route path="professionals" element={<AdminProfessionalsPage />} />
           <Route path="markup" element={<AdminMarkupPage />} />
           <Route path="customers" element={<AdminCustomersPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
@@ -88,6 +91,7 @@ function App() {
           <Route path="jobs" element={<JobsPage />} />
           <Route path="jobs/:id" element={<JobDetailPage />} />
           <Route path="calendar" element={<CalendarPage />} />
+          <Route path="notifications" element={<ProNotificationsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

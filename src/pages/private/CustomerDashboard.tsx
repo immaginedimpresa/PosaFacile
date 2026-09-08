@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { canCancelOrder, orderStatusColor, orderStatusLabel, type OrderStatus } from '@/lib/orderStatus'
-import { Package, Clock, Settings, ChevronRight, Calendar, Trash2, ArrowRight, CheckCircle2, MapPin, Sparkles } from 'lucide-react'
+import { OrderTimelineCompact } from '@/components/orders/OrderTimeline'
+import { customerTimeline, type ResolvedStep } from '@/lib/orderTimeline'
+import { fetchMilestonesForOrders } from '@/services/orderTimelineService'
+import { Package, Clock, Settings, ChevronRight, Calendar, Trash2, ArrowRight, CheckCircle2, MapPin, Sparkles, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,6 +14,7 @@ import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { fetchSavedQuotes, deleteSavedQuote, convertSavedQuoteToOrder, type SavedQuoteItem } from '@/lib/quotesService'
+import { CustomerNotificationsTab } from '@/components/dashboard/CustomerNotificationsTab'
 
 interface Order {
     id: string
@@ -36,12 +40,14 @@ export function CustomerDashboard() {
     const { user } = useAuth()
     const { profile } = useUserStore()
 
-    // Tabs: 'orders' | 'quotes' | 'settings'
-    const initialTab = (searchParams.get('tab') as 'orders' | 'quotes' | 'settings') || 'quotes'
-    const [activeTab, setActiveTab] = useState<'orders' | 'quotes' | 'settings'>(initialTab)
+    // Tabs: 'orders' | 'quotes' | 'notifications' | 'settings'
+    const initialTab = (searchParams.get('tab') as 'orders' | 'quotes' | 'notifications' | 'settings') || 'quotes'
+    const [activeTab, setActiveTab] = useState<'orders' | 'quotes' | 'notifications' | 'settings'>(initialTab)
 
     // Orders state
     const [orders, setOrders] = useState<Order[]>([])
+    /** Barra di stato compatta per ogni ordine dell'elenco. */
+    const [timelines, setTimelines] = useState<Record<string, ResolvedStep[]>>({})
     const [loadingOrders, setLoadingOrders] = useState(true)
     const [orderToCancel, setOrderToCancel] = useState<string | null>(null)
 
@@ -53,13 +59,13 @@ export function CustomerDashboard() {
 
     // Sync tab with URL
     useEffect(() => {
-        const tab = searchParams.get('tab') as 'orders' | 'quotes' | 'settings'
-        if (tab && (tab === 'orders' || tab === 'quotes' || tab === 'settings')) {
+        const tab = searchParams.get('tab') as 'orders' | 'quotes' | 'notifications' | 'settings'
+        if (tab && (tab === 'orders' || tab === 'quotes' || tab === 'notifications' || tab === 'settings')) {
             setActiveTab(tab)
         }
     }, [searchParams])
 
-    const handleTabChange = (tab: 'orders' | 'quotes' | 'settings') => {
+    const handleTabChange = (tab: 'orders' | 'quotes' | 'notifications' | 'settings') => {
         setActiveTab(tab)
         setSearchParams({ tab })
     }
@@ -100,6 +106,14 @@ export function CustomerDashboard() {
             })
 
             setOrders(typedData)
+
+            // Una sola query per tutte le barre di stato dell'elenco.
+            const milestones = await fetchMilestonesForOrders(typedData.map(o => o.id))
+            setTimelines(
+                Object.fromEntries(
+                    typedData.map(o => [o.id, customerTimeline(o.status, milestones[o.id] || [])]),
+                ),
+            )
         } catch (error) {
             console.error('Error fetching orders:', error)
         } finally {
@@ -245,6 +259,20 @@ export function CustomerDashboard() {
                                 {orders.length}
                             </span>
                         )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleTabChange('notifications')}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                            activeTab === 'notifications'
+                                ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
+                                : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                        }`}
+                    >
+                        <span className="flex items-center gap-2.5">
+                            <Bell size={18} /> Notifiche
+                        </span>
                     </button>
 
                     <button
@@ -523,6 +551,10 @@ export function CustomerDashboard() {
                                                     </div>
                                                 </div>
 
+                                                {!isDraft && timelines[order.id] && (
+                                                    <OrderTimelineCompact steps={timelines[order.id]} />
+                                                )}
+
                                                 <hr className="my-4 border-stone-100" />
 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -650,6 +682,11 @@ export function CustomerDashboard() {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {/* TAB: NOTIFICHE */}
+                    {activeTab === 'notifications' && (
+                        <CustomerNotificationsTab />
                     )}
                 </div>
             </div>

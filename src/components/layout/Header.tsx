@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/ui/Logo'
 import { useUserStore } from '@/store/userStore'
 import { useCartStore } from '@/store/cartStore'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 export function Header() {
     const { user, profile, signOut } = useUserStore()
@@ -36,7 +37,11 @@ export function Header() {
                 </nav>
 
                 {/* Actions */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
+                    {user && (
+                        <NotificationBell variant="light" />
+                    )}
+
                     <Link to="/cart" className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <ShoppingCart size={20} />
                         {cartCount > 0 && (
