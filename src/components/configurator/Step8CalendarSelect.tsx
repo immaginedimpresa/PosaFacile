@@ -4,11 +4,11 @@ import { format, isSameDay, startOfMonth, endOfMonth, addMonths } from 'date-fns
 import { it } from 'date-fns/locale'
 import { useConfiguratorStore } from '@/store/configuratorStore'
 import { supabase } from '@/lib/supabase'
-import { Calendar as CalendarIcon, ArrowRight } from 'lucide-react'
+import { Calendar as CalendarIcon } from 'lucide-react'
 import 'react-day-picker/dist/style.css'
 
 export function Step8CalendarSelect() {
-    const { selectedProfessional, selectedDate, setSelectedDate, prevStep, nextStep } = useConfiguratorStore()
+    const { selectedProfessional, selectedDate, setSelectedDate } = useConfiguratorStore()
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const [busyDates, setBusyDates] = useState<Date[]>([])
     const [jobDates, setJobDates] = useState<Date[]>([])
@@ -171,22 +171,6 @@ export function Step8CalendarSelect() {
                         </div>
                     )}
                 </div>
-            </div>
-
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={nextStep}
-                    disabled={!selectedDate}
-                    className="flex items-center gap-2 px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continua <ArrowRight size={20} />
-                </button>
             </div>
         </div>
     )

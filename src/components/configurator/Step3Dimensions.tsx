@@ -2,7 +2,7 @@ import { useConfiguratorStore } from '@/store/configuratorStore'
 import { Calculator } from 'lucide-react'
 
 export function Step3Dimensions() {
-    const { dimensions, setDimensions, selectedProduct, getTotalMq, getMaterialCost, prevStep, nextStep } = useConfiguratorStore()
+    const { dimensions, setDimensions, selectedProduct, getTotalMq, getMaterialCost } = useConfiguratorStore()
 
     const totalMq = getTotalMq()
     const materialCost = getMaterialCost()
@@ -115,23 +115,6 @@ export function Step3Dimensions() {
                     </div>
                 </div>
             )}
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={nextStep}
-                    disabled={!canProceed}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continua
-                </button>
-            </div>
         </div>
     )
 }

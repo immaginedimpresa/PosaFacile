@@ -12,7 +12,7 @@ const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
 ]
 
 export function Step4LayingType() {
-    const { layingType, setLayingType, getLayingCost, prevStep, nextStep, selectedProduct, setAiResultImage } = useConfiguratorStore()
+    const { layingType, setLayingType, getLayingCost, selectedProduct, setAiResultImage } = useConfiguratorStore()
 
     const layingCost = getLayingCost()
 
@@ -88,22 +88,6 @@ export function Step4LayingType() {
                     />
                 </div>
             )}
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={nextStep}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
-                >
-                    Continua
-                </button>
-            </div>
         </div>
     )
 }

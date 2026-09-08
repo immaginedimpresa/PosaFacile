@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConfiguratorStore, LAYING_TYPE_LABELS, SERVICE_PRICES } from '@/store/configuratorStore'
-import { Check, MapPin, Calendar, Package, Sparkles } from 'lucide-react'
+import { MapPin, Calendar, Package, Sparkles, AlertCircle, LogIn } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
@@ -21,7 +21,6 @@ export function Step7Summary() {
         getSubtotal,
         getVat,
         getTotal,
-        prevStep,
         aiResultImage,
         selectedProfessional,
         selectedDate,
@@ -44,7 +43,22 @@ export function Step7Summary() {
         : location.dataPreferita
 
     const handleSubmit = async () => {
-        if (!agreed || !user || !user.email) return
+        if (!agreed) {
+            const termsEl = document.getElementById('terms-agreement-box')
+            if (termsEl) {
+                termsEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                termsEl.classList.add('ring-2', 'ring-orange-500', 'bg-orange-50/50')
+                setTimeout(() => termsEl.classList.remove('ring-2', 'ring-orange-500', 'bg-orange-50/50'), 2500)
+            }
+            alert('Per favore accetta i Termini e Condizioni e la Privacy Policy per procedere.')
+            return
+        }
+
+        if (!user || !user.email) {
+            // Se non è loggato, reindirizza al login mantenendo il preventivo
+            navigate('/login?redirect=/configuratore')
+            return
+        }
 
         if (!effectiveDate) {
             alert('Per favore seleziona una data preferita per i lavori prima di procedere.')
@@ -208,6 +222,14 @@ export function Step7Summary() {
         }
     }
 
+    useEffect(() => {
+        const handleTriggerSubmit = () => {
+            handleSubmit()
+        }
+        window.addEventListener('posafacile-submit-quote', handleTriggerSubmit)
+        return () => window.removeEventListener('posafacile-submit-quote', handleTriggerSubmit)
+    }, [handleSubmit])
+
     const AMBIENTE_LABELS = {
         bagno: 'Bagno',
         cucina: 'Cucina',
@@ -219,6 +241,12 @@ export function Step7Summary() {
 
     return (
         <div className="space-y-6">
+            {submitting && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex flex-col items-center justify-center text-white">
+                    <div className="w-9 h-9 border-3 border-white border-t-transparent rounded-full animate-spin mb-3" />
+                    <p className="font-semibold text-sm">Creazione del preventivo in corso...</p>
+                </div>
+            )}
             <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Riepilogo del tuo preventivo</h3>
                 <p className="text-gray-500">Verifica i dettagli prima di confermare</p>
@@ -367,45 +395,44 @@ export function Step7Summary() {
                 )}
             </div>
 
+            {/* Guest / Session Info Banner */}
+            {!user && (
+                <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-semibold text-stone-900 text-sm">Sessione preventivo non salvata</p>
+                            <p className="text-xs text-stone-600 mt-0.5">
+                                Sei in modalità ospite. Se abbandoni la pagina, la configurazione andrà persa. Accedi o registrati per salvare la sessione nel tuo profilo.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/login?redirect=/configuratore')}
+                        className="w-full sm:w-auto px-4 py-2 bg-stone-900 hover:bg-black text-white text-xs font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    >
+                        <LogIn className="w-3.5 h-3.5" />
+                        Accedi per salvare
+                    </button>
+                </div>
+            )}
+
             {/* Terms Agreement */}
-            <label className="flex items-start gap-3 cursor-pointer p-4 bg-gray-50 rounded-xl">
+            <label
+                id="terms-agreement-box"
+                className="flex items-start gap-3 cursor-pointer p-4 bg-gray-50 rounded-xl transition-all border border-gray-200"
+            >
                 <input
                     type="checkbox"
                     checked={agreed}
                     onChange={(e) => setAgreed(e.target.checked)}
-                    className="w-5 h-5 mt-0.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                    className="w-5 h-5 mt-0.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
                 />
-                <span className="text-sm text-gray-600">
-                    Ho letto e accetto i <a href="/termini" className="text-orange-600 underline">Termini e Condizioni</a> e la <a href="/privacy" className="text-orange-600 underline">Privacy Policy</a>
+                <span className="text-sm text-gray-700">
+                    Ho letto e accetto i <a href="/termini" className="text-orange-600 underline font-medium">Termini e Condizioni</a> e la <a href="/privacy" className="text-orange-600 underline font-medium">Privacy Policy</a>
                 </span>
             </label>
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={handleSubmit}
-                    disabled={!agreed || submitting}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                >
-                    {submitting ? (
-                        <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Invio in corso...
-                        </>
-                    ) : (
-                        <>
-                            <Check className="w-5 h-5" />
-                            Conferma preventivo
-                        </>
-                    )}
-                </button>
-            </div>
         </div>
     )
 }

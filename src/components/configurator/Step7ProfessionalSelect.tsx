@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useConfiguratorStore, layingRateFor } from '@/store/configuratorStore'
 import { supabase } from '@/lib/supabase'
-import { Star, Briefcase, ArrowRight, AlertCircle, MapPin } from 'lucide-react'
+import { Star, Briefcase, AlertCircle, MapPin } from 'lucide-react'
 import { loadComuni, provincesInSameRegion } from '@/lib/comuni'
 import { motion } from 'framer-motion'
 
@@ -21,7 +21,7 @@ interface Professional {
 }
 
 export function Step7ProfessionalSelect() {
-    const { location, selectedProfessional, setSelectedProfessional, prevStep, nextStep } = useConfiguratorStore()
+    const { location, selectedProfessional, setSelectedProfessional, prevStep } = useConfiguratorStore()
     const [professionals, setProfessionals] = useState<Professional[]>([])
     const [loading, setLoading] = useState(true)
     const [widenedToRegion, setWidenedToRegion] = useState(false)
@@ -205,22 +205,6 @@ export function Step7ProfessionalSelect() {
                     })}
                 </div>
             )}
-
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={nextStep}
-                    disabled={!selectedProfessional}
-                    className="flex items-center gap-2 px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continua <ArrowRight size={20} />
-                </button>
-            </div>
         </div>
     )
 }

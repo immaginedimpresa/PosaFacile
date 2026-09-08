@@ -1,6 +1,3 @@
-import { useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { AuthDialog } from '@/components/auth/AuthDialog'
 import { useConfiguratorStore, SERVICE_PRICES } from '@/store/configuratorStore'
 import { Trash2, Layers, Droplets, Truck, Square, DoorOpen } from 'lucide-react'
 
@@ -12,15 +9,7 @@ const SERVICES = [
 ] as const
 
 export function Step5Services() {
-    const { services, setServices, dimensions, getServicesCost, prevStep, nextStep } = useConfiguratorStore()
-    const { user } = useAuth()
-    const [showAuthDialog, setShowAuthDialog] = useState(false)
-
-    // L'accesso serve prima di assegnare un professionista e una data.
-    const handleNext = () => {
-        if (user) nextStep()
-        else setShowAuthDialog(true)
-    }
+    const { services, setServices, dimensions, getServicesCost } = useConfiguratorStore()
 
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
     const servicesCost = getServicesCost()
@@ -158,28 +147,6 @@ export function Step5Services() {
                     </div>
                 </div>
             )}
-
-            <AuthDialog
-                open={showAuthDialog}
-                onOpenChange={setShowAuthDialog}
-                onSuccess={() => { setShowAuthDialog(false); nextStep() }}
-            />
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={handleNext}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
-                >
-                    Scegli Professionista
-                </button>
-            </div>
         </div>
     )
 }

@@ -1,13 +1,16 @@
 import { Facebook, Instagram, Linkedin, Twitter } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 export function Footer() {
     return (
-        <footer className="bg-gray-900 text-gray-300 py-12">
+        <footer className="bg-stone-950 text-stone-300 py-14 border-t border-stone-800">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
-                        <h3 className="text-white text-lg font-bold mb-4">PosaFacile</h3>
-                        <p className="text-sm text-gray-400">
+                        <div className="mb-4">
+                            <Logo variant="light" size="md" />
+                        </div>
+                        <p className="text-sm text-stone-400 leading-relaxed">
                             La prima piattaforma integrata per la vendita e posa di piastrelle.
                             Qualità garantita, prezzi trasparenti.
                         </p>

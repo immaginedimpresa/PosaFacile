@@ -17,9 +17,7 @@ const INTERVENTI = [
 ] as const
 
 export function Step1ProjectType() {
-    const { projectInfo, setProjectInfo, nextStep } = useConfiguratorStore()
-
-    const canProceed = projectInfo.ambiente && projectInfo.intervento
+    const { projectInfo, setProjectInfo } = useConfiguratorStore()
 
     return (
         <div className="space-y-8">
@@ -86,17 +84,6 @@ export function Step1ProjectType() {
                     </label>
                 </div>
             )}
-
-            {/* Navigation */}
-            <div className="flex justify-end pt-4">
-                <button
-                    onClick={nextStep}
-                    disabled={!canProceed}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continua
-                </button>
-            </div>
         </div>
     )
 }

@@ -4,7 +4,7 @@ import { useProducts } from '@/hooks/useProducts'
 import { Search } from 'lucide-react'
 
 export function Step2ProductSelect() {
-    const { selectedProduct, setSelectedProduct, prevStep, nextStep } = useConfiguratorStore()
+    const { selectedProduct, setSelectedProduct } = useConfiguratorStore()
     const [search, setSearch] = useState('')
     const [category, setCategory] = useState<'floor' | 'wall' | 'outdoor' | 'mosaic' | undefined>()
 
@@ -91,23 +91,6 @@ export function Step2ProductSelect() {
                     })}
                 </div>
             )}
-
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-                <button
-                    onClick={prevStep}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-                >
-                    Indietro
-                </button>
-                <button
-                    onClick={nextStep}
-                    disabled={!selectedProduct}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continua
-                </button>
-            </div>
         </div>
     )
 }

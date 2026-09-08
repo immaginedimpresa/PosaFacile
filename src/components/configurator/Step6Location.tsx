@@ -3,9 +3,7 @@ import { MapPin } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete'
 
 export function Step6Location() {
-    const { location, setLocation, nextStep } = useConfiguratorStore()
-
-    const canProceed = location.indirizzo && location.citta && location.provincia && location.cap
+    const { location, setLocation } = useConfiguratorStore()
 
     return (
         <div className="space-y-6">
@@ -25,17 +23,6 @@ export function Step6Location() {
                     value={location}
                     onChange={setLocation}
                 />
-            </div>
-
-            {/* Navigation — primo step, nessun indietro */}
-            <div className="flex justify-end pt-4">
-                <button
-                    onClick={nextStep}
-                    disabled={!canProceed}
-                    className="px-8 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Continua
-                </button>
             </div>
         </div>
     )

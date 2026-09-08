@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingCart, User, Menu, X, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/ui/Logo'
 import { useUserStore } from '@/store/userStore'
 import { useCartStore } from '@/store/cartStore'
 
@@ -19,14 +20,11 @@ export function Header() {
     const cartCount = items.length
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+        <header className="sticky top-0 z-50 w-full border-b bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70">
             <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                 {/* Logo */}
-                <Link to="/" className="flex items-center gap-2 group">
-                    <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold group-hover:bg-primary transition-colors">
-                        P
-                    </div>
-                    <span className="font-display font-bold text-xl tracking-tight">PosaFacile</span>
+                <Link to="/" className="group flex items-center">
+                    <Logo size="md" variant="default" />
                 </Link>
 
                 {/* Desktop Nav */}
