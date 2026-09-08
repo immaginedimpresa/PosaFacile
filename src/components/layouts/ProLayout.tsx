@@ -5,13 +5,13 @@ import {
     UserCircle,
     Calendar,
     LogOut,
-    Store,
     ArrowUpRight,
     HardHat,
     Bell
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { LogoIcon } from '@/components/ui/Logo'
 
 export function ProLayout() {
     const location = useLocation()
@@ -38,19 +38,19 @@ export function ProLayout() {
             <aside className="w-64 bg-stone-900 text-stone-200 flex-shrink-0 hidden lg:flex flex-col border-r border-stone-800 shadow-xl z-20 sticky top-0 h-screen">
                 {/* Brand Header */}
                 <div className="p-5 border-b border-stone-800/80 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-lg shadow-md shadow-orange-500/20">
-                            P
+                    <Link to="/pro" className="flex items-center gap-3 group">
+                        <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform shrink-0">
+                            <LogoIcon size={20} />
                         </div>
                         <div>
-                            <span className="font-extrabold text-white text-base tracking-tight block">
-                                PosaFacile
+                            <span className="font-extrabold text-white text-base tracking-tight block font-display">
+                                Posa<span className="text-orange-500">Facile</span>
                             </span>
                             <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest block -mt-0.5">
                                 Portale Posatori
                             </span>
                         </div>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2">
                         <NotificationBell variant="dark" align="left" />
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Posatore online" />
@@ -91,7 +91,7 @@ export function ProLayout() {
                         className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-stone-400 hover:text-white hover:bg-stone-800/50 transition-colors"
                     >
                         <span className="flex items-center gap-2">
-                            <Store className="w-4 h-4 text-orange-400" />
+                            <LogoIcon size={16} className="text-orange-400 shrink-0" />
                             <span>Vedi Piattaforma</span>
                         </span>
                         <ArrowUpRight className="w-3.5 h-3.5 opacity-60" />

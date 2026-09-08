@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useUserStore } from '@/store/userStore'
 import { FadeIn } from '@/components/ui/motion'
+import { Logo } from '@/components/ui/Logo'
 
 export function LoginPage() {
     const navigate = useNavigate()
@@ -43,8 +44,13 @@ export function LoginPage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <FadeIn className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
                 <div className="text-center mb-8">
+                    <div className="flex justify-center mb-5">
+                        <Link to="/" className="inline-block group">
+                            <Logo size="md" variant="default" />
+                        </Link>
+                    </div>
                     <h1 className="text-3xl font-bold font-display text-gray-900 mb-2">Accedi</h1>
-                    <p className="text-gray-500">Bentornato su PosaFacile</p>
+                    <p className="text-gray-500 text-sm">Bentornato su PosaFacile</p>
                 </div>
 
                 {error && (
