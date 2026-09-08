@@ -12,6 +12,7 @@ import { Step7ProfessionalSelect } from '@/components/configurator/Step7Professi
 import { Step8CalendarSelect } from '@/components/configurator/Step8CalendarSelect'
 import { Step7Summary as Step9Summary } from '@/components/configurator/Step7Summary'
 import { ArrowLeft, ArrowRight, Check, ShieldCheck, AlertCircle, Trash2, LogIn } from 'lucide-react'
+import { fetchSavedQuotes } from '@/lib/quotesService'
 
 // Il luogo viene chiesto per primo: conoscendo la provincia si può usare la
 // tariffa del professionista che copre quella zona invece di una stima generica.
@@ -88,7 +89,17 @@ export function ConfiguratorPage() {
                 console.error('Failed to parse product from URL', e)
             }
         }
-    }, [searchParams])
+
+        const quoteIdParam = searchParams.get('quote')
+        if (quoteIdParam && user?.id) {
+            fetchSavedQuotes(user.id).then(quotes => {
+                const found = quotes.find(q => q.id === quoteIdParam)
+                if (found) {
+                    useConfiguratorStore.getState().loadFromSavedQuote(found)
+                }
+            })
+        }
+    }, [searchParams, user])
 
     const total = getTotal()
 
@@ -201,9 +212,14 @@ export function ConfiguratorPage() {
                 <div className="border-t border-gray-100 bg-stone-50/90 py-1.5 px-4 text-[11px]">
                     <div className="container mx-auto max-w-3xl flex items-center justify-between">
                         {user ? (
-                            <div className="flex items-center gap-1.5 text-emerald-700 font-medium">
-                                <ShieldCheck size={14} className="text-emerald-600" />
-                                <span>Sessione salvata con account ({user.email}). Il tuo preventivo resta memorizzato.</span>
+                            <div className="flex items-center justify-between w-full text-emerald-700 font-medium">
+                                <span className="flex items-center gap-1.5">
+                                    <ShieldCheck size={14} className="text-emerald-600" />
+                                    <span>Account attivo ({user.email}). Il tuo preventivo resta memorizzato.</span>
+                                </span>
+                                <Link to="/dashboard?tab=quotes" className="text-orange-600 font-bold hover:underline ml-2 flex-shrink-0">
+                                    I Miei Preventivi Salvati →
+                                </Link>
                             </div>
                         ) : (
                             <div className="flex items-center justify-between w-full text-stone-600">

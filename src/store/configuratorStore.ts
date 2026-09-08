@@ -117,8 +117,9 @@ export function layingRateFor(pro: SelectedProfessional | null): number {
     return base * (1 + num(pro?.markup_percent) / 100)
 }
 
-interface ConfiguratorState {
+export interface ConfiguratorState {
     currentStep: number
+    activeQuoteId: string | null
     projectInfo: ProjectInfo
     selectedProduct: SelectedProduct | null
     dimensions: Dimensions
@@ -131,8 +132,10 @@ interface ConfiguratorState {
 
     // Actions
     setCurrentStep: (step: number) => void
+    setActiveQuoteId: (id: string | null) => void
     nextStep: () => void
     prevStep: () => void
+    loadFromSavedQuote: (quote: any) => void
 
     setProjectInfo: (info: Partial<ProjectInfo>) => void
     setSelectedProduct: (product: SelectedProduct | null) => void
@@ -192,6 +195,7 @@ const initialState = {
         dataPreferita: null,
         flessibile: true,
     },
+    activeQuoteId: null,
     selectedProfessional: null,
     selectedDate: null,
     aiResultImage: null,
@@ -203,8 +207,67 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             ...initialState,
 
             setCurrentStep: (step) => set({ currentStep: step }),
+            setActiveQuoteId: (id) => set({ activeQuoteId: id }),
             nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 9) })),
             prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
+
+            loadFromSavedQuote: (quote: any) => {
+                if (!quote) return
+
+                const product = quote.product ? {
+                    id: quote.product.id,
+                    name: quote.product.name,
+                    slug: quote.product.slug || quote.product.name?.toLowerCase().replace(/\s+/g, '-'),
+                    price_per_sqm: Number(quote.product.price_per_sqm) || 0,
+                    images: quote.product.images || [],
+                    category: quote.product.category || 'floor',
+                    material: quote.product.material || 'Gres porcellanato'
+                } : null
+
+                const servicesObj = typeof quote.services === 'object' && quote.services !== null
+                    ? quote.services
+                    : {}
+
+                set({
+                    activeQuoteId: quote.id,
+                    currentStep: 9, // Go straight to summary
+                    projectInfo: {
+                        ambiente: quote.project_type || 'soggiorno',
+                        intervento: 'ristrutturazione',
+                        rimuoverePavimento: false,
+                        fareMassetto: false,
+                    },
+                    selectedProduct: product,
+                    dimensions: {
+                        pavimentoMq: Number(quote.floor_sqm) || 0,
+                        paretiMq: Number(quote.wall_sqm) || 0,
+                        sfridoPercent: 10,
+                    },
+                    layingType: (quote.laying_type as LayingType) || 'dritta',
+                    services: {
+                        demolizione: Boolean(servicesObj.demolizione),
+                        massetto: Boolean(servicesObj.massetto),
+                        impermeabilizzazione: Boolean(servicesObj.impermeabilizzazione),
+                        smaltimento: Boolean(servicesObj.smaltimento),
+                        battiscopa: Boolean(servicesObj.battiscopa),
+                        battiscopaMetri: Number(servicesObj.battiscopaMetri) || 0,
+                        soglie: Boolean(servicesObj.soglie),
+                        soglieQty: Number(servicesObj.soglieQty) || 0,
+                    },
+                    location: {
+                        indirizzo: quote.address || '',
+                        citta: quote.city || '',
+                        provincia: quote.provincia || '',
+                        cap: quote.cap || '',
+                        lat: null,
+                        lon: null,
+                        dataPreferita: quote.scheduled_date || null,
+                        flessibile: true,
+                    },
+                    selectedDate: quote.scheduled_date ? new Date(quote.scheduled_date) : null,
+                    aiResultImage: quote.ai_result_image || null,
+                })
+            },
 
             setProjectInfo: (info) => set((state) => ({
                 projectInfo: { ...state.projectInfo, ...info }

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConfiguratorStore, LAYING_TYPE_LABELS, SERVICE_PRICES } from '@/store/configuratorStore'
-import { MapPin, Calendar, Package, Sparkles, AlertCircle, LogIn } from 'lucide-react'
+import { MapPin, Calendar, Package, Sparkles, AlertCircle, LogIn, Bookmark, CheckCircle2, ArrowRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
+import { saveCurrentQuote } from '@/lib/quotesService'
 
 export function Step7Summary() {
     const navigate = useNavigate()
@@ -24,9 +25,13 @@ export function Step7Summary() {
         aiResultImage,
         selectedProfessional,
         selectedDate,
+        activeQuoteId,
+        setActiveQuoteId,
     } = useConfiguratorStore()
 
     const [submitting, setSubmitting] = useState(false)
+    const [savingQuote, setSavingQuote] = useState(false)
+    const [savedSuccess, setSavedSuccess] = useState(false)
     const [agreed, setAgreed] = useState(false)
     const { user } = useAuth()
 
@@ -222,13 +227,40 @@ export function Step7Summary() {
         }
     }
 
+    const handleSaveQuote = async () => {
+        if (!user) {
+            navigate('/login?redirect=/configuratore')
+            return
+        }
+
+        setSavingQuote(true)
+        const storeState = useConfiguratorStore.getState()
+        const { data, error } = await saveCurrentQuote(storeState, user.id, activeQuoteId || undefined)
+        setSavingQuote(false)
+
+        if (error) {
+            console.error('Error saving quote:', error)
+            alert('Errore durante il salvataggio del preventivo. Riprova.')
+        } else if (data) {
+            setActiveQuoteId(data.id)
+            setSavedSuccess(true)
+        }
+    }
+
     useEffect(() => {
         const handleTriggerSubmit = () => {
             handleSubmit()
         }
+        const handleTriggerSave = () => {
+            handleSaveQuote()
+        }
         window.addEventListener('posafacile-submit-quote', handleTriggerSubmit)
-        return () => window.removeEventListener('posafacile-submit-quote', handleTriggerSubmit)
-    }, [handleSubmit])
+        window.addEventListener('posafacile-save-quote', handleTriggerSave)
+        return () => {
+            window.removeEventListener('posafacile-submit-quote', handleTriggerSubmit)
+            window.removeEventListener('posafacile-save-quote', handleTriggerSave)
+        }
+    }, [handleSubmit, handleSaveQuote])
 
     const AMBIENTE_LABELS = {
         bagno: 'Bagno',
@@ -418,6 +450,33 @@ export function Step7Summary() {
                 </div>
             )}
 
+            {/* Saved Success Notification */}
+            {savedSuccess && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="font-bold text-emerald-950 text-sm sm:text-base">
+                                🎉 Preventivo salvato con successo nei tuoi Preventivi!
+                            </p>
+                            <p className="text-xs text-emerald-800/90 mt-0.5">
+                                Il prezzo è bloccato per 30 giorni. Puoi ritrovarlo e gestirlo nella tua area personale.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/dashboard?tab=quotes')}
+                            className="w-full sm:w-auto px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all inline-flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                            <span>I Miei Preventivi</span>
+                            <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Terms Agreement */}
             <label
                 id="terms-agreement-box"
@@ -433,6 +492,28 @@ export function Step7Summary() {
                     Ho letto e accetto i <a href="/termini" className="text-orange-600 underline font-medium">Termini e Condizioni</a> e la <a href="/privacy" className="text-orange-600 underline font-medium">Privacy Policy</a>
                 </span>
             </label>
+
+            {/* In-Page Action Buttons for Quotes & Ordering */}
+            <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-left w-full sm:w-auto">
+                    <p className="text-xs text-stone-500 uppercase font-semibold">Vuoi pensarci su?</p>
+                    <p className="text-xs text-stone-700 mt-0.5">
+                        Salva questo preventivo nella tua area personale per ritrovarlo in qualsiasi momento.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <button
+                        type="button"
+                        disabled={savingQuote}
+                        onClick={handleSaveQuote}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100/80 text-stone-800 text-xs sm:text-sm font-semibold transition-all inline-flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                        <Bookmark size={16} className={savedSuccess ? "text-emerald-600 fill-emerald-600" : "text-orange-500"} />
+                        <span>{savingQuote ? 'Salvataggio...' : savedSuccess ? 'Preventivo Salvato ✓' : 'Salva nei miei Preventivi'}</span>
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }

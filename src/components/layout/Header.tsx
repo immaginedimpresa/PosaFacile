@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, User, Menu, X, ArrowRight } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, ArrowRight, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/ui/Logo'
@@ -7,7 +7,7 @@ import { useUserStore } from '@/store/userStore'
 import { useCartStore } from '@/store/cartStore'
 
 export function Header() {
-    const { user, signOut } = useUserStore()
+    const { user, profile, signOut } = useUserStore()
     const { items } = useCartStore()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const navigate = useNavigate()
@@ -18,6 +18,7 @@ export function Header() {
     }
 
     const cartCount = items.length
+    const userRole = profile?.role || (user as any)?.user_metadata?.role || 'customer'
 
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70">
@@ -46,8 +47,16 @@ export function Header() {
                     </Link>
 
                     {user ? (
-                        <div className="hidden md:flex items-center gap-4">
-                            <Link to={user.role === 'admin' ? '/admin' : user.role === 'professional' ? '/pro' : '/dashboard'}>
+                        <div className="hidden md:flex items-center gap-2">
+                            {userRole === 'customer' && (
+                                <Link to="/dashboard?tab=quotes">
+                                    <Button variant="ghost" size="sm" className="gap-1.5 text-stone-700 hover:text-orange-600">
+                                        <Clock size={16} className="text-orange-500" />
+                                        <span>I miei Preventivi</span>
+                                    </Button>
+                                </Link>
+                            )}
+                            <Link to={userRole === 'admin' ? '/admin' : userRole === 'professional' ? '/pro' : '/dashboard'}>
                                 <Button variant="ghost" size="sm" className="gap-2">
                                     <User size={16} /> Area Riservata
                                 </Button>
@@ -87,7 +96,14 @@ export function Header() {
                     <div className="border-t pt-4 flex flex-col gap-3">
                         {user ? (
                             <>
-                                <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                                {userRole === 'customer' && (
+                                    <Link to="/dashboard?tab=quotes" onClick={() => setIsMenuOpen(false)}>
+                                        <Button variant="outline" className="w-full justify-start gap-2 text-orange-600 border-orange-200 bg-orange-50/50">
+                                            <Clock size={16} /> I miei Preventivi
+                                        </Button>
+                                    </Link>
+                                )}
+                                <Link to={userRole === 'admin' ? '/admin' : userRole === 'professional' ? '/pro' : '/dashboard'} onClick={() => setIsMenuOpen(false)}>
                                     <Button className="w-full justify-start">Area Riservata</Button>
                                 </Link>
                                 <Button variant="outline" className="w-full justify-start" onClick={handleSignOut}>Esci</Button>
