@@ -1,9 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { DayPicker } from 'react-day-picker'
 import { format, startOfMonth, endOfMonth, isSameDay, eachDayOfInterval, getDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useProStore } from '@/store/proStore'
-import { Loader2, Repeat, CalendarRange, Calendar as CalendarIcon, CheckCircle2, Lock } from 'lucide-react'
+import {
+    Calendar as CalendarIcon,
+    CalendarRange,
+    Repeat,
+    CheckCircle2,
+    Lock,
+    RefreshCw,
+    Hammer,
+    CalendarX,
+    CheckCircle
+} from 'lucide-react'
 import { toast } from 'sonner'
 import 'react-day-picker/dist/style.css'
 
@@ -34,6 +44,26 @@ export function CalendarPage() {
         const end = endOfMonth(currentMonth)
         fetchAvailability(start, end)
     }, [currentMonth, fetchAvailability])
+
+    // KPI Metrics aggregate
+    const kpiMetrics = useMemo(() => {
+        const totalJobs = jobs.filter(j => j.status !== 'cancelled').length
+        const busyDaysCount = availability.filter(a => a.status === 'busy').length
+
+        const mStart = startOfMonth(currentMonth)
+        const mEnd = endOfMonth(currentMonth)
+        const thisMonthJobs = jobs.filter(j => {
+            if (!j.scheduled_date || j.status === 'cancelled') return false
+            const d = new Date(j.scheduled_date)
+            return d >= mStart && d <= mEnd
+        }).length
+
+        return {
+            totalJobs,
+            busyDaysCount,
+            thisMonthJobs
+        }
+    }, [jobs, availability, currentMonth])
 
     // Shared logic for calculating dates
     const calculateTargetDates = (startStr: string, endStr: string, days: number[]) => {
@@ -129,7 +159,7 @@ export function CalendarPage() {
     }
 
     const bookedDays = jobs
-        .filter(j => j.scheduled_date && j.status !== 'draft' && j.status !== 'pending')
+        .filter(j => j.scheduled_date && j.status !== 'draft' && j.status !== 'pending' && j.status !== 'cancelled')
         .map(j => new Date(j.scheduled_date!))
 
     const pendingDays = jobs
@@ -148,7 +178,7 @@ export function CalendarPage() {
     }
 
     const modifiersStyles = {
-        booked: { color: 'white', backgroundColor: '#f97316' },
+        booked: { color: 'white', backgroundColor: '#1c1917' },
         pending: { color: 'white', backgroundColor: '#eab308' },
         busy: { color: 'white', backgroundColor: '#ef4444' }
     }
@@ -164,145 +194,224 @@ export function CalendarPage() {
     ]
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 flex-shrink-0">
-                        <CalendarIcon className="w-6 h-6" />
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+            {/* Header matching Admin style */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
+                        <CalendarIcon className="w-8 h-8 text-orange-500" />
+                        <span>Calendario & Disponibilità</span>
+                    </h1>
+                    <p className="text-sm text-stone-500 mt-1">
+                        Pianifica le tue disponibilità per i cantieri, blocca i giorni di ferie o gestisci periodi di chiusura.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const mStart = startOfMonth(currentMonth)
+                            const mEnd = endOfMonth(currentMonth)
+                            fetchJobs()
+                            fetchAvailability(mStart, mEnd)
+                            toast.success('Calendario aggiornato')
+                        }}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-semibold transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                        <RefreshCw size={16} className={loading ? 'animate-spin text-orange-500' : ''} />
+                        <span>Aggiorna</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* 4-Card KPI Strip matching Admin/Pro style */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {/* 1. Cantieri del Mese */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                        <CalendarIcon size={24} />
                     </div>
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">Calendario Disponibilità</h1>
-                        <p className="text-stone-500 text-sm mt-0.5">Gestisci giorni operativi, ferie e blocca fasce orarie o ricorrenze</p>
+                        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Cantieri questo Mese</p>
+                        <p className="text-2xl font-bold text-stone-900 mt-0.5">{kpiMetrics.thisMonthJobs}</p>
+                        <p className="text-[11px] text-stone-400 mt-0.5">Programmati nel periodo</p>
                     </div>
                 </div>
 
-                {loading && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-50 text-orange-600 text-xs font-bold border border-orange-200/60">
-                        <Loader2 className="animate-spin" size={14} /> Sincronizzazione calendario...
+                {/* 2. Totale Cantieri Assegnati */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <Hammer size={24} />
                     </div>
-                )}
+                    <div>
+                        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Totale Cantieri</p>
+                        <p className="text-2xl font-bold text-stone-900 mt-0.5">{kpiMetrics.totalJobs}</p>
+                        <p className="text-[11px] text-stone-400 mt-0.5">In carico e completati</p>
+                    </div>
+                </div>
+
+                {/* 3. Giorni Bloccati / Ferie */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                        <CalendarX size={24} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Giorni Bloccati</p>
+                        <p className="text-2xl font-bold text-stone-900 mt-0.5">{kpiMetrics.busyDaysCount}</p>
+                        <p className="text-[11px] text-stone-400 mt-0.5">Ferie e indisponibilità</p>
+                    </div>
+                </div>
+
+                {/* 4. Stato Operatività */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <CheckCircle size={24} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Stato Posatore</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="text-base font-bold text-stone-900">Operativo</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-600 font-medium mt-0.5">Disponibile a ricevere lavori</p>
+                    </div>
+                </div>
             </div>
 
+            {/* Main Calendar + Management Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Calendar Card - 2/3 */}
-                <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl border border-stone-200/90 shadow-xs flex flex-col">
-                    <style>{`
-                        .rdp {
-                            display: block !important;
-                            margin: 0 !important;
-                            width: 100% !important;
-                            --rdp-cell-size: 100% !important;
-                            --rdp-accent-color: #f97316;
-                        }
-                        .rdp-months { 
-                            width: 100% !important;
-                            min-width: 100% !important; 
-                            justify-content: center;
-                        }
-                        .rdp-month { 
-                            width: 100% !important; 
-                        }
-                        .rdp-table { 
-                            width: 100% !important; 
-                            max-width: none !important; 
-                            table-layout: fixed !important;
-                        }
-                        .rdp-caption { 
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            padding: 0 0.5rem; 
-                            margin-bottom: 1.5rem; 
-                            width: 100%;
-                            position: relative;
-                            font-weight: 800;
-                            color: #1c1917;
-                        }
-                        .rdp-caption_label {
-                            font-size: 1.15rem !important;
-                            font-weight: 800 !important;
-                            text-transform: capitalize;
-                        }
-                        .rdp-head_cell {
-                            width: 14.28% !important;
-                            font-size: 0.8rem;
-                            font-weight: 700;
-                            color: #78716c;
-                            padding-bottom: 0.75rem;
-                            text-transform: uppercase;
-                            letter-spacing: 0.05em;
-                            text-align: center;
-                        }
-                        .rdp-cell { 
-                            width: 14.28% !important;
-                            text-align: center;
-                            padding: 3px !important;
-                        }
-                        .rdp-button { 
-                            width: 100% !important; 
-                            height: 64px !important; 
-                            font-size: 1.15rem !important; 
-                            font-weight: 700 !important;
-                            border-radius: 14px !important;
-                            display: flex !important;
-                            align-items: center;
-                            justify-content: center;
-                            transition: all 0.15s ease;
-                        }
-                        .rdp-button:hover:not([disabled]):not(.rdp-day_selected) { 
-                            background-color: #f5f5f4 !important; 
-                        }
-                        
-                        /* BUSY STYLE */
-                        .rdp-day_busy { 
-                            position: relative;
-                            background-color: #ef4444 !important; 
-                            color: white !important;
-                            box-shadow: 0 2px 6px -1px rgba(239, 68, 68, 0.3) !important;
-                        }
-                        .rdp-day_busy::after {
-                            content: "✕";
-                            position: absolute;
-                            top: 50%;
-                            left: 50%;
-                            transform: translate(-50%, -50%);
-                            font-size: 22px;
-                            color: rgba(255, 255, 255, 0.75);
-                            pointer-events: none;
-                        }
+                <div className="lg:col-span-2 bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                <CalendarIcon size={20} />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-bold text-stone-900">Mese Operativo</h2>
+                                <p className="text-xs text-stone-500">Clicca su una data libera per bloccarla o sbloccarla singolarmente</p>
+                            </div>
+                        </div>
+                    </div>
 
-                        /* PREVIEW STYLE */
-                        .rdp-day_preview:not(.rdp-day_busy) {
-                            background-color: #ffedd5 !important; 
-                            color: #c2410c !important;
-                            border: 2px dashed #f97316 !important;
-                            font-weight: 800;
-                        }
-                        .rdp-day_preview.rdp-day_busy {
-                            border: 2px solid #ffffff !important;
-                            transform: scale(0.92);
-                        }
-                        
-                        .rdp-nav_button { 
-                            width: 36px !important; 
-                            height: 36px !important; 
-                            border-radius: 10px !important;
-                            border: 1px solid #e7e5e4 !important;
-                            background: #ffffff !important;
-                            display: flex !important;
-                            align-items: center;
-                            justify-content: center;
-                        }
-                        .rdp-nav_button:hover {
-                            background: #f5f5f4 !important;
-                        }
+                    <div className="p-6 sm:p-8">
+                        <style>{`
+                            .rdp {
+                                display: block !important;
+                                margin: 0 !important;
+                                width: 100% !important;
+                                --rdp-cell-size: 100% !important;
+                                --rdp-accent-color: #f97316;
+                            }
+                            .rdp-months { 
+                                width: 100% !important;
+                                min-width: 100% !important; 
+                                justify-content: center;
+                            }
+                            .rdp-month { 
+                                width: 100% !important; 
+                            }
+                            .rdp-table { 
+                                width: 100% !important; 
+                                max-width: none !important; 
+                                table-layout: fixed !important;
+                            }
+                            .rdp-caption { 
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                padding: 0 0.5rem; 
+                                margin-bottom: 1.5rem; 
+                                width: 100%;
+                                position: relative;
+                                font-weight: 800;
+                                color: #1c1917;
+                            }
+                            .rdp-caption_label {
+                                font-size: 1.15rem !important;
+                                font-weight: 800 !important;
+                                text-transform: capitalize;
+                            }
+                            .rdp-head_cell {
+                                width: 14.28% !important;
+                                font-size: 0.8rem;
+                                font-weight: 700;
+                                color: #78716c;
+                                padding-bottom: 0.75rem;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                                text-align: center;
+                            }
+                            .rdp-cell { 
+                                width: 14.28% !important;
+                                text-align: center;
+                                padding: 3px !important;
+                            }
+                            .rdp-button { 
+                                width: 100% !important; 
+                                height: 60px !important; 
+                                font-size: 1.1rem !important; 
+                                font-weight: 700 !important;
+                                border-radius: 12px !important;
+                                display: flex !important;
+                                align-items: center;
+                                justify-content: center;
+                                transition: all 0.15s ease;
+                            }
+                            .rdp-button:hover:not([disabled]):not(.rdp-day_selected) { 
+                                background-color: #f5f5f4 !important; 
+                            }
+                            
+                            /* BUSY STYLE */
+                            .rdp-day_busy { 
+                                position: relative;
+                                background-color: #ef4444 !important; 
+                                color: white !important;
+                                box-shadow: 0 2px 6px -1px rgba(239, 68, 68, 0.3) !important;
+                            }
+                            .rdp-day_busy::after {
+                                content: "✕";
+                                position: absolute;
+                                top: 50%;
+                                left: 50%;
+                                transform: translate(-50%, -50%);
+                                font-size: 20px;
+                                color: rgba(255, 255, 255, 0.8);
+                                pointer-events: none;
+                            }
 
-                        @media (max-width: 640px) {
-                            .rdp-button { height: 46px !important; font-size: 0.95rem !important; border-radius: 10px !important; }
-                        }
-                    `}</style>
-                    <div className="w-full">
+                            /* PREVIEW STYLE */
+                            .rdp-day_preview:not(.rdp-day_busy) {
+                                background-color: #ffedd5 !important; 
+                                color: #c2410c !important;
+                                border: 2px dashed #f97316 !important;
+                                font-weight: 800;
+                            }
+                            .rdp-day_preview.rdp-day_busy {
+                                border: 2px solid #ffffff !important;
+                                transform: scale(0.92);
+                            }
+                            
+                            .rdp-nav_button { 
+                                width: 36px !important; 
+                                height: 36px !important; 
+                                border-radius: 10px !important;
+                                border: 1px solid #e7e5e4 !important;
+                                background: #ffffff !important;
+                                display: flex !important;
+                                align-items: center;
+                                justify-content: center;
+                            }
+                            .rdp-nav_button:hover {
+                                background: #f5f5f4 !important;
+                            }
+
+                            @media (max-width: 640px) {
+                                .rdp-button { height: 44px !important; font-size: 0.95rem !important; border-radius: 10px !important; }
+                            }
+                        `}</style>
                         <DayPicker
                             mode="single"
                             month={currentMonth}
@@ -322,25 +431,23 @@ export function CalendarPage() {
                         />
                     </div>
 
-                    {/* LEGEND */}
-                    <div className="mt-6 border-t border-stone-100 pt-5">
-                        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-stone-600">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3.5 h-3.5 rounded-md bg-orange-500 shadow-2xs"></div>
-                                <span>Cantiere Confermato</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3.5 h-3.5 rounded-md bg-yellow-500 shadow-2xs"></div>
-                                <span>In Attesa</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3.5 h-3.5 rounded-md bg-red-500 flex items-center justify-center text-white text-[9px] font-bold shadow-2xs">✕</div>
-                                <span>Non Disponibile</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3.5 h-3.5 rounded-md bg-orange-100 border border-dashed border-orange-500"></div>
-                                <span>Anteprima Selezione</span>
-                            </div>
+                    {/* LEGEND matching system styles */}
+                    <div className="p-5 bg-stone-50/60 border-t border-stone-100 flex flex-wrap items-center gap-5 text-xs font-semibold text-stone-600">
+                        <div className="flex items-center gap-2">
+                            <span className="w-3.5 h-3.5 rounded-md bg-stone-900 shadow-2xs"></span>
+                            <span>Cantiere Confermato</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="w-3.5 h-3.5 rounded-md bg-amber-500 shadow-2xs"></span>
+                            <span>In Attesa</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="w-3.5 h-3.5 rounded-md bg-rose-500 flex items-center justify-center text-white text-[9px] font-bold shadow-2xs">✕</span>
+                            <span>Non Disponibile / Bloccato</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="w-3.5 h-3.5 rounded-md bg-orange-100 border border-orange-500"></span>
+                            <span>Selezione Azione Rapida</span>
                         </div>
                     </div>
                 </div>
@@ -348,57 +455,75 @@ export function CalendarPage() {
                 {/* Management Toolbar Card - 1/3 */}
                 <div className="space-y-6 lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs sticky top-6 overflow-hidden">
+                        <div className="p-6 border-b border-stone-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                    <CalendarRange size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-stone-900">Azioni in Blocco</h2>
+                                    <p className="text-xs text-stone-500">Imposta disponibilità su più date</p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Segmented Control Tabs */}
-                        <div className="p-2 bg-stone-100/70 border-b border-stone-200/70 grid grid-cols-2 gap-1.5">
+                        <div className="p-1.5 mx-6 mt-6 bg-stone-100/80 rounded-xl border border-stone-200/60 grid grid-cols-2 gap-1">
                             <button
+                                type="button"
                                 onClick={() => setActiveTab('recurring')}
-                                className={`py-2 px-3 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${activeTab === 'recurring'
-                                    ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
-                                    : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
-                                    }`}
+                                className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                    activeTab === 'recurring'
+                                        ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                                        : 'text-stone-500 hover:text-stone-900'
+                                }`}
                             >
-                                <Repeat size={14} className="text-orange-500" />
+                                <Repeat size={14} className={activeTab === 'recurring' ? 'text-orange-500' : ''} />
                                 Ricorrenze
                             </button>
                             <button
+                                type="button"
                                 onClick={() => setActiveTab('range')}
-                                className={`py-2 px-3 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${activeTab === 'range'
-                                    ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
-                                    : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
-                                    }`}
+                                className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                    activeTab === 'range'
+                                        ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                                        : 'text-stone-500 hover:text-stone-900'
+                                }`}
                             >
-                                <CalendarRange size={14} className="text-orange-500" />
+                                <CalendarRange size={14} className={activeTab === 'range' ? 'text-orange-500' : ''} />
                                 Intervalli
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-6">
+                        <div className="p-6 space-y-6">
                             {activeTab === 'recurring' ? (
                                 <>
-                                    <div className="bg-orange-50/70 p-3 rounded-xl text-xs text-orange-900 border border-orange-200/70 leading-relaxed font-medium">
-                                        Seleziona un intervallo temporale e i giorni della settimana da impostare in blocco.
+                                    <div className="bg-orange-50/70 p-3.5 rounded-xl text-xs text-orange-950 border border-orange-200/70 leading-relaxed font-medium">
+                                        Seleziona un periodo e i giorni della settimana da impostare in blocco.
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-2.5 block">1. Periodo di Validità</label>
+                                        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5 block">1. Periodo di Validità</label>
                                         <div className="grid grid-cols-2 gap-2.5">
                                             <button
+                                                type="button"
                                                 onClick={() => {
                                                     const today = new Date()
                                                     setBulkStart(format(today, 'yyyy-MM-dd'))
                                                     setBulkEnd(format(endOfMonth(today), 'yyyy-MM-dd'))
                                                 }}
-                                                className="px-3 py-2 text-xs font-bold bg-stone-50 hover:bg-stone-100 text-stone-800 rounded-xl border border-stone-200/80 shadow-2xs transition-all active:scale-95"
+                                                className="px-3 py-2 text-xs font-bold bg-stone-50 hover:bg-stone-100 text-stone-800 rounded-xl border border-stone-200/80 shadow-2xs transition-all active:scale-95 cursor-pointer"
                                             >
                                                 Questo Mese
                                             </button>
                                             <button
+                                                type="button"
                                                 onClick={() => {
                                                     const today = new Date()
                                                     setBulkStart(format(today, 'yyyy-MM-dd'))
                                                     setBulkEnd(format(new Date(today.getFullYear(), 11, 31), 'yyyy-MM-dd'))
                                                 }}
-                                                className="px-3 py-2 text-xs font-bold bg-stone-50 hover:bg-stone-100 text-stone-800 rounded-xl border border-stone-200/80 shadow-2xs transition-all active:scale-95"
+                                                className="px-3 py-2 text-xs font-bold bg-stone-50 hover:bg-stone-100 text-stone-800 rounded-xl border border-stone-200/80 shadow-2xs transition-all active:scale-95 cursor-pointer"
                                             >
                                                 Tutto l'Anno
                                             </button>
@@ -406,7 +531,7 @@ export function CalendarPage() {
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-2.5 block">
+                                        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5 block">
                                             2. Giorni della Settimana
                                         </label>
                                         <div className="grid grid-cols-7 gap-1.5">
@@ -415,8 +540,9 @@ export function CalendarPage() {
                                                 return (
                                                     <button
                                                         key={day.id}
+                                                        type="button"
                                                         onClick={() => toggleWeekDay(day.id)}
-                                                        className={`aspect-square rounded-xl flex items-center justify-center text-xs font-black transition-all ${isSelected
+                                                        className={`aspect-square rounded-xl flex items-center justify-center text-xs font-black transition-all cursor-pointer ${isSelected
                                                             ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                                                             : 'bg-stone-50 text-stone-400 border border-stone-200/70 hover:border-stone-300 hover:bg-white'
                                                             }`}
@@ -430,15 +556,15 @@ export function CalendarPage() {
                                 </>
                             ) : (
                                 <>
-                                    <div className="bg-stone-100 p-3 rounded-xl text-xs text-stone-700 border border-stone-200/80 leading-relaxed font-medium">
-                                        Seleziona un periodo continuo esatto da bloccare o sbloccare (es. ferie estive o chiusura).
+                                    <div className="bg-stone-100/80 p-3.5 rounded-xl text-xs text-stone-700 border border-stone-200/80 leading-relaxed font-medium">
+                                        Seleziona un periodo continuativo esatto da bloccare o sbloccare (es. ferie estive o chiusura aziendale).
                                     </div>
 
                                     <div>
-                                        <label className="text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-2.5 block">Intervallo Date</label>
+                                        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5 block">Intervallo Date</label>
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="block text-xs font-bold text-stone-600 mb-1">Data Inizio</label>
+                                                <label className="block text-xs font-medium text-stone-600 mb-1">Data Inizio</label>
                                                 <input
                                                     type="date"
                                                     className="w-full text-sm p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
@@ -447,7 +573,7 @@ export function CalendarPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-stone-600 mb-1">Data Fine</label>
+                                                <label className="block text-xs font-medium text-stone-600 mb-1">Data Fine</label>
                                                 <input
                                                     type="date"
                                                     className="w-full text-sm p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
@@ -460,21 +586,23 @@ export function CalendarPage() {
                                 </>
                             )}
 
-                            {/* Actions Footer */}
+                            {/* Standard PosaFacile buttons */}
                             <div className="pt-4 border-t border-stone-100 flex flex-col gap-2.5">
                                 <button
+                                    type="button"
                                     onClick={() => handleBulkAction('busy')}
-                                    className="w-full bg-rose-600 hover:bg-rose-700 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md shadow-rose-600/15 flex items-center justify-center gap-2 transition-transform active:scale-95"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-black text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md"
                                 >
-                                    <Lock size={16} />
-                                    Blocca {activeTab === 'recurring' ? 'Giorni' : 'Periodo'}
+                                    <Lock size={15} />
+                                    <span>Blocca {activeTab === 'recurring' ? 'Giorni Selezionati' : 'Intervallo'}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => handleBulkAction('available')}
-                                    className="w-full bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200/90 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-2xs"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
                                 >
-                                    <CheckCircle2 size={16} />
-                                    Rendi Disponibili
+                                    <CheckCircle2 size={15} />
+                                    <span>Rendi Date Disponibili</span>
                                 </button>
                             </div>
                         </div>
@@ -484,4 +612,5 @@ export function CalendarPage() {
         </div>
     )
 }
+
 
