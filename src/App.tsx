@@ -12,6 +12,7 @@ import { AdminProductFormPage } from '@/pages/admin/AdminProductFormPage'
 import { AdminProfessionalsPage } from '@/pages/admin/AdminProfessionalsPage'
 import { AdminMarkupPage } from '@/pages/admin/AdminMarkupPage'
 import { AdminOrdersPage } from '@/pages/admin/AdminOrdersPage'
+import { AdminCustomersPage } from '@/pages/admin/AdminCustomersPage'
 import { CustomerDashboard } from '@/pages/private/CustomerDashboard'
 import { CustomerOrderDetailPage } from '@/pages/private/CustomerOrderDetailPage'
 import HomePage from '@/pages/public/HomePage'
@@ -41,7 +42,6 @@ import { Toaster } from 'sonner'
 const NotFoundPage = () => <div className="p-8 text-red-500">404 Pagina non trovata</div>
 
 // Placeholder pages for admin sections not yet implemented
-const AdminCustomersPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Gestione Clienti</h1><p className="text-gray-500 mt-2">In arrivo...</p></div>
 const AdminSettingsPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Impostazioni</h1><p className="text-gray-500 mt-2">In arrivo...</p></div>
 
 function App() {

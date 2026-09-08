@@ -60,34 +60,40 @@ export type Database = {
       }
       customers: {
         Row: {
+          admin_notes: string | null
           billing_address_id: string | null
           company_name: string | null
           created_at: string | null
           customer_type: Database["public"]["Enums"]["customer_type"]
           fiscal_code: string | null
           id: string
+          is_active: boolean | null
           marketing_consent: boolean | null
           newsletter_consent: boolean | null
           vat_number: string | null
         }
         Insert: {
+          admin_notes?: string | null
           billing_address_id?: string | null
           company_name?: string | null
           created_at?: string | null
           customer_type?: Database["public"]["Enums"]["customer_type"]
           fiscal_code?: string | null
           id: string
+          is_active?: boolean | null
           marketing_consent?: boolean | null
           newsletter_consent?: boolean | null
           vat_number?: string | null
         }
         Update: {
+          admin_notes?: string | null
           billing_address_id?: string | null
           company_name?: string | null
           created_at?: string | null
           customer_type?: Database["public"]["Enums"]["customer_type"]
           fiscal_code?: string | null
           id?: string
+          is_active?: boolean | null
           marketing_consent?: boolean | null
           newsletter_consent?: boolean | null
           vat_number?: string | null
