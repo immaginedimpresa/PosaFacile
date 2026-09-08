@@ -1,0 +1,27 @@
+# Configurazione del deploy su Netlify.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# PosaFacile è una single-page application: il routing lo fa React Router nel
+# browser. Senza questa regola, ricaricare una pagina su /professionisti o
+# /dashboard fa cercare a Netlify un file a quel percorso e restituisce 404.
+# Tutto ciò che non è un file esistente viene servito come index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Gli asset con hash nel nome non cambiano mai a parità di nome: si possono
+# tenere in cache a lungo. L'index.html no, altrimenti i browser continuano a
+# servire il bundle vecchio dopo un deploy.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
