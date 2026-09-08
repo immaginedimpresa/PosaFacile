@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useProducts, useProduct } from '@/hooks/useProducts'
 import { ImageUpload } from '@/components/admin/ImageUpload'
 import type { Database } from '@/types/supabase'
+import { Package, ArrowLeft, Save, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 type ProductInsert = Database['public']['Tables']['products']['Insert']
 type ProductUpdate = Database['public']['Tables']['products']['Update']
@@ -78,43 +80,49 @@ export function AdminProductFormPage() {
                 style_tags: product.style_tags || [],
                 price_per_sqm: product.price_per_sqm,
                 cost_per_sqm: product.cost_per_sqm,
-                min_order_sqm: product.min_order_sqm,
-                stock_qty: product.stock_qty,
-                lead_time_days: product.lead_time_days,
-                images: product.images as string[] || [],
+                min_order_sqm: product.min_order_sqm || 1,
+                stock_qty: product.stock_qty || 0,
+                lead_time_days: product.lead_time_days || 7,
+                images: (product.images as string[]) || [],
                 tileable_image_url: product.tileable_image_url || '',
                 datasheet_url: product.datasheet_url || '',
-                certifications: product.certifications || [],
-                status: product.status,
+                certifications: (product.certifications as string[]) || [],
+                status: product.status || 'draft',
                 seo_title: product.seo_title || '',
                 seo_description: product.seo_description || '',
             })
         }
     }, [product])
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target
-
-        setFormData(prev => ({
+    // Auto-generate slug from name
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const name = e.target.value
+        setFormData((prev) => ({
             ...prev,
-            [name]: type === 'number' ? (value === '' ? null : parseFloat(value)) : value
+            name,
+            slug: !isEditing ? generateSlug(name) : prev.slug,
         }))
-
-        // Auto-generate slug from name
-        if (name === 'name' && !isEditing) {
-            setFormData(prev => ({
-                ...prev,
-                slug: generateSlug(value)
-            }))
-        }
     }
 
-    const handleImagesChange = (newImages: string[]) => {
-        setFormData(prev => ({
+    const handleChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
+        const { name, value, type } = e.target
+        setFormData((prev) => ({
             ...prev,
-            images: newImages,
-            // Automatically set tileable image to first image if empty
-            tileable_image_url: (!prev.tileable_image_url && newImages.length > 0) ? newImages[0] : prev.tileable_image_url
+            [name]:
+                type === 'number'
+                    ? value === '' ? null : parseFloat(value)
+                    : value === '' ? null : value,
+        }))
+    }
+
+    const handleImagesChange = (images: string[]) => {
+        setFormData((prev) => ({
+            ...prev,
+            images,
+            // If no AI texture is selected yet, use the first image as fallback
+            tileable_image_url: prev.tileable_image_url || images[0] || ''
         }))
     }
 
@@ -123,44 +131,63 @@ export function AdminProductFormPage() {
         setError(null)
         setSaving(true)
 
-        try {
-            // Validate required fields
-            if (!formData.sku || !formData.name || !formData.slug || !formData.price_per_sqm) {
-                throw new Error('SKU, Nome, Slug e Prezzo sono campi obbligatori')
-            }
+        // Validation
+        if (!formData.name.trim()) {
+            setError('Il nome del prodotto è obbligatorio')
+            setSaving(false)
+            return
+        }
 
+        if (!formData.sku.trim()) {
+            setError('Lo SKU è obbligatorio')
+            setSaving(false)
+            return
+        }
+
+        if (formData.price_per_sqm <= 0) {
+            setError('Il prezzo al mq deve essere maggiore di zero')
+            setSaving(false)
+            return
+        }
+
+        try {
             if (isEditing && id) {
-                const updates: ProductUpdate = { ...formData }
-                const { error } = await updateProduct(id, updates)
-                if (error) throw error
+                const { error: updateErr } = await updateProduct(id, formData as ProductUpdate)
+                if (updateErr) throw updateErr
+                toast.success('Prodotto aggiornato con successo')
             } else {
-                const { error } = await createProduct(formData)
-                if (error) throw error
+                const { error: createErr } = await createProduct(formData)
+                if (createErr) throw createErr
+                toast.success('Prodotto creato con successo')
             }
 
             navigate('/admin/products')
-        } catch (err) {
-            setError((err as Error).message)
+        } catch (err: any) {
+            setError(err.message || 'Errore durante il salvataggio')
+            toast.error(err.message || 'Errore durante il salvataggio')
         } finally {
             setSaving(false)
         }
     }
 
-    if (isEditing && productLoading) {
+    if (productLoading) {
         return (
-            <div className="flex items-center justify-center min-h-96">
-                <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex flex-col items-center justify-center min-h-96">
+                <div className="w-10 h-10 border-3 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm font-semibold text-stone-500 mt-4">Caricamento scheda prodotto...</p>
             </div>
         )
     }
 
     if (productError) {
         return (
-            <div className="p-6">
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <p className="text-red-700">Errore: {productError.message}</p>
-                    <Link to="/admin/products" className="text-red-600 underline mt-2 inline-block">
-                        Torna alla lista
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center">
+                    <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-2" />
+                    <h3 className="text-lg font-bold text-rose-900">Errore nel caricamento</h3>
+                    <p className="text-rose-700 text-sm mt-1">{productError.message}</p>
+                    <Link to="/admin/products" className="inline-flex items-center gap-1.5 text-orange-600 font-bold text-sm mt-4 hover:underline">
+                        <ArrowLeft size={16} /> Torna alla lista
                     </Link>
                 </div>
             </div>
@@ -168,24 +195,29 @@ export function AdminProductFormPage() {
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="container mx-auto px-4 py-8 max-w-5xl">
             {/* Header */}
-            <div className="mb-6">
-                <Link to="/admin/products" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
-                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Torna alla lista
+            <div className="mb-8">
+                <Link
+                    to="/admin/products"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors mb-3 group"
+                >
+                    <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                    <span>Torna al catalogo prodotti</span>
                 </Link>
-                <h1 className="text-2xl font-bold text-gray-900">
-                    {isEditing ? 'Modifica Prodotto' : 'Nuovo Prodotto'}
-                </h1>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
+                        <Package className="w-8 h-8 text-orange-500" />
+                        <span>{isEditing ? `Modifica: ${formData.name || 'Prodotto'}` : 'Nuovo Prodotto a Catalogo'}</span>
+                    </h1>
+                </div>
             </div>
 
             {/* Error Message */}
             {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                    <p className="text-red-700">{error}</p>
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-6 flex items-center justify-between">
+                    <p className="text-rose-800 text-sm font-medium">{error}</p>
+                    <button onClick={() => setError(null)} className="text-rose-600 font-bold text-xs underline cursor-pointer">Chiudi</button>
                 </div>
             )}
 
@@ -292,7 +324,7 @@ export function AdminProductFormPage() {
                                 type="text"
                                 name="name"
                                 value={formData.name || ''}
-                                onChange={handleChange}
+                                onChange={handleNameChange}
                                 required
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                 placeholder="Gres Porcellanato Bianco"
@@ -542,57 +574,58 @@ export function AdminProductFormPage() {
                 </div>
 
                 {/* SEO */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">SEO</h2>
+                <div className="bg-white rounded-2xl shadow-xs border border-stone-200/90 p-6">
+                    <h2 className="text-base font-bold text-stone-900 mb-4">Ottimizzazione SEO</h2>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Titolo SEO</label>
+                            <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">Titolo SEO</label>
                             <input
                                 type="text"
                                 name="seo_title"
                                 value={formData.seo_title || ''}
                                 onChange={handleChange}
                                 maxLength={70}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                className="w-full px-4 py-2.5 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-stone-50/50 focus:bg-white text-sm"
                                 placeholder="Titolo per i motori di ricerca"
                             />
-                            <p className="text-xs text-gray-500 mt-1">{(formData.seo_title || '').length}/70 caratteri</p>
+                            <p className="text-xs text-stone-400 mt-1 font-medium">{(formData.seo_title || '').length}/70 caratteri</p>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione SEO</label>
+                            <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">Descrizione SEO</label>
                             <textarea
                                 name="seo_description"
                                 value={formData.seo_description || ''}
                                 onChange={handleChange}
                                 maxLength={160}
                                 rows={2}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                className="w-full px-4 py-2.5 border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-stone-50/50 focus:bg-white text-sm"
                                 placeholder="Descrizione per i motori di ricerca"
                             />
-                            <p className="text-xs text-gray-500 mt-1">{(formData.seo_description || '').length}/160 caratteri</p>
+                            <p className="text-xs text-stone-400 mt-1 font-medium">{(formData.seo_description || '').length}/160 caratteri</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Submit */}
-                <div className="flex items-center justify-end gap-4">
+                {/* Submit Bar */}
+                <div className="flex items-center justify-end gap-3 pt-2">
                     <Link
                         to="/admin/products"
-                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                        className="px-5 py-2.5 border border-stone-200 text-stone-700 rounded-xl text-sm font-semibold hover:bg-stone-50 transition-colors shadow-xs"
                     >
                         Annulla
                     </Link>
                     <button
                         type="submit"
                         disabled={saving}
-                        className="px-6 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center"
+                        className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold shadow-md shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 cursor-pointer"
                     >
                         {saving && (
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         )}
-                        {isEditing ? 'Salva Modifiche' : 'Crea Prodotto'}
+                        <Save size={16} />
+                        <span>{isEditing ? 'Salva Modifiche' : 'Crea Prodotto'}</span>
                     </button>
                 </div>
             </form>

@@ -1,17 +1,30 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useProducts } from '@/hooks/useProducts'
 import type { Database } from '@/types/supabase'
+import {
+    Package,
+    Plus,
+    Search,
+    RefreshCw,
+    CheckCircle2,
+    Clock,
+    AlertCircle,
+    Copy,
+    Edit3,
+    Trash2
+} from 'lucide-react'
+import { toast } from 'sonner'
 
 type Product = Database['public']['Tables']['products']['Row']
 type ProductStatus = Exclude<Product['status'], null>
 type ProductCategory = Product['category']
 
-const STATUS_LABELS: Record<ProductStatus, { label: string; color: string }> = {
-    draft: { label: 'Bozza', color: 'bg-gray-100 text-gray-700' },
-    active: { label: 'Attivo', color: 'bg-green-100 text-green-700' },
-    out_of_stock: { label: 'Esaurito', color: 'bg-yellow-100 text-yellow-700' },
-    discontinued: { label: 'Sospeso', color: 'bg-red-100 text-red-700' },
+const STATUS_LABELS: Record<ProductStatus, { label: string; color: string; dotColor: string }> = {
+    draft: { label: 'Bozza', color: 'bg-stone-100 text-stone-700 border-stone-300', dotColor: 'bg-stone-400' },
+    active: { label: 'Attivo', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dotColor: 'bg-emerald-500' },
+    out_of_stock: { label: 'Esaurito', color: 'bg-amber-50 text-amber-700 border-amber-200', dotColor: 'bg-amber-500' },
+    discontinued: { label: 'Sospeso', color: 'bg-rose-50 text-rose-700 border-rose-200', dotColor: 'bg-rose-500' },
 }
 
 const CATEGORY_LABELS: Record<NonNullable<ProductCategory>, string> = {
@@ -26,6 +39,8 @@ export function AdminProductsPage() {
     const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>()
     const [categoryFilter, setCategoryFilter] = useState<ProductCategory | undefined>()
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+    const [refreshing, setRefreshing] = useState(false)
 
     const { products, loading, error, total, deleteProduct, updateProduct, createProduct, refetch } = useProducts({
         search: search || undefined,
@@ -33,8 +48,14 @@ export function AdminProductsPage() {
         category: categoryFilter,
     })
 
+    const handleRefresh = async () => {
+        setRefreshing(true)
+        await refetch()
+        setRefreshing(false)
+    }
+
     const handleDelete = async (id: string, name: string) => {
-        if (!window.confirm(`Sei sicuro di voler eliminare "${name}"?`)) {
+        if (!window.confirm(`Sei sicuro di voler eliminare definitivamente "${name}"?`)) {
             return
         }
 
@@ -43,188 +64,350 @@ export function AdminProductsPage() {
         setDeletingId(null)
 
         if (error) {
-            alert(`Errore durante l'eliminazione: ${error.message}`)
+            toast.error(`Errore eliminazione: ${error.message}`)
+        } else {
+            toast.success(`Prodotto "${name}" eliminato`)
+            refetch()
         }
     }
 
+    const handleDuplicate = async (product: Product) => {
+        setDuplicatingId(product.id)
+        try {
+            const newSku = `${product.sku}-COPY-${Math.floor(100 + Math.random() * 900)}`
+            const { id, created_at, updated_at, ...rest } = product as any
+            const { error } = await createProduct({
+                ...rest,
+                name: `${product.name} (Copia)`,
+                sku: newSku,
+                status: 'draft'
+            })
+            if (error) throw error
+            toast.success(`Prodotto duplicato come bozza: SKU ${newSku}`)
+            refetch()
+        } catch (err: any) {
+            toast.error(`Errore durante la duplicazione: ${err.message}`)
+        } finally {
+            setDuplicatingId(null)
+        }
+    }
+
+    // KPI Metrics calculation
+    const kpiMetrics = useMemo(() => {
+        const totalCount = products.length
+        const activeCount = products.filter(p => p.status === 'active').length
+        const draftCount = products.filter(p => p.status === 'draft').length
+        const outOfStockCount = products.filter(p => p.status === 'out_of_stock' || p.status === 'discontinued').length
+
+        return {
+            totalCount,
+            activeCount,
+            draftCount,
+            outOfStockCount
+        }
+    }, [products])
+
     return (
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Gestione Prodotti</h1>
-                    <p className="text-gray-500 mt-1">{total} prodotti totali</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
+                        <Package className="w-8 h-8 text-orange-500" />
+                        <span>Gestione Prodotti</span>
+                    </h1>
+                    <p className="text-sm text-stone-500 mt-1">
+                        Catalogo pavimenti e rivestimenti, prezzi di acquisto e vendita al mq, disponibilità e schede tecniche.
+                    </p>
                 </div>
-                <Link
-                    to="/admin/products/new"
-                    className="inline-flex items-center justify-center px-6 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors"
-                >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Nuovo Prodotto
-                </Link>
+
+                <div className="flex items-center gap-3">
+                    <Link
+                        to="/admin/products/new"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
+                    >
+                        <Plus size={16} />
+                        <span>Nuovo Prodotto</span>
+                    </Link>
+
+                    <button
+                        type="button"
+                        onClick={handleRefresh}
+                        disabled={refreshing || loading}
+                        className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-semibold transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                        title="Ricarica prodotti"
+                    >
+                        <RefreshCw size={16} className={refreshing ? 'animate-spin text-orange-500' : ''} />
+                        <span className="hidden sm:inline">Aggiorna</span>
+                    </button>
+                </div>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Search */}
-                    <div className="relative">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+            {/* KPI Cards Strip */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {/* 1. Totale Prodotti */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                        <Package size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                            Totale Catalogo
+                        </div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">
+                            {total}
+                        </div>
+                        <div className="text-[11px] text-stone-400 mt-0.5">
+                            {products.length} mostrati
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Prodotti Attivi */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                            Prodotti Attivi
+                        </div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">
+                            {kpiMetrics.activeCount}
+                        </div>
+                        <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">
+                            Visibili nello store
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Bozze in Lavorazione */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <Clock size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                            Bozze / Lavorazione
+                        </div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">
+                            {kpiMetrics.draftCount}
+                        </div>
+                        <div className="text-[11px] text-amber-600 font-semibold mt-0.5">
+                            In attesa di pubblicazione
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Esauriti o Sospesi */}
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                        <AlertCircle size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                            Esauriti / Sospesi
+                        </div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">
+                            {kpiMetrics.outOfStockCount}
+                        </div>
+                        <div className="text-[11px] text-rose-600 font-semibold mt-0.5">
+                            Da riassortire
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter / Search Toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-stone-200/90 shadow-xs mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    {/* Cerca */}
+                    <div className="sm:col-span-6 relative">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
                         <input
                             type="text"
-                            placeholder="Cerca per nome o SKU..."
+                            placeholder="Cerca per nome, SKU o colore..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                            className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-stone-50/50"
                         />
                     </div>
 
-                    {/* Status Filter */}
-                    <select
-                        value={statusFilter || ''}
-                        onChange={(e) => setStatusFilter(e.target.value as ProductStatus || undefined)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    >
-                        <option value="">Tutti gli stati</option>
-                        <option value="active">Attivi</option>
-                        <option value="draft">Bozze</option>
-                        <option value="out_of_stock">Esauriti</option>
-                        <option value="discontinued">Sospesi</option>
-                    </select>
+                    {/* Filtro Stato */}
+                    <div className="sm:col-span-3">
+                        <select
+                            value={statusFilter || ''}
+                            onChange={(e) => setStatusFilter(e.target.value as ProductStatus || undefined)}
+                            className="w-full px-3.5 py-2 border border-stone-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-stone-50/50"
+                        >
+                            <option value="">Tutti gli stati</option>
+                            <option value="active">Attivi</option>
+                            <option value="draft">Bozze</option>
+                            <option value="out_of_stock">Esauriti</option>
+                            <option value="discontinued">Sospesi</option>
+                        </select>
+                    </div>
 
-                    {/* Category Filter */}
-                    <select
-                        value={categoryFilter || ''}
-                        onChange={(e) => setCategoryFilter(e.target.value as ProductCategory || undefined)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    >
-                        <option value="">Tutte le categorie</option>
-                        <option value="floor">Pavimento</option>
-                        <option value="wall">Rivestimento</option>
-                        <option value="outdoor">Esterno</option>
-                        <option value="mosaic">Mosaico</option>
-                    </select>
+                    {/* Filtro Categoria */}
+                    <div className="sm:col-span-3">
+                        <select
+                            value={categoryFilter || ''}
+                            onChange={(e) => setCategoryFilter(e.target.value as ProductCategory || undefined)}
+                            className="w-full px-3.5 py-2 border border-stone-200 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-stone-50/50"
+                        >
+                            <option value="">Tutte le categorie</option>
+                            <option value="floor">Pavimento</option>
+                            <option value="wall">Rivestimento</option>
+                            <option value="outdoor">Esterno</option>
+                            <option value="mosaic">Mosaico</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             {/* Error State */}
             {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                    <p className="text-red-700">Errore: {error.message}</p>
-                    <button onClick={refetch} className="text-red-600 underline mt-2">
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 mb-6 flex items-center justify-between">
+                    <p className="text-rose-800 text-sm font-medium">Errore di caricamento: {error.message}</p>
+                    <button onClick={handleRefresh} className="text-rose-600 font-bold text-xs underline cursor-pointer">
                         Riprova
                     </button>
                 </div>
             )}
 
-            {/* Loading State */}
+            {/* Content Table / Loading / Empty */}
             {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-16 flex flex-col items-center justify-center">
+                    <div className="w-10 h-10 border-3 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-sm font-semibold text-stone-500 mt-4">Caricamento catalogo in corso...</p>
                 </div>
             ) : products.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                    <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun prodotto trovato</h3>
-                    <p className="text-gray-500 mb-4">
+                <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-16 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center mx-auto mb-4">
+                        <Package size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-stone-900 mb-1">Nessun prodotto trovato</h3>
+                    <p className="text-sm text-stone-500 max-w-md mx-auto mb-6">
                         {search || statusFilter || categoryFilter
-                            ? 'Prova a modificare i filtri di ricerca'
-                            : 'Inizia aggiungendo il tuo primo prodotto'}
+                            ? 'Nessun articolo corrisponde ai filtri selezionati. Prova a reimpostarli.'
+                            : 'Inizia creando il tuo primo articolo a catalogo con prezzi e specifiche tecniche.'}
                     </p>
                     <Link
                         to="/admin/products/new"
-                        className="inline-flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-orange-500/20"
                     >
-                        Aggiungi Prodotto
+                        <Plus size={16} />
+                        <span>Aggiungi Prodotto</span>
                     </Link>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                        <table className="w-full text-left">
+                            <thead className="bg-stone-50/80 border-b border-stone-200">
                                 <tr>
-                                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">
                                         Prodotto
                                     </th>
-                                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">
                                         SKU
                                     </th>
-                                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">
                                         Categoria
                                     </th>
-                                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Prezzo
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                        Prezzo Vendita
                                     </th>
-                                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Stock
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                                        Giacenza Stock
                                     </th>
-                                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">
                                         Stato
                                     </th>
-                                    <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500 text-right">
                                         Azioni
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-stone-100 text-sm">
                                 {products.map((product) => {
                                     const images = product.images as string[] | null
                                     const firstImage = images?.[0]
-                                    const statusInfo = STATUS_LABELS[product.status as ProductStatus] || { label: product.status, color: 'bg-gray-100' }
+                                    const statusInfo = STATUS_LABELS[product.status as ProductStatus] || {
+                                        label: product.status,
+                                        color: 'bg-stone-100 text-stone-700 border-stone-200',
+                                        dotColor: 'bg-stone-400'
+                                    }
 
                                     return (
-                                        <tr key={product.id} className="hover:bg-gray-50">
+                                        <tr key={product.id} className="hover:bg-stone-50/70 transition-colors">
+                                            {/* Prodotto & Thumb */}
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     {firstImage ? (
                                                         <img
                                                             src={firstImage}
                                                             alt={product.name}
-                                                            className="w-12 h-12 rounded-lg object-cover"
+                                                            className="w-12 h-12 rounded-xl object-cover border border-stone-200 shrink-0"
                                                         />
                                                     ) : (
-                                                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                                                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                            </svg>
+                                                        <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 shrink-0">
+                                                            <Package size={20} />
                                                         </div>
                                                     )}
                                                     <div>
-                                                        <p className="font-medium text-gray-900">{product.name}</p>
+                                                        <p className="font-bold text-stone-900 leading-snug">{product.name}</p>
                                                         {product.color_name && (
-                                                            <p className="text-sm text-gray-500">{product.color_name}</p>
+                                                            <p className="text-xs text-stone-500 mt-0.5">{product.color_name}</p>
                                                         )}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 font-mono">
+
+                                            {/* SKU */}
+                                            <td className="px-6 py-4 text-xs font-mono font-medium text-stone-600">
                                                 {product.sku}
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">
-                                                {product.category ? CATEGORY_LABELS[product.category] : '-'}
+
+                                            {/* Categoria */}
+                                            <td className="px-6 py-4">
+                                                {product.category ? (
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-stone-100 text-stone-700">
+                                                        {CATEGORY_LABELS[product.category]}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-stone-400">—</span>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                                €{product.price_per_sqm.toFixed(2)}/mq
+
+                                            {/* Prezzo */}
+                                            <td className="px-6 py-4 font-bold text-stone-900">
+                                                € {product.price_per_sqm.toFixed(2)}
+                                                <span className="text-xs font-normal text-stone-500 ml-1">/mq</span>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">
-                                                {product.stock_qty != null ? `${product.stock_qty} mq` : '-'}
+
+                                            {/* Stock */}
+                                            <td className="px-6 py-4 text-stone-600">
+                                                {product.stock_qty != null ? (
+                                                    <span className={`font-semibold ${product.stock_qty <= 10 ? 'text-amber-600' : 'text-stone-800'}`}>
+                                                        {product.stock_qty} mq
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-stone-400">—</span>
+                                                )}
                                             </td>
+
+                                            {/* Stato con inline quick change */}
                                             <td className="px-6 py-4">
                                                 <select
                                                     value={product.status || 'draft'}
                                                     onChange={async (e) => {
                                                         const newStatus = e.target.value as ProductStatus
                                                         await updateProduct(product.id, { status: newStatus })
+                                                        toast.success(`Stato aggiornato a ${newStatus}`)
                                                         refetch()
                                                     }}
-                                                    className={`px-2.5 py-1 text-xs font-semibold rounded-full border border-stone-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-orange-500 ${statusInfo.color}`}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${statusInfo.color}`}
                                                 >
                                                     <option value="active">Attivo</option>
                                                     <option value="draft">Bozza</option>
@@ -232,53 +415,46 @@ export function AdminProductsPage() {
                                                     <option value="discontinued">Sospeso</option>
                                                 </select>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-end gap-1.5">
+
+                                            {/* Azioni */}
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {/* Duplica */}
                                                     <button
                                                         type="button"
-                                                        onClick={async () => {
-                                                            const newSku = `${product.sku}-COPY-${Math.floor(100 + Math.random() * 900)}`
-                                                            const { id, created_at, updated_at, ...rest } = product as any
-                                                            const { error } = await createProduct({
-                                                                ...rest,
-                                                                name: `${product.name} (Copia)`,
-                                                                sku: newSku,
-                                                                status: 'draft'
-                                                            })
-                                                            if (error) {
-                                                                alert(`Errore durante la duplicazione: ${error.message}`)
-                                                            } else {
-                                                                refetch()
-                                                            }
-                                                        }}
-                                                        className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+                                                        onClick={() => handleDuplicate(product)}
+                                                        disabled={duplicatingId === product.id}
+                                                        className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-xl transition-colors cursor-pointer"
                                                         title="Duplica prodotto"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                        </svg>
+                                                        {duplicatingId === product.id ? (
+                                                            <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                                                        ) : (
+                                                            <Copy size={16} />
+                                                        )}
                                                     </button>
+
+                                                    {/* Modifica */}
                                                     <Link
                                                         to={`/admin/products/${product.id}`}
-                                                        className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-lg transition-colors"
-                                                        title="Modifica"
+                                                        className="p-2 text-stone-600 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-colors"
+                                                        title="Modifica scheda prodotto"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
+                                                        <Edit3 size={16} />
                                                     </Link>
+
+                                                    {/* Elimina */}
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleDelete(product.id, product.name)}
                                                         disabled={deletingId === product.id}
-                                                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-                                                        title="Elimina"
+                                                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                                                        title="Elimina prodotto"
                                                     >
                                                         {deletingId === product.id ? (
-                                                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                                            <div className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
                                                         ) : (
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
+                                                            <Trash2 size={16} />
                                                         )}
                                                     </button>
                                                 </div>

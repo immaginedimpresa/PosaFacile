@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Search, Percent, Euro, Save, Loader2, RotateCcw } from 'lucide-react'
+import {
+    Search,
+    Percent,
+    Euro,
+    Save,
+    Loader2,
+    RefreshCw,
+    Users,
+    Clock
+} from 'lucide-react'
 import { ITALIAN_PROVINCES } from '@/lib/provinces'
+import { toast } from 'sonner'
 
 interface MarkupRow {
     id: string
@@ -26,15 +36,15 @@ const euro = (v: number | null) =>
         : `€ ${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const inputClass =
-    'w-full px-2 py-1 text-sm text-right border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none'
+    'w-full px-3 py-1.5 text-sm text-right border border-stone-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-hidden bg-stone-50/50 focus:bg-white transition-colors'
 
 export function AdminMarkupPage() {
     const [rows, setRows] = useState<MarkupRow[]>([])
     const [draft, setDraft] = useState<Record<string, { percent: string; fixed: string }>>({})
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [notice, setNotice] = useState<string | null>(null)
 
     const [search, setSearch] = useState('')
     const [province, setProvince] = useState('')
@@ -43,8 +53,9 @@ export function AdminMarkupPage() {
     const [bulkPercent, setBulkPercent] = useState('')
     const [bulkFixed, setBulkFixed] = useState('')
 
-    const fetchRows = async () => {
-        setLoading(true)
+    const fetchRows = async (isManual = false) => {
+        if (isManual) setRefreshing(true)
+        else setLoading(true)
         setError(null)
         try {
             const { data, error: fetchError } = await supabase
@@ -62,8 +73,10 @@ export function AdminMarkupPage() {
             setSelected(new Set())
         } catch (err: any) {
             setError(err.message || 'Impossibile caricare i markup')
+            toast.error('Errore durante il caricamento dei markup')
         } finally {
             setLoading(false)
+            setRefreshing(false)
         }
     }
 
@@ -102,32 +115,43 @@ export function AdminMarkupPage() {
 
     const allFilteredSelected = filtered.length > 0 && filtered.every(r => selected.has(r.id))
 
-    const toggleAllFiltered = () =>
+    const toggleAllFiltered = () => {
         setSelected(prev => {
             const next = new Set(prev)
-            if (allFilteredSelected) filtered.forEach(r => next.delete(r.id))
-            else filtered.forEach(r => next.add(r.id))
-            return next
-        })
-
-    /** Il bulk scrive solo nella bozza: nulla va a DB finché non si salva. */
-    const applyBulk = () => {
-        if (selected.size === 0) return
-        const percent = bulkPercent.trim()
-        const fixed = bulkFixed.trim()
-        if (percent === '' && fixed === '') return
-
-        setDraft(prev => {
-            const next = { ...prev }
-            for (const id of selected) {
-                next[id] = {
-                    percent: percent === '' ? next[id].percent : percent,
-                    fixed: fixed === '' ? next[id].fixed : fixed,
-                }
+            if (allFilteredSelected) {
+                filtered.forEach(r => next.delete(r.id))
+            } else {
+                filtered.forEach(r => next.add(r.id))
             }
             return next
         })
-        setNotice(`Valori applicati a ${selected.size} professionisti. Salva per confermare.`)
+    }
+
+    const applyBulk = () => {
+        const hasPercent = bulkPercent.trim() !== ''
+        const hasFixed = bulkFixed.trim() !== ''
+        if (!hasPercent && !hasFixed) return
+
+        const pNum = Number(bulkPercent)
+        const fNum = Number(bulkFixed)
+        if ((hasPercent && (!Number.isFinite(pNum) || pNum < 0)) ||
+            (hasFixed && (!Number.isFinite(fNum) || fNum < 0))) {
+            toast.error('I markup devono essere numeri non negativi')
+            return
+        }
+
+        setDraft(prev => {
+            const next = { ...prev }
+            selected.forEach(id => {
+                const current = next[id] ?? { percent: '0', fixed: '0' }
+                next[id] = {
+                    percent: hasPercent ? String(pNum) : current.percent,
+                    fixed: hasFixed ? String(fNum) : current.fixed,
+                }
+            })
+            return next
+        })
+        toast.success(`Modifiche applicate in bozza a ${selected.size} posatori`)
     }
 
     const resetDraft = () => {
@@ -135,14 +159,13 @@ export function AdminMarkupPage() {
             percent: String(r.markup_percent ?? 0),
             fixed: String(r.markup_fixed ?? 0),
         }])))
-        setNotice(null)
+        toast.info('Modifiche in bozza ripristinate')
     }
 
     const save = async () => {
         if (dirtyIds.length === 0) return
         setSaving(true)
         setError(null)
-        setNotice(null)
 
         try {
             const invalid = dirtyIds.find(id => {
@@ -152,8 +175,6 @@ export function AdminMarkupPage() {
             })
             if (invalid) throw new Error('I markup devono essere numeri non negativi')
 
-            // Un update per riga: PostgREST non fa update multipli con valori
-            // diversi in una sola chiamata, e le righe modificate sono poche.
             const results = await Promise.all(dirtyIds.map(id =>
                 supabase
                     .from('professional_profiles')
@@ -171,9 +192,10 @@ export function AdminMarkupPage() {
             setRows(prev => prev.map(r => dirtyIds.includes(r.id)
                 ? { ...r, markup_percent: Number(draft[r.id].percent), markup_fixed: Number(draft[r.id].fixed) }
                 : r))
-            setNotice(`${dirtyIds.length} markup salvati.`)
+            toast.success(`${dirtyIds.length} markup salvati con successo`)
         } catch (err: any) {
             setError(err.message || 'Salvataggio fallito')
+            toast.error(`Errore durante il salvataggio: ${err.message}`)
         } finally {
             setSaving(false)
         }
@@ -184,202 +206,209 @@ export function AdminMarkupPage() {
         return ITALIAN_PROVINCES.filter(p => codes.has(p.code))
     }, [rows])
 
+    const kpiMetrics = useMemo(() => {
+        const totalCount = rows.length
+        const avgPercent = rows.length
+            ? rows.reduce((sum, r) => sum + (Number(r.markup_percent) || 0), 0) / rows.length
+            : 0
+        const avgFixed = rows.length
+            ? rows.reduce((sum, r) => sum + (Number(r.markup_fixed) || 0), 0) / rows.length
+            : 0
+        const dirtyCount = dirtyIds.length
+
+        return {
+            totalCount,
+            avgPercent,
+            avgFixed,
+            dirtyCount
+        }
+    }, [rows, dirtyIds])
+
     return (
-        <div className="space-y-6 p-6">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Markup Professionisti</h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                    Ricarico della piattaforma sulla tariffa di posa: percentuale sul mq e importo una tantum.
-                </p>
-            </div>
-
-            {/* Filtri */}
-            <div className="flex flex-wrap gap-3">
-                <div className="relative flex-1 min-w-[240px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Cerca professionista o città..."
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
-                <select
-                    value={province}
-                    onChange={e => setProvince(e.target.value)}
-                    className="px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                >
-                    <option value="">Tutte le province</option>
-                    {usedProvinces.map(p => (
-                        <option key={p.code} value={p.code}>{p.code} · {p.name}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Azioni in blocco */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex flex-wrap items-end gap-4">
-                    <div>
-                        <span className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-                            Applica in blocco
-                        </span>
-                        <span className="text-sm text-gray-600">
-                            {selected.size === 0
-                                ? 'Nessun professionista selezionato'
-                                : `${selected.size} selezionati`}
-                        </span>
-                    </div>
-                    <div className="w-32">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Markup %</label>
-                        <div className="relative">
-                            <Percent className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-                            <input
-                                type="number" min="0" step="0.5" placeholder="invariato"
-                                className={`${inputClass} pl-7 text-left`}
-                                value={bulkPercent}
-                                onChange={e => setBulkPercent(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <div className="w-36">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Una tantum</label>
-                        <div className="relative">
-                            <Euro className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-                            <input
-                                type="number" min="0" step="1" placeholder="invariato"
-                                className={`${inputClass} pl-7 text-left`}
-                                value={bulkFixed}
-                                onChange={e => setBulkFixed(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <button
-                        onClick={applyBulk}
-                        disabled={selected.size === 0 || (bulkPercent.trim() === '' && bulkFixed.trim() === '')}
-                        className="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        Applica alla selezione
-                    </button>
-                    <p className="text-xs text-gray-400 w-full">
-                        Un campo lasciato vuoto non viene toccato. Le modifiche restano in bozza finché non salvi.
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
+                        <Percent className="w-8 h-8 text-orange-500" />
+                        <span>Markup Piattaforma</span>
+                    </h1>
+                    <p className="text-sm text-stone-500 mt-1">
+                        Configura la percentuale di ricarico e l'importo fisso applicati alle tariffe dei posatori per calcolare il prezzo al cliente.
                     </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {dirtyIds.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={saving}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20 disabled:opacity-50"
+                        >
+                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            <span>Salva {dirtyIds.length} Modifiche</span>
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => fetchRows(true)}
+                        disabled={refreshing || loading}
+                        className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-semibold transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                        title="Ricarica markup"
+                    >
+                        <RefreshCw size={16} className={refreshing ? 'animate-spin text-orange-500' : ''} />
+                        <span className="hidden sm:inline">Aggiorna</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* KPI Cards Strip */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                        <Users size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Posatori a Listino</div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">{kpiMetrics.totalCount}</div>
+                    </div>
+                </div>
+
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                        <Percent size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Markup % Medio</div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">+{kpiMetrics.avgPercent.toFixed(1)}%</div>
+                    </div>
+                </div>
+
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                        <Euro size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Fisso Medio</div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">€ {kpiMetrics.avgFixed.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div className="p-5 bg-white rounded-2xl border border-stone-200/90 shadow-xs flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${kpiMetrics.dirtyCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-stone-50 text-stone-400'}`}>
+                        <Clock size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Modifiche in Bozza</div>
+                        <div className="text-2xl font-black text-stone-900 mt-0.5">{kpiMetrics.dirtyCount}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter / Search Toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-stone-200/90 shadow-xs mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="sm:col-span-8 relative">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" size={17} />
+                        <input
+                            type="text"
+                            placeholder="Cerca professionista o città..."
+                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-stone-200 focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm bg-stone-50/50"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="sm:col-span-4">
+                        <select
+                            value={province}
+                            onChange={e => setProvince(e.target.value)}
+                            className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm bg-stone-50/50"
+                        >
+                            <option value="">Tutte le province ({usedProvinces.length})</option>
+                            {usedProvinces.map(p => (
+                                <option key={p.code} value={p.code}>{p.code} · {p.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Azioni in Blocco */}
+            <div className="bg-white rounded-2xl border border-stone-200/90 p-5 shadow-xs mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                    <div className="flex flex-wrap items-end gap-3 flex-1">
+                        <div>
+                            <span className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-1">Applica in blocco</span>
+                            <span className="text-sm font-bold text-stone-900">{selected.size} posatori selezionati</span>
+                        </div>
+                        <div className="w-32">
+                            <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-1">Markup %</label>
+                            <div className="relative">
+                                <Percent className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={13} />
+                                <input type="number" min="0" step="0.5" placeholder="invariato" className={`${inputClass} pl-7 text-left`} value={bulkPercent} onChange={e => setBulkPercent(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="w-36">
+                            <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider mb-1">Una tantum (€)</label>
+                            <div className="relative">
+                                <Euro className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={13} />
+                                <input type="number" min="0" step="1" placeholder="invariato" className={`${inputClass} pl-7 text-left`} value={bulkFixed} onChange={e => setBulkFixed(e.target.value)} />
+                            </div>
+                        </div>
+                        <button type="button" onClick={applyBulk} disabled={selected.size === 0 || (bulkPercent.trim() === '' && bulkFixed.trim() === '')} className="px-4 py-2 bg-stone-900 hover:bg-black text-white text-sm font-bold rounded-xl disabled:opacity-40 cursor-pointer">Applica</button>
+                    </div>
                 </div>
             </div>
 
             {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
-            )}
-            {notice && !error && (
-                <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">{notice}</div>
+                <div className="rounded-2xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700 mb-6 flex items-center justify-between">
+                    <span>{error}</span>
+                    <button onClick={() => setError(null)} className="text-rose-600 font-bold text-xs underline">Chiudi</button>
+                </div>
             )}
 
             {/* Tabella */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-500 font-medium text-xs uppercase tracking-wider">
-                            <tr>
-                                <th className="px-4 py-4 w-10">
-                                    <input
-                                        type="checkbox"
-                                        checked={allFilteredSelected}
-                                        onChange={toggleAllFiltered}
-                                        aria-label="Seleziona tutti i risultati"
-                                        className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
-                                    />
-                                </th>
-                                <th className="px-4 py-4">Professionista</th>
-                                <th className="px-4 py-4 text-right">Tariffa/mq</th>
-                                <th className="px-4 py-4 text-right w-28">Markup %</th>
-                                <th className="px-4 py-4 text-right w-32">Una tantum</th>
-                                <th className="px-4 py-4 text-right">Prezzo cliente/mq</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 text-sm">
-                            {loading ? (
-                                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400">Caricamento...</td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400">Nessun professionista trovato.</td></tr>
-                            ) : (
-                                filtered.map(r => {
-                                    const d = draft[r.id] ?? { percent: '0', fixed: '0' }
-                                    const percentNum = Number(d.percent)
-                                    const client = clientPricePerSqm(r.price_per_sqm, Number.isFinite(percentNum) ? percentNum : 0)
-                                    const isDirty = dirtyIds.includes(r.id)
-                                    return (
-                                        <tr key={r.id} className={isDirty ? 'bg-amber-50/60' : 'hover:bg-gray-50/50'}>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selected.has(r.id)}
-                                                    onChange={() => toggleRow(r.id)}
-                                                    aria-label={`Seleziona ${r.company_name ?? r.id}`}
-                                                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-400"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="font-medium text-gray-900">{r.company_name || '—'}</div>
-                                                <div className="text-xs text-gray-500">
-                                                    {r.billing_city}{r.billing_province ? ` (${r.billing_province})` : ''}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-gray-600">{euro(r.price_per_sqm)}</td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    type="number" min="0" step="0.5"
-                                                    className={inputClass}
-                                                    value={d.percent}
-                                                    onChange={e => setDraftValue(r.id, 'percent', e.target.value)}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <input
-                                                    type="number" min="0" step="1"
-                                                    className={inputClass}
-                                                    value={d.fixed}
-                                                    onChange={e => setDraftValue(r.id, 'fixed', e.target.value)}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                                                {euro(client)}
-                                                {Number(d.fixed) > 0 && (
-                                                    <span className="block text-xs font-normal text-gray-500">
-                                                        + {euro(Number(d.fixed))} una tantum
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    )
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs">
+                <table className="w-full text-left">
+                    <thead className="bg-stone-50/80 border-b border-stone-200">
+                        <tr>
+                            <th className="px-5 py-4 w-12 text-center"><input type="checkbox" checked={allFilteredSelected} onChange={toggleAllFiltered} className="rounded border-stone-300 text-orange-500 cursor-pointer" /></th>
+                            <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-stone-500">Professionista</th>
+                            <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500">Tariffa/mq</th>
+                            <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500 w-36">Markup %</th>
+                            <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500 w-36">Una Tantum (€)</th>
+                            <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500">Prezzo Finale</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100 text-sm">
+                        {loading ? <tr><td colSpan={6} className="px-6 py-16 text-center text-stone-400">Caricamento...</td></tr> : filtered.map(r => {
+                            const d = draft[r.id] ?? { percent: '0', fixed: '0' }
+                            const client = clientPricePerSqm(r.price_per_sqm, Number(d.percent))
+                            const isDirty = dirtyIds.includes(r.id)
+                            return (
+                                <tr key={r.id} className={isDirty ? 'bg-amber-50/50' : 'hover:bg-stone-50/70'}>
+                                    <td className="px-5 py-3.5 text-center"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleRow(r.id)} className="rounded border-stone-300 text-orange-500 cursor-pointer" /></td>
+                                    <td className="px-6 py-3.5"><div className="font-bold text-stone-900">{r.company_name || '—'}</div><div className="text-xs text-stone-500">{r.billing_city}</div></td>
+                                    <td className="px-6 py-3.5 text-right font-medium">{euro(r.price_per_sqm)}</td>
+                                    <td className="px-6 py-3.5"><input type="number" className={inputClass} value={d.percent} onChange={e => setDraftValue(r.id, 'percent', e.target.value)} /></td>
+                                    <td className="px-6 py-3.5"><input type="number" className={inputClass} value={d.fixed} onChange={e => setDraftValue(r.id, 'fixed', e.target.value)} /></td>
+                                    <td className="px-6 py-3.5 text-right font-bold text-stone-900">{euro(client)}</td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
             </div>
 
-            {/* Barra di salvataggio: compare solo se c'è qualcosa da salvare */}
+            {/* Sticky Save Bar */}
             {dirtyIds.length > 0 && (
-                <div className="sticky bottom-4 flex items-center justify-between gap-4 bg-gray-900 text-white rounded-xl px-5 py-3 shadow-xl">
-                    <span className="text-sm">
-                        {dirtyIds.length} {dirtyIds.length === 1 ? 'modifica non salvata' : 'modifiche non salvate'}
-                    </span>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={resetDraft}
-                            disabled={saving}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 hover:text-white disabled:opacity-50"
-                        >
-                            <RotateCcw size={15} /> Annulla
-                        </button>
-                        <button
-                            onClick={save}
-                            disabled={saving}
-                            className="flex items-center gap-2 px-5 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 disabled:opacity-60"
-                        >
-                            {saving ? <><Loader2 size={15} className="animate-spin" /> Salvataggio...</>
-                                    : <><Save size={15} /> Salva</>}
-                        </button>
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center justify-between gap-6 bg-stone-900 text-white rounded-2xl px-6 py-3.5 shadow-2xl border border-stone-700 w-full max-w-xl">
+                    <span className="text-sm font-semibold">{dirtyIds.length} modifiche in sospeso</span>
+                    <div className="flex items-center gap-2">
+                        <button onClick={resetDraft} className="px-3.5 py-2 text-xs font-semibold text-stone-300 hover:text-white cursor-pointer">Annulla</button>
+                        <button onClick={save} disabled={saving} className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 rounded-xl font-bold text-xs cursor-pointer">{saving ? 'Salvataggio...' : 'Salva Tutto'}</button>
                     </div>
                 </div>
             )}
