@@ -848,6 +848,68 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_rates: {
+        Row: {
+          created_at: string
+          laying_dritta: number | null
+          laying_correre: number | null
+          laying_diagonale: number | null
+          laying_spina: number | null
+          laying_mosaico: number | null
+          demolizione: number | null
+          massetto: number | null
+          impermeabilizzazione: number | null
+          smaltimento: number | null
+          battiscopa: number | null
+          soglie: number | null
+          professional_id: string
+          servizi_esclusi: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          laying_dritta?: number | null
+          laying_correre?: number | null
+          laying_diagonale?: number | null
+          laying_spina?: number | null
+          laying_mosaico?: number | null
+          demolizione?: number | null
+          massetto?: number | null
+          impermeabilizzazione?: number | null
+          smaltimento?: number | null
+          battiscopa?: number | null
+          soglie?: number | null
+          professional_id: string
+          servizi_esclusi?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          laying_dritta?: number | null
+          laying_correre?: number | null
+          laying_diagonale?: number | null
+          laying_spina?: number | null
+          laying_mosaico?: number | null
+          demolizione?: number | null
+          massetto?: number | null
+          impermeabilizzazione?: number | null
+          smaltimento?: number | null
+          battiscopa?: number | null
+          soglie?: number | null
+          professional_id?: string
+          servizi_esclusi?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_rates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "professional_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_schedule: {
         Row: {
           booking_horizon_weeks: number

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Database } from '@/types/supabase'
 import { estimateLayingDuration, type DurationEstimate } from '@/lib/layingDuration'
+import { layingRate, serviceRate, type ProfessionalRates } from '@/services/ratesService'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -47,14 +48,6 @@ export const LAYING_TYPE_LABELS: Record<LayingType, string> = {
     mosaico: 'Mosaico/Decorativo',
 }
 
-export const LAYING_TYPE_SURCHARGE: Record<LayingType, number> = {
-    dritta: 0,
-    diagonale: 0.15,
-    correre: 0.10,
-    spina: 0.25,
-    mosaico: 0.40,
-}
-
 // Step 5: Additional Services
 export interface AdditionalServices {
     demolizione: boolean
@@ -65,16 +58,6 @@ export interface AdditionalServices {
     battiscopaMetri: number
     soglie: boolean
     soglieQty: number
-}
-
-// Service prices (configurable)
-export const SERVICE_PRICES = {
-    demolizione: 12, // €/mq
-    massetto: 18, // €/mq
-    impermeabilizzazione: 25, // €/mq
-    smaltimento: 8, // €/mq
-    battiscopa: 6, // €/metro
-    soglie: 35, // €/pezzo
 }
 
 // Step 6: Location & Date
@@ -102,25 +85,10 @@ export interface SelectedProfessional {
     markup_fixed: number
 }
 
-// Tariffa usata solo finché non è stato scelto un professionista: da lì in poi
-// il preventivo usa la sua tariffa reale, così il totale non cambia a sorpresa.
-const BASE_LAYING_RATE = 25 // €/mq
-
 /** Numero utilizzabile, oppure il valore di ripiego indicato. */
 function num(value: unknown, fallback = 0): number {
     const n = Number(value)
     return Number.isFinite(n) ? n : fallback
-}
-
-/**
- * Prezzo al mq esposto al cliente: tariffa del posatore più markup percentuale.
- * Tollera professionisti salvati con il formato precedente, privi di tariffa:
- * lo stato è persistito in localStorage e sopravvive agli aggiornamenti.
- */
-export function layingRateFor(pro: SelectedProfessional | null): number {
-    const base = num(pro?.price_per_sqm)
-    if (base <= 0) return BASE_LAYING_RATE
-    return base * (1 + num(pro?.markup_percent) / 100)
 }
 
 export interface ConfiguratorState {
@@ -133,6 +101,8 @@ export interface ConfiguratorState {
     services: AdditionalServices
     location: LocationInfo
     selectedProfessional: SelectedProfessional | null
+    /** Tariffe del posatore scelto: sono loro a fare il preventivo. */
+    professionalRates: ProfessionalRates | null
     selectedDate: Date | null
     aiResultImage: string | null
 
@@ -150,6 +120,7 @@ export interface ConfiguratorState {
     setServices: (services: Partial<AdditionalServices>) => void
     setLocation: (loc: Partial<LocationInfo>) => void
     setSelectedProfessional: (pro: SelectedProfessional | null) => void
+    setProfessionalRates: (rates: ProfessionalRates | null) => void
     setSelectedDate: (date: Date | null) => void
     setAiResultImage: (image: string | null) => void
 
@@ -204,6 +175,7 @@ const initialState = {
     },
     activeQuoteId: null,
     selectedProfessional: null,
+    professionalRates: null,
     selectedDate: null,
     aiResultImage: null,
 }
@@ -300,6 +272,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             })),
 
             setSelectedProfessional: (pro) => set({ selectedProfessional: pro }),
+            setProfessionalRates: (rates) => set({ professionalRates: rates }),
             setSelectedDate: (date) => set({ selectedDate: date }),
 
             setAiResultImage: (image) => set({ aiResultImage: image }),
@@ -318,26 +291,30 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             },
 
             getLayingCost: () => {
-                const { layingType, dimensions, selectedProfessional } = get()
+                const { layingType, dimensions, selectedProfessional, professionalRates } = get()
                 const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
-                const surcharge = LAYING_TYPE_SURCHARGE[layingType]
-                const rate = layingRateFor(selectedProfessional)
-                // Il markup fisso è una tantum: non va moltiplicato per i metri quadri.
+                // La tariffa e' quella dichiarata dal posatore per quello schema:
+                // non piu' una base unica con una maggiorazione uguale per tutti.
+                const tariffa = layingRate(professionalRates, layingType)
+                const conMargine = tariffa * (1 + num(selectedProfessional?.markup_percent) / 100)
+                // Il margine fisso e' una tantum: non va moltiplicato per i metri quadri.
                 const oneOff = num(selectedProfessional?.markup_fixed)
-                return baseMq * rate * (1 + surcharge) + oneOff
+                return baseMq * conMargine + oneOff
             },
 
             getServicesCost: () => {
-                const { services, dimensions } = get()
+                const { services, dimensions, professionalRates, selectedProfessional } = get()
                 const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
+                const margine = 1 + num(selectedProfessional?.markup_percent) / 100
+                const tariffa = (chiave: string) => serviceRate(professionalRates, chiave) * margine
                 let cost = 0
 
-                if (services.demolizione) cost += baseMq * SERVICE_PRICES.demolizione
-                if (services.massetto) cost += baseMq * SERVICE_PRICES.massetto
-                if (services.impermeabilizzazione) cost += baseMq * SERVICE_PRICES.impermeabilizzazione
-                if (services.smaltimento) cost += baseMq * SERVICE_PRICES.smaltimento
-                if (services.battiscopa) cost += services.battiscopaMetri * SERVICE_PRICES.battiscopa
-                if (services.soglie) cost += services.soglieQty * SERVICE_PRICES.soglie
+                if (services.demolizione) cost += baseMq * tariffa('demolizione')
+                if (services.massetto) cost += baseMq * tariffa('massetto')
+                if (services.impermeabilizzazione) cost += baseMq * tariffa('impermeabilizzazione')
+                if (services.smaltimento) cost += baseMq * tariffa('smaltimento')
+                if (services.battiscopa) cost += services.battiscopaMetri * tariffa('battiscopa')
+                if (services.soglie) cost += services.soglieQty * tariffa('soglie')
 
                 return cost
             },

@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { AIVisualizer } from '@/components/ai/AIVisualizer'
-import { useConfiguratorStore, LAYING_TYPE_LABELS, LAYING_TYPE_SURCHARGE, type LayingType } from '@/store/configuratorStore'
+import { useConfiguratorStore, LAYING_TYPE_LABELS, type LayingType } from '@/store/configuratorStore'
+import { layingRate } from '@/services/ratesService'
 
 
 const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
@@ -12,9 +13,16 @@ const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
 ]
 
 export function Step4LayingType() {
-    const { layingType, setLayingType, getLayingCost, selectedProduct, setAiResultImage } = useConfiguratorStore()
+    const {
+        layingType, setLayingType, getLayingCost, selectedProduct, setAiResultImage,
+        professionalRates, selectedProfessional, dimensions,
+    } = useConfiguratorStore()
 
     const layingCost = getLayingCost()
+    const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
+    const margine = 1 + (selectedProfessional?.markup_percent ?? 0) / 100
+    // Riferimento per il confronto: lo schema piu' semplice.
+    const costoDritta = layingRate(professionalRates, 'dritta') * margine * baseMq
 
     return (
         <div className="space-y-6">
@@ -27,7 +35,10 @@ export function Step4LayingType() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {LAYING_TYPES.map(({ value, pattern }) => {
                     const isSelected = layingType === value
-                    const surcharge = LAYING_TYPE_SURCHARGE[value]
+                    // Costo della posa con questo schema su questa superficie:
+                    // il confronto utile e' fra importi, non fra percentuali.
+                    const costo = layingRate(professionalRates, value) * margine * baseMq
+                    const differenza = costo - costoDritta
 
                     return (
                         <button
@@ -45,11 +56,20 @@ export function Step4LayingType() {
                             {/* Label */}
                             <p className="font-medium text-gray-900">{LAYING_TYPE_LABELS[value]}</p>
 
-                            {/* Surcharge */}
-                            {surcharge > 0 ? (
-                                <p className="text-sm text-orange-600">+{Math.round(surcharge * 100)}% sul costo posa</p>
+                            {/* Costo della posa con questo schema */}
+                            {baseMq > 0 ? (
+                                <>
+                                    <p className="text-sm font-bold text-gray-900">
+                                        €{costo.toFixed(0)}
+                                    </p>
+                                    <p className={`text-xs ${differenza > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                        {differenza > 0
+                                            ? `+€${differenza.toFixed(0)} rispetto alla posa dritta`
+                                            : 'Lo schema più economico'}
+                                    </p>
+                                </>
                             ) : (
-                                <p className="text-sm text-green-600">Nessun sovrapprezzo</p>
+                                <p className="text-sm text-gray-500">Indica prima la superficie</p>
                             )}
                         </button>
                     )

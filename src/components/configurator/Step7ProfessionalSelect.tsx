@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useConfiguratorStore, layingRateFor } from '@/store/configuratorStore'
+import { useConfiguratorStore } from '@/store/configuratorStore'
+import { fetchRates, layingRate } from '@/services/ratesService'
 import { supabase } from '@/lib/supabase'
 import { Star, Briefcase, AlertCircle, MapPin } from 'lucide-react'
 import { loadComuni, provincesInSameRegion } from '@/lib/comuni'
@@ -21,7 +22,13 @@ interface Professional {
 }
 
 export function Step7ProfessionalSelect() {
-    const { location, selectedProfessional, setSelectedProfessional, prevStep } = useConfiguratorStore()
+    const {
+        location, selectedProfessional, setSelectedProfessional, setProfessionalRates,
+        layingType, dimensions, prevStep,
+    } = useConfiguratorStore()
+    // Tariffe dei posatori in elenco: servono a mostrare quanto costa questo
+    // progetto con ciascuno, invece di un listino al metro quadro.
+    const [ratesById, setRatesById] = useState<Record<string, number>>({})
     const [professionals, setProfessionals] = useState<Professional[]>([])
     const [loading, setLoading] = useState(true)
     const [widenedToRegion, setWidenedToRegion] = useState(false)
@@ -89,7 +96,24 @@ export function Step7ProfessionalSelect() {
         }
     }
 
-    const handleSelect = (pro: Professional) => {
+    // Una sola query per tutto l'elenco: la tariffa serve per lo schema di
+    // posa gia' scelto, non per tutti gli schemi.
+    useEffect(() => {
+        if (professionals.length === 0) return
+        let attivo = true
+        void (async () => {
+            const coppie = await Promise.all(
+                professionals.map(async (pro) => [
+                    pro.id,
+                    layingRate(await fetchRates(pro.id), layingType),
+                ] as const),
+            )
+            if (attivo) setRatesById(Object.fromEntries(coppie))
+        })()
+        return () => { attivo = false }
+    }, [professionals, layingType])
+
+    const handleSelect = async (pro: Professional) => {
         setSelectedProfessional({
             id: pro.id,
             full_name: pro.full_name,
@@ -99,6 +123,8 @@ export function Step7ProfessionalSelect() {
             markup_percent: pro.markup_percent ?? 0,
             markup_fixed: pro.markup_fixed ?? 0,
         })
+        // Il preventivo si costruisce sulle tariffe di chi esegue il lavoro.
+        setProfessionalRates(await fetchRates(pro.id))
     }
 
     if (loading) {
@@ -182,17 +208,19 @@ export function Step7ProfessionalSelect() {
                                         {pro.bio && <p className="text-gray-600 text-sm mt-2 line-clamp-2">{pro.bio}</p>}
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        {pro.price_per_sqm !== null && (
+                                        {ratesById[pro.id] !== undefined && (
                                             <>
                                                 <div className="text-xl font-bold text-gray-900">
-                                                    € {layingRateFor({
-                                                        id: pro.id, full_name: pro.full_name, company_name: pro.company_name,
-                                                        rating: pro.rating, price_per_sqm: pro.price_per_sqm,
-                                                        markup_percent: pro.markup_percent ?? 0,
-                                                        markup_fixed: pro.markup_fixed ?? 0,
-                                                    }).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    € {(
+                                                        ratesById[pro.id]
+                                                        * (dimensions.pavimentoMq + dimensions.paretiMq)
+                                                        * (1 + (pro.markup_percent ?? 0) / 100)
+                                                        + (pro.markup_fixed ?? 0)
+                                                    ).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 </div>
-                                                <div className="text-xs text-gray-500">al mq, posa</div>
+                                                <div className="text-xs text-gray-500">
+                                                    posa di questo progetto
+                                                </div>
                                             </>
                                         )}
                                         {isSelected && (

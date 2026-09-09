@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Check, Minus, Plus, Ruler } from 'lucide-react'
 import {
-    SERVICE_PRICES,
-    layingRateFor,
     useConfiguratorStore,
 } from '@/store/configuratorStore'
+import { RATE_DEFAULTS } from '@/services/ratesService'
+
 
 const finishes = [
     { name: 'Effetto legno', price: 28, swatch: 'wood' },
@@ -26,9 +26,11 @@ export function InstantEstimator() {
     const navigate = useNavigate()
     const finish = finishes[selected]
     const material = sqm * 1.1 * finish.price
-    const laying = sqm * layingRateFor(null)
+    // Stima pubblica: usa i valori di piattaforma, non le tariffe di un
+    // posatore, che si conoscono solo dopo averlo scelto.
+    const laying = sqm * RATE_DEFAULTS.laying_dritta
     const services = removal
-        ? sqm * (SERVICE_PRICES.demolizione + SERVICE_PRICES.smaltimento)
+        ? sqm * (RATE_DEFAULTS.demolizione + RATE_DEFAULTS.smaltimento)
         : 0
     const subtotal = material + laying + services
     const total = subtotal * 1.22
@@ -147,8 +149,8 @@ export function InstantEstimator() {
                         </span>
                         <span>
                             +
-                            {SERVICE_PRICES.demolizione +
-                                SERVICE_PRICES.smaltimento}{' '}
+                            {RATE_DEFAULTS.demolizione +
+                                RATE_DEFAULTS.smaltimento}{' '}
                             €/m²
                         </span>
                     </label>

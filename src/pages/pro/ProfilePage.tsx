@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import {
+    Euro,
     Mail,
     Phone,
     FileText,
@@ -17,6 +18,8 @@ import {
 } from 'lucide-react'
 import { ITALIAN_PROVINCES } from '@/lib/provinces'
 import { toast } from 'sonner'
+import { RatesSettings } from '@/components/pro/RatesSettings'
+
 
 interface ProfessionalProfile {
     company_name: string
@@ -622,6 +625,27 @@ export function ProfilePage() {
                     </div>
                 </div>
             </form>
+
+            {/* Tariffe: salvataggio indipendente dal resto del profilo, perche'
+                sono il dato che entra nei preventivi e va aggiornato da solo. */}
+            {user?.id && (
+                <div className="mt-8 space-y-4">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 flex-shrink-0">
+                            <Euro className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
+                                Le tue tariffe
+                            </h2>
+                            <p className="text-stone-500 text-sm mt-0.5">
+                                Il prezzo della manodopera nei preventivi che ricevi
+                            </p>
+                        </div>
+                    </div>
+                    <RatesSettings professionalId={user.id} />
+                </div>
+            )}
         </div>
     )
 }

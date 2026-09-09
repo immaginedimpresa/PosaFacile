@@ -1,18 +1,31 @@
-import { useConfiguratorStore, SERVICE_PRICES } from '@/store/configuratorStore'
+import { useConfiguratorStore } from '@/store/configuratorStore'
+import { serviceRate, servizioEscluso } from '@/services/ratesService'
 import { Trash2, Layers, Droplets, Truck, Square, DoorOpen } from 'lucide-react'
 
 const SERVICES = [
-    { key: 'demolizione', label: 'Demolizione pavimento esistente', icon: Trash2, price: SERVICE_PRICES.demolizione, unit: '€/mq' },
-    { key: 'massetto', label: 'Preparazione massetto', icon: Layers, price: SERVICE_PRICES.massetto, unit: '€/mq' },
-    { key: 'impermeabilizzazione', label: 'Impermeabilizzazione', icon: Droplets, price: SERVICE_PRICES.impermeabilizzazione, unit: '€/mq' },
-    { key: 'smaltimento', label: 'Smaltimento materiale', icon: Truck, price: SERVICE_PRICES.smaltimento, unit: '€/mq' },
+    { key: 'demolizione', label: 'Demolizione pavimento esistente', icon: Trash2 },
+    { key: 'massetto', label: 'Preparazione massetto', icon: Layers },
+    { key: 'impermeabilizzazione', label: 'Impermeabilizzazione', icon: Droplets },
+    { key: 'smaltimento', label: 'Smaltimento materiale', icon: Truck },
 ] as const
 
 export function Step5Services() {
-    const { services, setServices, dimensions, getServicesCost } = useConfiguratorStore()
+    const {
+        services, setServices, dimensions, getServicesCost,
+        professionalRates, selectedProfessional,
+    } = useConfiguratorStore()
 
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
     const servicesCost = getServicesCost()
+    const margine = 1 + (selectedProfessional?.markup_percent ?? 0) / 100
+
+    /**
+     * Quanto costa quella lavorazione su questo progetto.
+     * Si mostra l'importo, non la tariffa al metro quadro: al cliente serve
+     * sapere quanto spende, non il listino di chi esegue.
+     */
+    const costoDi = (chiave: string, quantita = baseMq) =>
+        serviceRate(professionalRates, chiave) * margine * quantita
 
     // Pre-check services based on project info
     const handleServiceToggle = (key: keyof typeof services) => {
@@ -29,9 +42,14 @@ export function Step5Services() {
 
             {/* Main Services */}
             <div className="space-y-3">
-                {SERVICES.map(({ key, label, icon: Icon, price, unit }) => {
+                {SERVICES.map(({ key, label, icon: Icon }) => {
                     const isChecked = services[key as keyof typeof services] as boolean
-                    const estimatedCost = price * baseMq
+                    const estimatedCost = costoDi(key)
+                    // Il posatore scelto puo' non eseguire quella lavorazione:
+                    // in quel caso non gliela si propone nemmeno.
+                    const nonOfferto = servizioEscluso(professionalRates, key)
+
+                    if (nonOfferto) return null
 
                     return (
                         <label
@@ -49,7 +67,11 @@ export function Step5Services() {
                                 <Icon className={`w-5 h-5 ${isChecked ? 'text-orange-500' : 'text-gray-400'}`} />
                                 <div>
                                     <p className="font-medium">{label}</p>
-                                    <p className="text-sm text-gray-500">{price} {unit}</p>
+                                    <p className="text-sm text-gray-500">
+                                        {baseMq > 0
+                                            ? `+€${estimatedCost.toFixed(0)} su ${baseMq.toFixed(0)} mq`
+                                            : 'Indica prima la superficie'}
+                                    </p>
                                 </div>
                             </div>
                             {isChecked && (
@@ -73,7 +95,7 @@ export function Step5Services() {
                     <Square className={`w-5 h-5 ${services.battiscopa ? 'text-orange-500' : 'text-gray-400'}`} />
                     <div>
                         <p className="font-medium">Battiscopa</p>
-                        <p className="text-sm text-gray-500">{SERVICE_PRICES.battiscopa} €/metro lineare</p>
+                        <p className="text-sm text-gray-500">Al metro lineare, secondo la tariffa del posatore</p>
                     </div>
                 </label>
                 {services.battiscopa && (
@@ -91,7 +113,7 @@ export function Step5Services() {
                             <span className="text-gray-500">m</span>
                             {services.battiscopaMetri > 0 && (
                                 <span className="text-orange-600 font-medium">
-                                    +€{(services.battiscopaMetri * SERVICE_PRICES.battiscopa).toFixed(2)}
+                                    +€{costoDi('battiscopa', services.battiscopaMetri).toFixed(2)}
                                 </span>
                             )}
                         </div>
@@ -112,7 +134,7 @@ export function Step5Services() {
                     <DoorOpen className={`w-5 h-5 ${services.soglie ? 'text-orange-500' : 'text-gray-400'}`} />
                     <div>
                         <p className="font-medium">Soglie e profili</p>
-                        <p className="text-sm text-gray-500">{SERVICE_PRICES.soglie} €/pezzo</p>
+                        <p className="text-sm text-gray-500">Al pezzo, secondo la tariffa del posatore</p>
                     </div>
                 </label>
                 {services.soglie && (
@@ -130,7 +152,7 @@ export function Step5Services() {
                             <span className="text-gray-500">pezzi</span>
                             {services.soglieQty > 0 && (
                                 <span className="text-orange-600 font-medium">
-                                    +€{(services.soglieQty * SERVICE_PRICES.soglie).toFixed(2)}
+                                    +€{costoDi('soglie', services.soglieQty).toFixed(2)}
                                 </span>
                             )}
                         </div>

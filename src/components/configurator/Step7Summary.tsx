@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useConfiguratorStore, LAYING_TYPE_LABELS, SERVICE_PRICES } from '@/store/configuratorStore'
+import { useConfiguratorStore, LAYING_TYPE_LABELS } from '@/store/configuratorStore'
+import { serviceRate } from '@/services/ratesService'
 import { MapPin, Calendar, Package, Sparkles, AlertCircle, LogIn, Bookmark, CheckCircle2, ArrowRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -47,6 +48,12 @@ export function Step7Summary() {
     // Durata stimata del cantiere: entra nel preventivo e viene poi
     // confermata (o corretta) dal professionista che accetta l'incarico.
     const durata = getDurationEstimate()
+    const { professionalRates } = useConfiguratorStore()
+    // Le voci del riepilogo usano le tariffe del posatore scelto, come il
+    // totale: mostrarle con valori diversi renderebbe il conto incoerente.
+    const margine = 1 + (selectedProfessional?.markup_percent ?? 0) / 100
+    const costoServizio = (chiave: string, quantita: number) =>
+        serviceRate(professionalRates, chiave) * margine * quantita
 
     // Determine the actual date to use (Calendar selection > Initial preference)
     const effectiveDate = selectedDate
@@ -383,37 +390,37 @@ export function Step7Summary() {
                     {services.demolizione && (
                         <div className="flex justify-between text-gray-600">
                             <span>Demolizione</span>
-                            <span>€{((dimensions.pavimentoMq + dimensions.paretiMq) * SERVICE_PRICES.demolizione).toFixed(2)}</span>
+                            <span>€{costoServizio('demolizione', dimensions.pavimentoMq + dimensions.paretiMq).toFixed(2)}</span>
                         </div>
                     )}
                     {services.massetto && (
                         <div className="flex justify-between text-gray-600">
                             <span>Massetto</span>
-                            <span>€{((dimensions.pavimentoMq + dimensions.paretiMq) * SERVICE_PRICES.massetto).toFixed(2)}</span>
+                            <span>€{costoServizio('massetto', dimensions.pavimentoMq + dimensions.paretiMq).toFixed(2)}</span>
                         </div>
                     )}
                     {services.impermeabilizzazione && (
                         <div className="flex justify-between text-gray-600">
                             <span>Impermeabilizzazione</span>
-                            <span>€{((dimensions.pavimentoMq + dimensions.paretiMq) * SERVICE_PRICES.impermeabilizzazione).toFixed(2)}</span>
+                            <span>€{costoServizio('impermeabilizzazione', dimensions.pavimentoMq + dimensions.paretiMq).toFixed(2)}</span>
                         </div>
                     )}
                     {services.smaltimento && (
                         <div className="flex justify-between text-gray-600">
                             <span>Smaltimento</span>
-                            <span>€{((dimensions.pavimentoMq + dimensions.paretiMq) * SERVICE_PRICES.smaltimento).toFixed(2)}</span>
+                            <span>€{costoServizio('smaltimento', dimensions.pavimentoMq + dimensions.paretiMq).toFixed(2)}</span>
                         </div>
                     )}
                     {services.battiscopa && services.battiscopaMetri > 0 && (
                         <div className="flex justify-between text-gray-600">
                             <span>Battiscopa ({services.battiscopaMetri}m)</span>
-                            <span>€{(services.battiscopaMetri * SERVICE_PRICES.battiscopa).toFixed(2)}</span>
+                            <span>€{costoServizio('battiscopa', services.battiscopaMetri).toFixed(2)}</span>
                         </div>
                     )}
                     {services.soglie && services.soglieQty > 0 && (
                         <div className="flex justify-between text-gray-600">
                             <span>Soglie ({services.soglieQty} pz)</span>
-                            <span>€{(services.soglieQty * SERVICE_PRICES.soglie).toFixed(2)}</span>
+                            <span>€{costoServizio('soglie', services.soglieQty).toFixed(2)}</span>
                         </div>
                     )}
 
