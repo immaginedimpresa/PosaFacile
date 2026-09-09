@@ -17,6 +17,7 @@ const IMAGE_MODEL = "gemini-2.5-flash-image"
 interface RequestBody {
     roomImage: string
     tileImage: string
+    surface?: 'floor' | 'wall'
     tileName: string
     productId?: string
     layingPattern: 'dritta' | 'diagonale' | 'correre' | 'spina' | 'mosaico'
@@ -134,23 +135,37 @@ function productFormatCm(product: any): { w: number; h: number } | null {
     return { w: Math.round(w / 10), h: Math.round(h / 10) }
 }
 
-/** Righe di specifica costruite dai dati reali del prodotto; i campi vuoti sono omessi. */
-function buildTileSpec(product: any, fallbackName: string, fw?: number, fh?: number): string {
+/**
+ * Le specifiche sono divise in due blocchi perche' hanno affidabilita' diversa.
+ *
+ * La geometria (formato, spessore) serve a dare la scala e non e' deducibile
+ * dall'immagine: senza, il modello inventa la dimensione delle piastrelle.
+ * Gli attributi descrittivi (materiale, colore, finitura, stile) sono invece
+ * campi compilati a mano, che possono essere sbagliati o non corrispondere
+ * all'immagine caricata. Restano utili come indizio, ma non devono mai
+ * prevalere su cio' che si vede nel campione: e' l'immagine che il cliente ha
+ * scelto, ed e' l'immagine il prodotto.
+ */
+function buildGeometrySpec(product: any, fw?: number, fh?: number): string {
+    const lines: string[] = []
+    const fmt = productFormatCm(product)
+    const w = fmt?.w ?? fw
+    const h = fmt?.h ?? fh
+    if (w && h) lines.push(`- Nominal tile format: ${w}x${h} cm`)
+    if (product?.thickness) lines.push(`- Thickness: ${product.thickness} mm`)
+    return lines.join('\n')
+}
+
+function buildDeclaredSpec(product: any, fallbackName: string): string {
     const lines: string[] = []
     const add = (label: string, value?: string | null) => {
         if (value) lines.push(`- ${label}: ${value}`)
     }
 
-    add('Product', product?.name || fallbackName)
+    add('Product name', product?.name || fallbackName)
     add('Type', CATEGORY_EN[product?.category] || null)
     add('Material', MATERIAL_EN[product?.material] || null)
     add('Surface finish', FINISH_EN[product?.finish] || null)
-
-    const fmt = productFormatCm(product)
-    const w = fmt?.w ?? fw
-    const h = fmt?.h ?? fh
-    if (w && h) add('Nominal tile format', `${w}x${h} cm`)
-    if (product?.thickness) add('Thickness', `${product.thickness} mm`)
 
     if (product?.color_name || product?.color_hex) {
         add('Colour', [product.color_name, product.color_hex].filter(Boolean).join(' '))
@@ -158,11 +173,8 @@ function buildTileSpec(product: any, fallbackName: string, fw?: number, fh?: num
     if (Array.isArray(product?.style_tags) && product.style_tags.length) {
         add('Style', product.style_tags.join(', '))
     }
-    if (Array.isArray(product?.certifications) && product.certifications.length) {
-        add('Certifications', product.certifications.join(', '))
-    }
     if (product?.description) {
-        add('Manufacturer description', String(product.description).replace(/\s+/g, ' ').slice(0, 600))
+        add('Description', String(product.description).replace(/\s+/g, ' ').slice(0, 400))
     }
 
     return lines.join('\n')
@@ -230,6 +242,8 @@ serve(async (req: Request) => {
         // --- Parse body ---
         const body: RequestBody = await req.json()
         const { roomImage, tileImage, tileName, productId, layingPattern, roomType, tileWidth, tileHeight } = body
+        // La superficie da sostituire: la home propone sia pavimento sia parete.
+        const surface = body.surface === 'wall' ? 'wall' : 'floor'
         if (!roomImage || !tileImage) throw new Error('Missing images')
 
         // Prepara room image
@@ -270,23 +284,59 @@ serve(async (req: Request) => {
         const fmt = productFormatCm(product)
         const w = fmt?.w || tileWidth || 60
         const h = fmt?.h || tileHeight || 60
-        const tileSpec = buildTileSpec(product, tileName, tileWidth, tileHeight)
+        const geometrySpec = buildGeometrySpec(product, tileWidth, tileHeight)
+        const declaredSpec = buildDeclaredSpec(product, tileName)
         console.log(product ? `Scheda tecnica caricata per ${productId}` : 'Nessuna scheda tecnica: uso i dati della richiesta')
 
+        // Il campione di materiale e' una texture gia' "posata": mostra un
+        // suo schema, una sua proporzione e le sue fughe. Se non si separa in
+        // modo esplicito l'aspetto del materiale dalla geometria della posa,
+        // il modello copia lo schema del campione e ignora quello richiesto.
+        const surfaceLabel = surface === 'wall' ? 'wall surface' : 'floor surface'
+        const otherSurfaces = surface === 'wall'
+            ? 'floor, ceiling, furniture, sanitary ware, mirrors, doors, windows, objects'
+            : 'walls, ceiling, furniture, rugs, doors, windows, objects'
+
         const editPrompt = `Photorealistic interior edit of the ${roomLabel} in the FIRST image.
-Replace ONLY the floor surface with the tile shown in the SECOND image ("${product?.name || tileName}").
 
-TILE TECHNICAL DATA (render the material exactly as specified):
-${tileSpec}
+THE TWO IMAGES HAVE DIFFERENT ROLES:
+- FIRST image: the real photo to edit. Its perspective, framing and lighting are fixed.
+- SECOND image: a flat, top-down SAMPLE of the tile material ("${product?.name || tileName}").
+  It is the ONLY reliable source for how the material looks: colour, veining, grain, mottling
+  and surface texture must be taken from this image and reproduced faithfully.
+  IGNORE completely the tile arrangement, the tile proportions, the grout width and the scale
+  visible in the sample. The sample is a material swatch, not the layout to reproduce.
 
-LAYING: ${pattern}. Lay the tiles at their true ${w}x${h} cm size relative to the room, so the number of tiles across the floor is physically correct for the room's dimensions.
-The new floor must follow the room's exact perspective and vanishing point, with tile scale decreasing correctly toward the background.
-Reproduce the material's optical behaviour from the technical data above: the surface finish drives how much light it reflects, and the colour, veining and texture must stay faithful to the SECOND image.
-Realistic grout lines proportional to the tile format, natural lighting, soft contact shadows under furniture, reflections consistent with the original photo.
-CRITICAL: everything except the floor must remain pixel-identical to the FIRST image — walls, ceiling, furniture, rugs, doors, windows, objects, framing and lighting are unchanged. Do not move, remove or restyle anything. Do not crop or rotate the photo.
+TILE GEOMETRY (from the product sheet — use this for scale, it cannot be read from the sample):
+${geometrySpec}
+
+DECLARED ATTRIBUTES (from the product sheet — these are manually entered and may be wrong or
+inconsistent with the sample. Use them only as a hint. Wherever they disagree with the SECOND
+image about colour, material or finish, THE IMAGE IS CORRECT and must be followed):
+${declaredSpec}
+
+TASK: replace ONLY the ${surfaceLabel} of the ${roomLabel} with this material.
+
+GEOMETRY OF THE NEW SURFACE (follow this, not the sample):
+- Tile size: ${w}x${h} cm, rendered at true scale relative to the room, so the number of tiles
+  across the surface is physically correct for its real dimensions.
+- Layout: ${pattern}
+- Grout lines: realistic width proportional to a ${w}x${h} cm tile, colour coherent with the material.
+- The surface must follow the room's exact perspective and vanishing point, with tile scale
+  decreasing correctly toward the background.
+
+MATERIAL APPEARANCE: the SECOND image decides. Colour, veining and texture must match it closely,
+with natural variation between tiles rather than the identical swatch repeated on every tile. Use
+the declared finish only to judge how much light the surface reflects, and only if it does not
+contradict what the sample plainly shows.
+
+CRITICAL: everything except the ${surfaceLabel} must remain pixel-identical to the FIRST image —
+${otherSurfaces}, framing and lighting are unchanged. Do not move, remove or restyle anything.
+Do not crop or rotate the photo.
+
 Output: the edited photo only, ultra-photorealistic, architectural visualization quality.`
 
-        console.log(`Editing floor with ${IMAGE_MODEL} (Vertex AI)...`)
+        console.log(`Editing ${surface} with ${IMAGE_MODEL} (Vertex AI)...`)
 
         const accessToken = await getVertexAccessToken(serviceAccount)
         const endpoint = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${IMAGE_MODEL}:generateContent`
