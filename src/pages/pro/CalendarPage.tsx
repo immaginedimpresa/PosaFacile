@@ -6,7 +6,6 @@ import { useProStore } from '@/store/proStore'
 import {
     Calendar as CalendarIcon,
     CalendarRange,
-    Repeat,
     CheckCircle2,
     Lock,
     RefreshCw,
@@ -17,6 +16,7 @@ import {
 import { toast } from 'sonner'
 import 'react-day-picker/dist/style.css'
 import { ScheduleSettings } from '@/components/pro/calendar/ScheduleSettings'
+import { fetchSchedule, isoWeekday, DEFAULT_SCHEDULE, type ProfessionalSchedule } from '@/services/scheduleService'
 import { useAuth } from '@/hooks/useAuth'
 import { SlidersHorizontal, CalendarDays } from 'lucide-react'
 
@@ -26,14 +26,15 @@ export function CalendarPage() {
     // Due piani distinti: le regole che valgono sempre e le eccezioni del
     // singolo giorno. Tenerli separati è metà del problema di comprensione.
     const [vista, setVista] = useState<'regole' | 'eccezioni'>('regole')
+    // Il calendario deve mostrare l'effetto delle regole, altrimenti le due
+    // viste raccontano cose diverse dello stesso mese.
+    const [schedule, setSchedule] = useState<ProfessionalSchedule | null>(null)
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const { jobs, availability, fetchJobs, fetchAvailability, toggleAvailability, bulkUpdateAvailability, loading } = useProStore()
 
     // Bulk Management State
-    const [activeTab, setActiveTab] = useState<'recurring' | 'range'>('recurring')
     const [bulkStart, setBulkStart] = useState<string>('')
     const [bulkEnd, setBulkEnd] = useState<string>('')
-    const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 0])
     const [previewDates, setPreviewDates] = useState<Date[]>([])
 
     // Set default range for Recurring tab on load
@@ -46,6 +47,16 @@ export function CalendarPage() {
     useEffect(() => {
         fetchJobs()
     }, [fetchJobs])
+
+    useEffect(() => {
+        if (!user?.id) return
+        let attivo = true
+        void (async () => {
+            const regole = await fetchSchedule(user.id)
+            if (attivo) setSchedule(regole)
+        })()
+        return () => { attivo = false }
+    }, [user?.id, vista])
 
     useEffect(() => {
         const start = startOfMonth(currentMonth)
@@ -93,15 +104,11 @@ export function CalendarPage() {
         }
     }
 
-    const getEffectiveDays = () => {
-        if (activeTab === 'range') return [0, 1, 2, 3, 4, 5, 6]
-        return selectedDays
-    }
 
     useEffect(() => {
-        const targets = calculateTargetDates(bulkStart, bulkEnd, getEffectiveDays())
+        const targets = calculateTargetDates(bulkStart, bulkEnd, [0, 1, 2, 3, 4, 5, 6])
         setPreviewDates(targets)
-    }, [bulkStart, bulkEnd, selectedDays, activeTab])
+    }, [bulkStart, bulkEnd])
 
     const handleDayClick = async (date: Date) => {
         const jobOnDay = jobs.find(j => j.scheduled_date && isSameDay(new Date(j.scheduled_date), date))
@@ -112,6 +119,11 @@ export function CalendarPage() {
 
         if (date < new Date(new Date().setHours(0, 0, 0, 0))) return
 
+        if (!regoleAttive.working_days.includes(isoWeekday(date))) {
+            toast.info('Non è un giorno in cui lavori: cambialo da "Come lavori di norma".')
+            return
+        }
+
         const isoDate = format(date, 'yyyy-MM-dd')
         try {
             await toggleAvailability(isoDate, 'busy')
@@ -121,16 +133,14 @@ export function CalendarPage() {
     }
 
     const handleBulkAction = async (action: 'busy' | 'available') => {
-        const targets = calculateTargetDates(bulkStart, bulkEnd, getEffectiveDays())
+        const targets = calculateTargetDates(bulkStart, bulkEnd, [0, 1, 2, 3, 4, 5, 6])
 
         if (targets.length === 0) {
-            if (!bulkStart || !bulkEnd) {
-                toast.error('Seleziona un periodo valido.')
-            } else if (activeTab === 'recurring' && selectedDays.length === 0) {
-                toast.error('Seleziona almeno un giorno della settimana.')
-            } else {
-                toast.info('Nessun giorno corrisponde ai criteri.')
-            }
+            toast.error(
+                !bulkStart || !bulkEnd
+                    ? 'Indica le date di inizio e fine del periodo.'
+                    : 'Nessuna giornata nel periodo scelto.',
+            )
             return
         }
 
@@ -160,11 +170,6 @@ export function CalendarPage() {
         })
     }
 
-    const toggleWeekDay = (day: number) => {
-        setSelectedDays(prev =>
-            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-        )
-    }
 
     const bookedDays = jobs
         .filter(j => j.scheduled_date && j.status !== 'draft' && j.status !== 'pending' && j.status !== 'cancelled')
@@ -178,28 +183,24 @@ export function CalendarPage() {
         .filter(a => a.status === 'busy')
         .map(a => new Date(a.date))
 
+    const regoleAttive = schedule ?? { professional_id: user?.id ?? '', ...DEFAULT_SCHEDULE }
+
     const modifiers = {
         booked: bookedDays,
         pending: pendingDays,
         busy: busyDays,
-        preview: previewDates
+        preview: previewDates,
+        // Non è un'assenza da segnare: è la regola settimanale che lo esclude.
+        nonLavorativo: (date: Date) => !regoleAttive.working_days.includes(isoWeekday(date)),
     }
 
     const modifiersStyles = {
         booked: { color: 'white', backgroundColor: '#1c1917' },
         pending: { color: 'white', backgroundColor: '#eab308' },
-        busy: { color: 'white', backgroundColor: '#ef4444' }
+        busy: { color: 'white', backgroundColor: '#ef4444' },
+        nonLavorativo: { color: '#a8a29e', backgroundColor: '#f5f5f4', textDecoration: 'line-through' },
     }
 
-    const WEEKDAYS = [
-        { id: 1, label: 'Lun' },
-        { id: 2, label: 'Mar' },
-        { id: 3, label: 'Mer' },
-        { id: 4, label: 'Gio' },
-        { id: 5, label: 'Ven' },
-        { id: 6, label: 'Sab' },
-        { id: 0, label: 'Dom' },
-    ]
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -475,23 +476,29 @@ export function CalendarPage() {
                         />
                     </div>
 
-                    {/* LEGEND matching system styles */}
-                    <div className="p-5 bg-stone-50/60 border-t border-stone-100 flex flex-wrap items-center gap-5 text-xs font-semibold text-stone-600">
-                        <div className="flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 rounded-md bg-stone-900 shadow-2xs"></span>
-                            <span>Cantiere Confermato</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 rounded-md bg-amber-500 shadow-2xs"></span>
-                            <span>In Attesa</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 rounded-md bg-rose-500 flex items-center justify-center text-white text-[9px] font-bold shadow-2xs">✕</span>
-                            <span>Non Disponibile / Bloccato</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-3.5 h-3.5 rounded-md bg-orange-100 border border-orange-500"></span>
-                            <span>Selezione Azione Rapida</span>
+                    {/* Legenda: dice cosa significano i colori e cosa fa il clic */}
+                    <div className="border-t border-stone-100">
+                        <p className="px-5 pt-4 text-xs font-medium text-stone-500">
+                            Clicca un giorno per segnare o togliere un’assenza. I cantieri
+                            confermati non si spostano da qui.
+                        </p>
+                        <div className="p-5 pt-3 flex flex-wrap items-center gap-5 text-xs font-semibold text-stone-600">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 rounded-md bg-stone-900 shadow-2xs"></span>
+                                <span>Cantiere confermato</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 rounded-md bg-amber-500 shadow-2xs"></span>
+                                <span>In attesa di conferma</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 rounded-md bg-rose-500 shadow-2xs"></span>
+                                <span>Tua assenza</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 rounded-md bg-stone-100 border border-stone-200"></span>
+                                <span>Non lavorativo (dalle tue regole)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -505,148 +512,60 @@ export function CalendarPage() {
                                     <CalendarRange size={20} />
                                 </div>
                                 <div>
-                                    <h2 className="text-base font-bold text-stone-900">Azioni in Blocco</h2>
-                                    <p className="text-xs text-stone-500">Imposta disponibilità su più date</p>
+                                    <h2 className="text-base font-bold text-stone-900">Ferie e chiusure</h2>
+                                    <p className="text-xs text-stone-500">Un periodo intero, invece di un giorno per volta</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Segmented Control Tabs */}
-                        <div className="p-1.5 mx-6 mt-6 bg-stone-100/80 rounded-xl border border-stone-200/60 grid grid-cols-2 gap-1">
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('recurring')}
-                                className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                    activeTab === 'recurring'
-                                        ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
-                                        : 'text-stone-500 hover:text-stone-900'
-                                }`}
-                            >
-                                <Repeat size={14} className={activeTab === 'recurring' ? 'text-orange-500' : ''} />
-                                Ricorrenze
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('range')}
-                                className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                    activeTab === 'range'
-                                        ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
-                                        : 'text-stone-500 hover:text-stone-900'
-                                }`}
-                            >
-                                <CalendarRange size={14} className={activeTab === 'range' ? 'text-orange-500' : ''} />
-                                Intervalli
-                            </button>
-                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2.5 block">
+                                    Dal
+                                </label>
+                                <input
+                                    type="date"
+                                    value={bulkStart}
+                                    onChange={(e) => setBulkStart(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2.5 block">
+                                    Al
+                                </label>
+                                <input
+                                    type="date"
+                                    value={bulkEnd}
+                                    min={bulkStart || undefined}
+                                    onChange={(e) => setBulkEnd(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
+                                />
+                            </div>
 
-                        <div className="p-6 space-y-6">
-                            {activeTab === 'recurring' ? (
-                                <>
-                                    <div className="bg-orange-50/70 p-3.5 rounded-xl text-xs text-orange-950 border border-orange-200/70 leading-relaxed font-medium">
-                                        Seleziona un periodo e i giorni della settimana da impostare in blocco.
-                                    </div>
-
-                                    <div>
-                                        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5 block">1. Periodo di Validità</label>
-                                        <div className="grid grid-cols-2 gap-2.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const today = new Date()
-                                                    setBulkStart(format(today, 'yyyy-MM-dd'))
-                                                    setBulkEnd(format(endOfMonth(today), 'yyyy-MM-dd'))
-                                                }}
-                                                className="px-3 py-2 text-xs font-bold bg-stone-50 hover:bg-stone-100 text-stone-800 rounded-xl border border-stone-200/80 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                                            >
-                                                Questo Mese
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const today = new Date()
-                                                    setBulkStart(format(today, 'yyyy-MM-dd'))
-                                                    setBulkEnd(format(new Date(today.getFullYear(), 11, 31), 'yyyy-MM-dd'))
-                                                }}
-                                                className="px-3 py-2 text-xs font-bold bg-stone-50 hover:bg-stone-100 text-stone-800 rounded-xl border border-stone-200/80 shadow-2xs transition-all active:scale-95 cursor-pointer"
-                                            >
-                                                Tutto l'Anno
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5 block">
-                                            2. Giorni della Settimana
-                                        </label>
-                                        <div className="grid grid-cols-7 gap-1.5">
-                                            {WEEKDAYS.map(day => {
-                                                const isSelected = selectedDays.includes(day.id)
-                                                return (
-                                                    <button
-                                                        key={day.id}
-                                                        type="button"
-                                                        onClick={() => toggleWeekDay(day.id)}
-                                                        className={`aspect-square rounded-xl flex items-center justify-center text-xs font-black transition-all cursor-pointer ${isSelected
-                                                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                                                            : 'bg-stone-50 text-stone-400 border border-stone-200/70 hover:border-stone-300 hover:bg-white'
-                                                            }`}
-                                                    >
-                                                        {day.label.charAt(0)}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="bg-stone-100/80 p-3.5 rounded-xl text-xs text-stone-700 border border-stone-200/80 leading-relaxed font-medium">
-                                        Seleziona un periodo continuativo esatto da bloccare o sbloccare (es. ferie estive o chiusura aziendale).
-                                    </div>
-
-                                    <div>
-                                        <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5 block">Intervallo Date</label>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="block text-xs font-medium text-stone-600 mb-1">Data Inizio</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full text-sm p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
-                                                    value={bulkStart}
-                                                    onChange={(e) => setBulkStart(e.target.value)}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium text-stone-600 mb-1">Data Fine</label>
-                                                <input
-                                                    type="date"
-                                                    className="w-full text-sm p-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
-                                                    value={bulkEnd}
-                                                    onChange={(e) => setBulkEnd(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
+                            {previewDates.length > 0 && (
+                                <p className="text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200/80 rounded-xl px-3.5 py-2.5">
+                                    {previewDates.length} {previewDates.length === 1 ? 'giornata' : 'giornate'} da segnare come assenza.
+                                    I giorni non lavorativi sono già esclusi dalle tue regole.
+                                </p>
                             )}
 
-                            {/* Standard PosaFacile buttons */}
                             <div className="pt-4 border-t border-stone-100 flex flex-col gap-2.5">
                                 <button
                                     type="button"
                                     onClick={() => handleBulkAction('busy')}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-black text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
                                 >
                                     <Lock size={15} />
-                                    <span>Blocca {activeTab === 'recurring' ? 'Giorni Selezionati' : 'Intervallo'}</span>
+                                    <span>Segna come assenza</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handleBulkAction('available')}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-stone-100 text-stone-700 border border-stone-200/90 text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
                                 >
                                     <CheckCircle2 size={15} />
-                                    <span>Rendi Date Disponibili</span>
+                                    <span>Annulla l’assenza</span>
                                 </button>
                             </div>
                         </div>
