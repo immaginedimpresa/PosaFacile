@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 
@@ -26,7 +26,7 @@ export function useAdminNavCounters(): AdminNavCounters {
     const [counters, setCounters] = useState<AdminNavCounters>(ZERO_ADMIN)
     const location = useLocation()
 
-    const carica = useCallback(async () => {
+    const leggiContatori = async (): Promise<AdminNavCounters> => {
         const settimanaFa = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
         const [ordini, professionisti, clienti] = await Promise.all([
@@ -45,18 +45,29 @@ export function useAdminNavCounters(): AdminNavCounters {
                 .gte('created_at', settimanaFa),
         ])
 
-        setCounters({
+        return {
             ordini: ordini.count ?? 0,
             professionisti: professionisti.count ?? 0,
             clienti: clienti.count ?? 0,
-        })
-    }, [])
+        }
+    }
 
     // Si aggiorna a ogni cambio di sezione: dopo aver lavorato un ordine il
     // numero deve scendere senza dover ricaricare la pagina.
     useEffect(() => {
-        carica().catch((err) => console.warn('Contatori non aggiornati:', err?.message))
-    }, [carica, location.pathname])
+        let attivo = true
+        void (async () => {
+            try {
+                const risultato = await leggiContatori()
+                if (attivo) setCounters(risultato)
+            } catch (err: unknown) {
+                console.warn('Contatori non aggiornati:', (err as Error)?.message)
+            }
+        })()
+        return () => {
+            attivo = false
+        }
+    }, [location.pathname])
 
     return counters
 }
@@ -67,10 +78,7 @@ export function useProNavCounters(professionalId: string | undefined): { lavori:
     const location = useLocation()
 
     useEffect(() => {
-        if (!professionalId) {
-            setLavori(0)
-            return
-        }
+        if (!professionalId) return
 
         let attivo = true
         supabase
@@ -92,5 +100,7 @@ export function useProNavCounters(professionalId: string | undefined): { lavori:
         }
     }, [professionalId, location.pathname])
 
-    return { lavori }
+    // Senza professionista il valore e' zero per definizione, senza bisogno
+    // di azzerare lo stato dentro l'effetto.
+    return { lavori: professionalId ? lavori : 0 }
 }
