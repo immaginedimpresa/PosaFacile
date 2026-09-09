@@ -19,7 +19,15 @@ import {
 import { toast } from 'sonner'
 import { useProducts } from '@/hooks/useProducts'
 import { InstantEstimator } from '@/components/home/InstantEstimator'
-import { HomeFAQ } from '@/components/home/HomeFAQ'
+import { HomeFAQ, HOME_FAQ } from '@/components/home/HomeFAQ'
+import { useSeo } from '@/hooks/useSeo'
+import {
+    STATIC_PAGES,
+    faqJsonLd,
+    organizationJsonLd,
+    serviceJsonLd,
+    websiteJsonLd,
+} from '@/lib/seo'
 import './home.css'
 
 const environments = [
@@ -52,7 +60,18 @@ const environments = [
     },
 ]
 
+const HOME_SEO = {
+    ...STATIC_PAGES.home,
+    jsonLd: [
+        organizationJsonLd(),
+        websiteJsonLd(),
+        serviceJsonLd(),
+        faqJsonLd(HOME_FAQ.map((q) => ({ question: q.question, answer: q.answer }))),
+    ],
+}
+
 export default function HomePage() {
+    useSeo(HOME_SEO)
     const [active, setActive] = useState(0)
     const environment = environments[active]
 

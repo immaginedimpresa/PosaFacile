@@ -21,6 +21,8 @@ import {
     Wallet,
     X,
 } from 'lucide-react'
+import { useSeo } from '@/hooks/useSeo'
+import { STATIC_PAGES, breadcrumbJsonLd, faqJsonLd } from '@/lib/seo'
 import './home.css'
 import './professionals.css'
 
@@ -150,6 +152,16 @@ const faq = [
 ]
 
 export function ProfessionalsPage() {
+    useSeo({
+        ...STATIC_PAGES.professionals,
+        jsonLd: [
+            faqJsonLd(faq),
+            breadcrumbJsonLd([
+                { name: 'Home', path: '/' },
+                { name: 'Diventa posatore', path: '/professionisti' },
+            ]),
+        ],
+    })
     const [activeChapter, setActiveChapter] = useState(0)
     const [openFaq, setOpenFaq] = useState<number | null>(0)
     const stepRefs = useRef<(HTMLElement | null)[]>([])

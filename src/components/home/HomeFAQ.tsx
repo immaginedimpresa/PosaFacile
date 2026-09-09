@@ -2,7 +2,7 @@ import { ArrowUpRight, Minus, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const questions = [
+export const HOME_FAQ = [
     {
         question: 'Da dove comincio per avere un preventivo?',
         answer: 'Apri il configuratore e indica dove si trova il tuo progetto. Potrai scegliere ambiente, piastrelle, metratura, tipo di posa e servizi aggiuntivi, poi selezionare un professionista e una data tra le disponibilità proposte.',
@@ -50,7 +50,7 @@ export function HomeFAQ() {
                 </Link>
             </div>
             <div className="pf-faq-list">
-                {questions.map((item, index) => (
+                {HOME_FAQ.map((item, index) => (
                     <div
                         className={open === index ? 'is-open' : ''}
                         key={item.question}

@@ -25,6 +25,9 @@ import { toast } from 'sonner'
 import './home.css'
 import './storefront.css'
 import { fetchSavedQuotes } from '@/lib/quotesService'
+import { useSeo } from '@/hooks/useSeo'
+import { STATIC_PAGES } from '@/lib/seo'
+
 
 // Il luogo viene chiesto per primo: conoscendo la provincia si può usare la
 // tariffa del professionista che copre quella zona invece di una stima generica.
@@ -41,6 +44,7 @@ const STEPS = [
 ]
 
 export function ConfiguratorPage() {
+    useSeo(STATIC_PAGES.configurator)
     useAuthSession()
     const [searchParams] = useSearchParams()
     const {

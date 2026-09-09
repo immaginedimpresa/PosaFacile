@@ -5,6 +5,8 @@ import { AIVisualizer } from '@/components/ai/AIVisualizer'
 import { useProducts } from '@/hooks/useProducts'
 import { useConfiguratorStore, type SelectedProduct } from '@/store/configuratorStore'
 import type { Database } from '@/types/supabase'
+import { useSeo } from '@/hooks/useSeo'
+import { STATIC_PAGES, breadcrumbJsonLd } from '@/lib/seo'
 import './home.css'
 
 type Product = Database['public']['Tables']['products']['Row']
@@ -34,6 +36,13 @@ const formatoLeggibile = (w?: number | null, h?: number | null): string | null =
  * con il prodotto scelto e l'anteprima generata, senza rifare nulla.
  */
 export function AITryPage() {
+    useSeo({
+        ...STATIC_PAGES.aiTry,
+        jsonLd: [breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Anteprima AI', path: '/prova-ai' },
+        ])],
+    })
     const navigate = useNavigate()
     const location = useLocation()
     const [searchParams] = useSearchParams()

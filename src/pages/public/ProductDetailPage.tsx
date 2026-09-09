@@ -5,6 +5,15 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/supabase'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/spinner'
+import { useSeo } from '@/hooks/useSeo'
+import {
+    breadcrumbJsonLd,
+    productDescription,
+    productJsonLd,
+    productImages,
+    formatLabel,
+} from '@/lib/seo'
+
 
 import { useConfiguratorStore } from '@/store/configuratorStore'
 
@@ -56,6 +65,30 @@ export function ProductDetailPage() {
         // Navigate to configurator
         navigate('/configuratore')
     }
+
+    // I metadati seguono il prodotto: titolo, descrizione e schema sono
+    // costruiti sui suoi attributi reali, non su un modello fisso.
+    useSeo(
+        product
+            ? {
+                path: `/products/${product.slug}`,
+                title: `${product.name}${formatLabel(product.format_width, product.format_height)
+                    ? ` ${formatLabel(product.format_width, product.format_height)}`
+                    : ''} — € ${Number(product.price_per_sqm).toFixed(2)}/mq | PosaFacile`,
+                description: productDescription(product),
+                image: productImages(product)[0],
+                type: 'product' as const,
+                jsonLd: [
+                    productJsonLd(product),
+                    breadcrumbJsonLd([
+                        { name: 'Home', path: '/' },
+                        { name: 'Catalogo', path: '/catalog' },
+                        { name: product.name, path: `/products/${product.slug}` },
+                    ]),
+                ],
+            }
+            : null,
+    )
 
     if (loading) return (
         <div className="container mx-auto py-32 flex justify-center">

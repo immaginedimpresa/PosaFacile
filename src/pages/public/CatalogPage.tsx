@@ -20,10 +20,20 @@ import {
 } from 'lucide-react'
 import './home.css'
 import './storefront.css'
+import { useSeo } from '@/hooks/useSeo'
+import { STATIC_PAGES, breadcrumbJsonLd } from '@/lib/seo'
+
 
 type Product = Database['public']['Tables']['products']['Row']
 
 export function CatalogPage() {
+    useSeo({
+        ...STATIC_PAGES.catalog,
+        jsonLd: [breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Catalogo piastrelle', path: '/catalog' },
+        ])],
+    })
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
