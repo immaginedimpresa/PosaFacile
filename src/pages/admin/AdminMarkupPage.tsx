@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {
+    ChevronDown,
     Search,
     Percent,
     Euro,
@@ -12,6 +13,8 @@ import {
 } from 'lucide-react'
 import { ITALIAN_PROVINCES } from '@/lib/provinces'
 import { toast } from 'sonner'
+import { MarkupVoicesEditor } from '@/components/admin/MarkupVoicesEditor'
+import type { MarkupOverrides } from '@/services/ratesService'
 
 interface MarkupRow {
     id: string
@@ -22,6 +25,7 @@ interface MarkupRow {
     price_per_sqm: number | null
     markup_percent: number
     markup_fixed: number
+    markup_overrides: MarkupOverrides
 }
 
 /** Prezzo esposto al cliente: la percentuale agisce sul mq, il fisso è una tantum. */
@@ -52,6 +56,8 @@ export function AdminMarkupPage() {
 
     const [bulkPercent, setBulkPercent] = useState('')
     const [bulkFixed, setBulkFixed] = useState('')
+    // Quale posatore ha aperto il dettaglio dei margini per voce.
+    const [espanso, setEspanso] = useState<string | null>(null)
 
     const fetchRows = async (isManual = false) => {
         if (isManual) setRefreshing(true)
@@ -60,7 +66,7 @@ export function AdminMarkupPage() {
         try {
             const { data, error: fetchError } = await supabase
                 .from('professional_profiles')
-                .select('id, company_name, full_name, billing_province, billing_city, price_per_sqm, markup_percent, markup_fixed')
+                .select('id, company_name, full_name, billing_province, billing_city, price_per_sqm, markup_percent, markup_fixed, markup_overrides')
                 .order('company_name', { ascending: true })
             if (fetchError) throw fetchError
 
@@ -380,22 +386,65 @@ export function AdminMarkupPage() {
                             <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500 w-36">Markup %</th>
                             <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500 w-36">Una Tantum (€)</th>
                             <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500">Prezzo Finale</th>
+                            <th className="px-4 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-stone-500">Margini per voce</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-100 text-sm">
-                        {loading ? <tr><td colSpan={6} className="px-6 py-16 text-center text-stone-400">Caricamento...</td></tr> : filtered.map(r => {
+                        {loading ? <tr><td colSpan={7} className="px-6 py-16 text-center text-stone-400">Caricamento...</td></tr> : filtered.map(r => {
                             const d = draft[r.id] ?? { percent: '0', fixed: '0' }
                             const client = clientPricePerSqm(r.price_per_sqm, Number(d.percent))
                             const isDirty = dirtyIds.includes(r.id)
                             return (
-                                <tr key={r.id} className={isDirty ? 'bg-amber-50/50' : 'hover:bg-stone-50/70'}>
+                                <Fragment key={r.id}>
+                                <tr className={isDirty ? 'bg-amber-50/50' : 'hover:bg-stone-50/70'}>
                                     <td className="px-5 py-3.5 text-center"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleRow(r.id)} className="rounded border-stone-300 text-orange-500 cursor-pointer" /></td>
                                     <td className="px-6 py-3.5"><div className="font-bold text-stone-900">{r.company_name || '—'}</div><div className="text-xs text-stone-500">{r.billing_city}</div></td>
                                     <td className="px-6 py-3.5 text-right font-medium">{euro(r.price_per_sqm)}</td>
                                     <td className="px-6 py-3.5"><input type="number" className={inputClass} value={d.percent} onChange={e => setDraftValue(r.id, 'percent', e.target.value)} /></td>
                                     <td className="px-6 py-3.5"><input type="number" className={inputClass} value={d.fixed} onChange={e => setDraftValue(r.id, 'fixed', e.target.value)} /></td>
                                     <td className="px-6 py-3.5 text-right font-bold text-stone-900">{euro(client)}</td>
+                                    <td className="px-4 py-3.5 text-right">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEspanso(espanso === r.id ? null : r.id)}
+                                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all ${
+                                                Object.keys(r.markup_overrides ?? {}).length > 0
+                                                    ? 'bg-orange-50 text-orange-700 border-orange-200/80'
+                                                    : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                                            }`}
+                                        >
+                                            {Object.keys(r.markup_overrides ?? {}).length > 0
+                                                ? `${Object.keys(r.markup_overrides).length} voci`
+                                                : 'Per voce'}
+                                            <ChevronDown
+                                                size={13}
+                                                className={`transition-transform ${espanso === r.id ? 'rotate-180' : ''}`}
+                                            />
+                                        </button>
+                                    </td>
                                 </tr>
+
+                                {espanso === r.id && (
+                                    <tr>
+                                        <td colSpan={7} className="p-0">
+                                            <MarkupVoicesEditor
+                                                professionalId={r.id}
+                                                markupPercent={Number(d.percent) || 0}
+                                                overrides={r.markup_overrides ?? {}}
+                                                onSaved={(nuove) =>
+                                                    setRows((prev) =>
+                                                        prev.map((riga) =>
+                                                            riga.id === r.id
+                                                                ? { ...riga, markup_overrides: nuove }
+                                                                : riga,
+                                                        ),
+                                                    )
+                                                }
+                                            />
+                                        </td>
+                                    </tr>
+                                )}
+                                </Fragment>
                             )
                         })}
                     </tbody>

@@ -16,6 +16,7 @@ interface Professional {
     price_per_sqm: number | null
     markup_percent: number | null
     markup_fixed: number | null
+    markup_overrides?: Record<string, number> | null
     coverage_mode: string
     /** Valorizzata solo per chi copre un raggio e se conosciamo le coordinate. */
     distance_km: number | null
@@ -122,6 +123,7 @@ export function Step7ProfessionalSelect() {
             price_per_sqm: pro.price_per_sqm,
             markup_percent: pro.markup_percent ?? 0,
             markup_fixed: pro.markup_fixed ?? 0,
+            markup_overrides: pro.markup_overrides ?? {},
         })
         // Il preventivo si costruisce sulle tariffe di chi esegue il lavoro.
         setProfessionalRates(await fetchRates(pro.id))

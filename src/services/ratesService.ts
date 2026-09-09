@@ -126,6 +126,46 @@ export function serviceRate(rates: ProfessionalRates | null, chiave: string): nu
     return num(rates?.[voce.campo], RATE_DEFAULTS[voce.campo as keyof typeof RATE_DEFAULTS])
 }
 
+/* ------------------------------------------------------------------ */
+/* Markup di piattaforma                                               */
+/* ------------------------------------------------------------------ */
+
+/** Tutte le voci su cui l'admin puo' fissare un margine. */
+export const VOCI_MARKUP: { campo: string; label: string; gruppo: 'posa' | 'servizi' }[] = [
+    ...VOCI_POSA.map((v) => ({ campo: String(v.campo), label: v.label, gruppo: 'posa' as const })),
+    ...VOCI_SERVIZI.map((v) => ({ campo: String(v.campo), label: v.label, gruppo: 'servizi' as const })),
+]
+
+/** Mappa voce -> percentuale. Le voci assenti usano il markup generale. */
+export type MarkupOverrides = Record<string, number>
+
+/**
+ * Margine da applicare a una voce.
+ *
+ * Il margine su una demolizione non e' quello su una posa a spina: dove
+ * l'admin ha differenziato vale l'eccezione, altrove il valore generale.
+ */
+export function markupFor(
+    voce: string,
+    markupPercent: number | null | undefined,
+    overrides: MarkupOverrides | null | undefined,
+): number {
+    const override = overrides?.[voce]
+    if (Number.isFinite(Number(override))) return Number(override)
+    const generale = Number(markupPercent)
+    return Number.isFinite(generale) ? generale : 0
+}
+
+/** Moltiplicatore pronto all'uso: 20% diventa 1.2. */
+export const markupMultiplier = (
+    voce: string,
+    markupPercent: number | null | undefined,
+    overrides: MarkupOverrides | null | undefined,
+): number => 1 + markupFor(voce, markupPercent, overrides) / 100
+
+/** Nome del campo tariffa corrispondente a uno schema di posa. */
+export const campoPosa = (layingType: LayingType): string => CAMPO_PER_POSA[layingType]
+
 /** Vero se il professionista non esegue quella lavorazione. */
 export const servizioEscluso = (rates: ProfessionalRates | null, chiave: string): boolean =>
     Boolean(rates?.servizi_esclusi?.includes(chiave))

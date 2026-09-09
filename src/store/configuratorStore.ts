@@ -2,7 +2,14 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Database } from '@/types/supabase'
 import { estimateLayingDuration, type DurationEstimate } from '@/lib/layingDuration'
-import { layingRate, serviceRate, type ProfessionalRates } from '@/services/ratesService'
+import {
+    campoPosa,
+    layingRate,
+    markupMultiplier,
+    serviceRate,
+    type MarkupOverrides,
+    type ProfessionalRates,
+} from '@/services/ratesService'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -83,6 +90,8 @@ export interface SelectedProfessional {
     price_per_sqm: number | null
     markup_percent: number
     markup_fixed: number
+    /** Margini per singola voce; le assenti usano markup_percent. */
+    markup_overrides?: MarkupOverrides | null
 }
 
 /** Numero utilizzabile, oppure il valore di ripiego indicato. */
@@ -296,7 +305,12 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                 // La tariffa e' quella dichiarata dal posatore per quello schema:
                 // non piu' una base unica con una maggiorazione uguale per tutti.
                 const tariffa = layingRate(professionalRates, layingType)
-                const conMargine = tariffa * (1 + num(selectedProfessional?.markup_percent) / 100)
+                // Il margine puo' essere diverso per schema di posa.
+                const conMargine = tariffa * markupMultiplier(
+                    campoPosa(layingType),
+                    selectedProfessional?.markup_percent,
+                    selectedProfessional?.markup_overrides,
+                )
                 // Il margine fisso e' una tantum: non va moltiplicato per i metri quadri.
                 const oneOff = num(selectedProfessional?.markup_fixed)
                 return baseMq * conMargine + oneOff
@@ -305,8 +319,12 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             getServicesCost: () => {
                 const { services, dimensions, professionalRates, selectedProfessional } = get()
                 const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
-                const margine = 1 + num(selectedProfessional?.markup_percent) / 100
-                const tariffa = (chiave: string) => serviceRate(professionalRates, chiave) * margine
+                const tariffa = (chiave: string) => serviceRate(professionalRates, chiave)
+                    * markupMultiplier(
+                        chiave,
+                        selectedProfessional?.markup_percent,
+                        selectedProfessional?.markup_overrides,
+                    )
                 let cost = 0
 
                 if (services.demolizione) cost += baseMq * tariffa('demolizione')

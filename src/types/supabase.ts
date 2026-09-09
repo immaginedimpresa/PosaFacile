@@ -780,6 +780,7 @@ export type Database = {
           full_name: string | null
           id: string
           markup_fixed: number
+          markup_overrides: Json
           markup_percent: number
           pec: string | null
           phone: string | null
@@ -807,6 +808,7 @@ export type Database = {
           full_name?: string | null
           id: string
           markup_fixed?: number
+          markup_overrides?: Json
           markup_percent?: number
           pec?: string | null
           phone?: string | null
@@ -834,6 +836,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           markup_fixed?: number
+          markup_overrides?: Json
           markup_percent?: number
           pec?: string | null
           phone?: string | null
