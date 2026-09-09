@@ -24,10 +24,8 @@ const generateSlug = (name: string): string => {
 export function AdminProductFormPage() {
     const navigate = useNavigate()
     const { id } = useParams<{ id: string }>()
-    // La rotta /admin/products/new non porta identificativo, ma se venisse
-    // raggiunta come :id il valore sarebbe la stringa 'new': in entrambi i
-    // casi non c'e' nulla da caricare, e passare 'new' al caricamento
-    // significherebbe cercare un prodotto che non esiste.
+    // La creazione avviene in modale dal catalogo: questa pagina modifica una
+    // scheda esistente. Il valore 'new' resta gestito per i vecchi segnalibri.
     const isEditing = Boolean(id && id !== 'new')
     const productId = isEditing ? (id as string) : ''
 

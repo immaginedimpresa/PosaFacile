@@ -70,7 +70,6 @@ function App() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="products" element={<AdminProductsPage />} />
-          <Route path="products/new" element={<AdminProductFormPage />} />
           <Route path="products/:id" element={<AdminProductFormPage />} />
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="professionals" element={<AdminProfessionalsPage />} />

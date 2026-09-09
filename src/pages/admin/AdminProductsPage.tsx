@@ -15,6 +15,8 @@ import {
     Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { CreateProductModal } from '@/components/admin/CreateProductModal'
+
 
 type Product = Database['public']['Tables']['products']['Row']
 type ProductStatus = Exclude<Product['status'], null>
@@ -35,6 +37,7 @@ const CATEGORY_LABELS: Record<NonNullable<ProductCategory>, string> = {
 }
 
 export function AdminProductsPage() {
+    const [createOpen, setCreateOpen] = useState(false)
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>()
     const [categoryFilter, setCategoryFilter] = useState<ProductCategory | undefined>()
@@ -122,13 +125,14 @@ export function AdminProductsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Link
-                        to="/admin/products/new"
+                    <button
+                        type="button"
+                        onClick={() => setCreateOpen(true)}
                         className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
                     >
                         <Plus size={16} />
                         <span>Nuovo Prodotto</span>
-                    </Link>
+                    </button>
 
                     <button
                         type="button"
@@ -292,13 +296,14 @@ export function AdminProductsPage() {
                             ? 'Nessun articolo corrisponde ai filtri selezionati. Prova a reimpostarli.'
                             : 'Inizia creando il tuo primo articolo a catalogo con prezzi e specifiche tecniche.'}
                     </p>
-                    <Link
-                        to="/admin/products/new"
+                    <button
+                        type="button"
+                        onClick={() => setCreateOpen(true)}
                         className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-orange-500/20"
                     >
                         <Plus size={16} />
                         <span>Aggiungi Prodotto</span>
-                    </Link>
+                    </button>
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
@@ -467,6 +472,12 @@ export function AdminProductsPage() {
                     </div>
                 </div>
             )}
+            <CreateProductModal
+                isOpen={createOpen}
+                onClose={() => setCreateOpen(false)}
+                onCreated={handleRefresh}
+            />
+
         </div>
     )
 }

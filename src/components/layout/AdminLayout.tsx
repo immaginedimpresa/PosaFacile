@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useNotificationStore } from '@/store/notificationStore'
+import { useAdminNavCounters } from '@/hooks/useNavCounters'
 import { LogoIcon } from '@/components/ui/Logo'
 
 const navItems = [
@@ -31,6 +32,18 @@ export function AdminLayout() {
     // Il contatore delle non lette e' gia' tenuto aggiornato dallo store, che
     // la campanella alimenta: la voce di menu si limita a rifletterlo.
     const unreadCount = useNotificationStore((state) => state.unreadCount)
+    const counters = useAdminNavCounters()
+
+    /** Quante cose aspettano una decisione su quella voce di menu. */
+    const badgeFor = (path: string): number => {
+        switch (path) {
+            case '/admin/orders': return counters.ordini
+            case '/admin/professionals': return counters.professionisti
+            case '/admin/customers': return counters.clienti
+            case '/admin/notifications': return unreadCount
+            default: return 0
+        }
+    }
 
     const isActive = (path: string, exact?: boolean) => {
         if (exact) {
@@ -84,11 +97,11 @@ export function AdminLayout() {
                             >
                                 <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-stone-400'}`} />
                                 <span>{item.label}</span>
-                                {item.path === '/admin/notifications' && unreadCount > 0 && (
+                                {badgeFor(item.path) > 0 && (
                                     <span className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center ${
                                         active ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
                                     }`}>
-                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                        {badgeFor(item.path) > 99 ? '99+' : badgeFor(item.path)}
                                     </span>
                                 )}
                             </Link>
@@ -141,9 +154,9 @@ export function AdminLayout() {
                             >
                                 <span className="relative">
                                     <Icon className={`w-4 h-4 mb-0.5 ${active ? 'text-orange-400' : 'text-stone-400'}`} />
-                                    {item.path === '/admin/notifications' && unreadCount > 0 && (
+                                    {badgeFor(item.path) > 0 && (
                                         <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 bg-orange-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                            {badgeFor(item.path) > 9 ? '9+' : badgeFor(item.path)}
                                         </span>
                                     )}
                                 </span>
