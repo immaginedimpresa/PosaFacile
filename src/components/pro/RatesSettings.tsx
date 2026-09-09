@@ -11,6 +11,7 @@ import {
 
 interface RatesSettingsProps {
     professionalId: string
+    onSaved?: () => void
 }
 
 const CARD = 'bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6'
@@ -26,7 +27,7 @@ const INPUT = 'w-full pl-8 pr-3 py-2.5 rounded-xl border border-stone-200 bg-sto
  * professionista. Finche' queste caselle restano vuote il preventivo usa
  * valori di piattaforma, che quasi certamente non sono i suoi.
  */
-export function RatesSettings({ professionalId }: RatesSettingsProps) {
+export function RatesSettings({ professionalId, onSaved }: RatesSettingsProps) {
     const [rates, setRates] = useState<ProfessionalRates | null>(null)
     const [saving, setSaving] = useState(false)
 
@@ -70,6 +71,7 @@ export function RatesSettings({ professionalId }: RatesSettingsProps) {
         try {
             await saveRates(rates)
             toast.success('Tariffe aggiornate: i nuovi preventivi le useranno')
+            onSaved?.()
         } catch (err: any) {
             toast.error(err.message || 'Non sono riuscito a salvare le tariffe')
         } finally {

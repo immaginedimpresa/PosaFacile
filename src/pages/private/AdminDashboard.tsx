@@ -143,7 +143,7 @@ export function AdminDashboard() {
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
-                            Panoramica Generale
+                            Panoramica generale
                         </h1>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

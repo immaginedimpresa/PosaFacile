@@ -149,7 +149,7 @@ export function CalendarPage() {
             {/* Header matching Admin style */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight flex items-center gap-3">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
                         <CalendarIcon className="w-8 h-8 text-orange-500" />
                         <span>Disponibilità</span>
                     </h1>
