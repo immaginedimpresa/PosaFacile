@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import {
+    Euro,
     LayoutDashboard,
     Hammer,
     UserCircle,
@@ -36,6 +37,7 @@ export function ProLayout() {
         { name: 'I miei Lavori', href: '/pro/jobs', icon: Hammer },
         { name: 'Calendario', href: '/pro/calendar', icon: Calendar },
         { name: 'Notifiche', href: '/pro/notifications', icon: Bell },
+        { name: 'Tariffe', href: '/pro/rates', icon: Euro },
         { name: 'Profilo', href: '/pro/profile', icon: UserCircle },
     ]
 

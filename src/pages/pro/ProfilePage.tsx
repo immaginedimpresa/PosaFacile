@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import {
     Euro,
@@ -18,7 +19,6 @@ import {
 } from 'lucide-react'
 import { ITALIAN_PROVINCES } from '@/lib/provinces'
 import { toast } from 'sonner'
-import { RatesSettings } from '@/components/pro/RatesSettings'
 
 
 interface ProfessionalProfile {
@@ -197,15 +197,13 @@ export function ProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => handleSave()}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20 disabled:opacity-50"
+                    <Link
+                        to="/pro/rates"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-stone-100 text-stone-700 border border-stone-200/90 text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
                     >
-                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                        <span>Salva Modifiche</span>
-                    </button>
+                        <Euro size={16} className="text-stone-500" />
+                        <span>Le tue tariffe</span>
+                    </Link>
                 </div>
             </div>
 
@@ -286,9 +284,9 @@ export function ProfilePage() {
                         </div>
 
                         <div className="p-6 space-y-5">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Nome Completo Referente
                                     </label>
                                     <input
@@ -300,7 +298,7 @@ export function ProfilePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Email di Accesso (Non Modificabile)
                                     </label>
                                     <div className="relative">
@@ -314,7 +312,7 @@ export function ProfilePage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Telefono / WhatsApp
                                     </label>
                                     <div className="relative">
@@ -329,7 +327,7 @@ export function ProfilePage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Anni di Esperienza nel Settore
                                     </label>
                                     <div className="relative">
@@ -347,7 +345,7 @@ export function ProfilePage() {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                     Presentazione Aziendale & Specializzazioni
                                 </label>
                                 <textarea
@@ -377,7 +375,7 @@ export function ProfilePage() {
 
                         <div className="p-6 space-y-5">
                             <div>
-                                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                     Ragione Sociale / Denominazione
                                 </label>
                                 <input
@@ -389,9 +387,9 @@ export function ProfilePage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Partita IVA
                                     </label>
                                     <input
@@ -403,7 +401,7 @@ export function ProfilePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Codice Fiscale
                                     </label>
                                     <input
@@ -415,7 +413,7 @@ export function ProfilePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Codice Univoco Destinatario SDI
                                     </label>
                                     <input
@@ -428,7 +426,7 @@ export function ProfilePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1.5">
+                                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                         Indirizzo PEC
                                     </label>
                                     <input
@@ -442,7 +440,7 @@ export function ProfilePage() {
                             </div>
 
                             <div className="pt-3 border-t border-stone-100">
-                                <label className="block text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5">
+                                <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
                                     Sede Legale
                                 </label>
                                 <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
@@ -609,42 +607,26 @@ export function ProfilePage() {
                                 })}
                             </div>
 
-                            {/* Save Submit Button */}
-                            <div className="pt-3 border-t border-stone-100">
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-stone-900 hover:bg-black text-white text-xs sm:text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md disabled:opacity-50"
-                                >
-                                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    <span>Salva Tutte le Modifiche</span>
-                                </button>
-                            </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Barra di salvataggio: resta raggiungibile su tutta la pagina */}
+                <div className="lg:col-span-12 sticky bottom-4 flex items-center justify-between gap-4 bg-white/90 backdrop-blur-sm border border-stone-200/90 rounded-2xl shadow-xs p-3.5">
+                    <p className="text-xs text-stone-500 font-medium pl-1.5 hidden sm:block">
+                        Anagrafica, dati fiscali e zone si salvano insieme.
+                    </p>
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20 disabled:opacity-50"
+                    >
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        <span>{saving ? 'Salvataggio…' : 'Salva modifiche'}</span>
+                    </button>
                 </div>
             </form>
 
-            {/* Tariffe: salvataggio indipendente dal resto del profilo, perche'
-                sono il dato che entra nei preventivi e va aggiornato da solo. */}
-            {user?.id && (
-                <div className="mt-8 space-y-4">
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 flex-shrink-0">
-                            <Euro className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
-                                Le tue tariffe
-                            </h2>
-                            <p className="text-stone-500 text-sm mt-0.5">
-                                Il prezzo della manodopera nei preventivi che ricevi
-                            </p>
-                        </div>
-                    </div>
-                    <RatesSettings professionalId={user.id} />
-                </div>
-            )}
         </div>
     )
 }

@@ -27,6 +27,7 @@ import { JobsPage } from '@/pages/pro/JobsPage'
 import { JobDetailPage } from '@/pages/pro/JobDetailPage'
 import { CalendarPage } from '@/pages/pro/CalendarPage'
 import { ProfilePage } from '@/pages/pro/ProfilePage'
+import { RatesPage } from '@/pages/pro/RatesPage'
 import { ProNotificationsPage } from '@/pages/pro/ProNotificationsPage'
 
 // Booking Pages
@@ -93,6 +94,7 @@ function App() {
           <Route path="jobs/:id" element={<JobDetailPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="notifications" element={<ProNotificationsPage />} />
+          <Route path="rates" element={<RatesPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 
