@@ -36,7 +36,7 @@ export function ProLayout() {
         { name: 'I miei Lavori', href: '/pro/jobs', icon: Hammer },
         { name: 'Calendario', href: '/pro/calendar', icon: Calendar },
         { name: 'Notifiche', href: '/pro/notifications', icon: Bell },
-        { name: 'Profilo & Zone', href: '/pro/profile', icon: UserCircle },
+        { name: 'Profilo', href: '/pro/profile', icon: UserCircle },
     ]
 
     const isActive = (path: string, exact?: boolean) => {
@@ -83,18 +83,16 @@ export function ProLayout() {
                             <Link
                                 key={item.name}
                                 to={item.href}
-                                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
-                                    active
+                                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${active
                                         ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                                         : 'text-stone-400 hover:text-white hover:bg-stone-800/70'
-                                }`}
+                                    }`}
                             >
                                 <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-stone-400'}`} />
                                 <span>{item.name}</span>
                                 {badgeFor(item.href) > 0 && (
-                                    <span className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center ${
-                                        active ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
-                                    }`}>
+                                    <span className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center ${active ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
+                                        }`}>
                                         {badgeFor(item.href) > 99 ? '99+' : badgeFor(item.href)}
                                     </span>
                                 )}
@@ -155,11 +153,10 @@ export function ProLayout() {
                             <Link
                                 key={item.name}
                                 to={item.href}
-                                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-lg text-[10px] font-medium transition-colors ${
-                                    active
+                                className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-lg text-[10px] font-medium transition-colors ${active
                                         ? 'text-orange-400 font-bold bg-orange-500/15'
                                         : 'text-stone-400 hover:text-stone-200'
-                                }`}
+                                    }`}
                             >
                                 <span className="relative">
                                     <Icon className={`w-4 h-4 mb-0.5 ${active ? 'text-orange-400' : 'text-stone-400'}`} />

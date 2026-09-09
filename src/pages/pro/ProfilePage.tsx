@@ -189,7 +189,7 @@ export function ProfilePage() {
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
                         <UserCircle className="w-8 h-8 text-orange-500" />
-                        <span>Profilo & Zone Operative</span>
+                        <span>Profilo</span>
                     </h1>
                     <p className="text-sm text-stone-500 mt-1">
                         Aggiorna la tua anagrafica, i dati fiscali per la fatturazione elettronica e le province coperte.
@@ -580,11 +580,10 @@ export function ProfilePage() {
                                     return (
                                         <label
                                             key={prov.code}
-                                            className={`flex items-center justify-between p-2 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
-                                                isChecked
+                                            className={`flex items-center justify-between p-2 rounded-lg text-xs font-semibold cursor-pointer transition-all ${isChecked
                                                     ? 'bg-orange-50/80 text-orange-950 font-bold'
                                                     : 'hover:bg-white text-stone-700'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center gap-2.5">
                                                 <input

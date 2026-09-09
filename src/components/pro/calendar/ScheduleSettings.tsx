@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import {
-    CalendarClock,
-    CalendarRange,
-    Layers,
-    PauseCircle,
-    PlayCircle,
-    Save,
-    Timer,
-} from 'lucide-react'
+import { CalendarClock, PauseCircle, Save } from 'lucide-react'
 import {
     GIORNI_SETTIMANA,
     fetchSchedule,
@@ -21,23 +13,19 @@ interface ScheduleSettingsProps {
     onSaved?: () => void
 }
 
-const CARD = 'bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6'
-const LABEL = 'block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5'
-const HINT = 'text-xs text-stone-500 font-medium mt-1.5 leading-relaxed'
+const CARD = 'bg-white rounded-2xl border border-stone-200/90 shadow-xs'
+const LABEL = 'block text-[11px] font-bold text-stone-400 uppercase tracking-wider mb-1.5'
 const SELECT = 'w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 '
     + 'focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 '
-    + 'text-sm font-medium transition-all outline-none'
+    + 'text-sm font-bold transition-all outline-none'
 
 /**
  * Regole permanenti di disponibilità.
  *
- * Prima si potevano solo cancellare i giorni a uno a uno: per dire "il sabato
- * non lavoro" servivano cinquantadue clic. Qui si dichiara come si lavora di
- * norma, e il calendario applica la regola da solo.
- *
- * Ogni campo spiega l'effetto che produce sul cliente, non il nome tecnico
- * dell'impostazione: è la differenza fra un pannello che si capisce e uno che
- * si compila a caso.
+ * Sono cinque impostazioni: se ognuna prende una scheda con icona, titolo e
+ * sottotitolo, la pagina diventa un rotolo e nessuna si legge. Qui stanno in
+ * tre blocchi — i giorni, i numeri, la pausa — con le spiegazioni accanto al
+ * campo e non sopra la sezione.
  */
 export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsProps) {
     const [schedule, setSchedule] = useState<ProfessionalSchedule | null>(null)
@@ -54,8 +42,8 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
 
     if (!schedule) {
         return (
-            <div className={`${CARD} text-sm text-stone-500 font-medium`}>
-                Carico le tue regole di disponibilità…
+            <div className={`${CARD} p-6 text-sm text-stone-500 font-medium`}>
+                Carico le tue regole…
             </div>
         )
     }
@@ -81,10 +69,10 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
         setSaving(true)
         try {
             await saveSchedule(schedule)
-            toast.success('Regole aggiornate: il calendario dei clienti le applica da subito')
+            toast.success('Regole salvate: il calendario dei clienti le applica da subito')
             onSaved?.()
         } catch (err: any) {
-            toast.error(err.message || 'Non sono riuscito a salvare le regole')
+            toast.error(err.message || 'Non sono riuscito a salvare')
         } finally {
             setSaving(false)
         }
@@ -94,23 +82,38 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
         schedule.paused_until && new Date(schedule.paused_until) >= new Date(new Date().toDateString()),
     )
 
+    const giorniAttivi = GIORNI_SETTIMANA.filter((g) => schedule.working_days.includes(g.iso))
+
     return (
         <div className="space-y-5">
-            {/* Giorni lavorativi */}
-            <div className={CARD}>
-                <div className="flex items-start gap-3.5 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-                        <CalendarRange size={20} />
-                    </div>
+            {/* Giorni: la scelta più frequente, la più visibile */}
+            <div className={`${CARD} p-6`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                     <div>
-                        <h3 className="text-base font-bold text-stone-900">Quando lavori</h3>
+                        <h3 className="text-base font-bold text-stone-900">Giorni in cui lavori</h3>
                         <p className="text-xs text-stone-500 mt-0.5">
-                            I giorni spenti non compaiono mai nel calendario del cliente
+                            Quelli spenti non compaiono mai nel calendario del cliente
                         </p>
+                    </div>
+                    <div className="flex gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => aggiorna('working_days', [1, 2, 3, 4, 5])}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                        >
+                            Lun–Ven
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => aggiorna('working_days', [1, 2, 3, 4, 5, 6])}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                        >
+                            Lun–Sab
+                        </button>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                     {GIORNI_SETTIMANA.map((giorno) => {
                         const attivo = schedule.working_days.includes(giorno.iso)
                         return (
@@ -118,11 +121,12 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
                                 key={giorno.iso}
                                 type="button"
                                 aria-pressed={attivo}
+                                aria-label={giorno.lungo}
                                 onClick={() => toggleGiorno(giorno.iso)}
-                                className={`px-4 py-2.5 rounded-xl text-sm font-bold border transition-all active:scale-95 ${
+                                className={`py-3 rounded-xl text-sm font-bold border transition-all active:scale-95 ${
                                     attivo
                                         ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
-                                        : 'bg-white text-stone-400 border-stone-200 hover:border-stone-300'
+                                        : 'bg-stone-50 text-stone-400 border-stone-200 hover:border-stone-300'
                                 }`}
                             >
                                 {giorno.breve}
@@ -130,28 +134,13 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
                         )
                     })}
                 </div>
-                <p className={HINT}>
-                    {schedule.working_days.length === 0
-                        ? 'Nessun giorno selezionato: così non riceveresti nessuna proposta.'
-                        : `Lavori ${schedule.working_days.length} giorni a settimana. Le assenze di un singolo giorno si segnano sul calendario qui sotto.`}
-                </p>
             </div>
 
-            {/* Regole di prenotazione */}
-            <div className={CARD}>
-                <div className="flex items-start gap-3.5 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-                        <Timer size={20} />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-bold text-stone-900">Con quanto anticipo</h3>
-                        <p className="text-xs text-stone-500 mt-0.5">
-                            Quanto vicino e quanto lontano un cliente può fissare l’inizio
-                        </p>
-                    </div>
-                </div>
+            {/* I quattro numeri, in griglia: stessa forma, lettura rapida */}
+            <div className={`${CARD} p-6`}>
+                <h3 className="text-base font-bold text-stone-900 mb-4">Regole di prenotazione</h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
                     <div>
                         <label className={LABEL}>Preavviso minimo</label>
                         <select
@@ -160,22 +149,18 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
                             className={SELECT}
                         >
                             <option value={0}>Anche per domani</option>
-                            <option value={1}>1 giorno prima</option>
-                            <option value={2}>2 giorni prima</option>
-                            <option value={3}>3 giorni prima</option>
-                            <option value={7}>1 settimana prima</option>
-                            <option value={14}>2 settimane prima</option>
-                            <option value={30}>1 mese prima</option>
+                            <option value={1}>1 giorno</option>
+                            <option value={2}>2 giorni</option>
+                            <option value={3}>3 giorni</option>
+                            <option value={7}>1 settimana</option>
+                            <option value={14}>2 settimane</option>
+                            <option value={30}>1 mese</option>
                         </select>
-                        <p className={HINT}>
-                            {schedule.min_notice_days === 0
-                                ? 'Un cliente può fissare un cantiere per domani.'
-                                : `Le prossime ${schedule.min_notice_days} giornate restano chiuse: nessuno può prenotarti all’ultimo.`}
-                        </p>
+                        <p className="text-xs text-stone-500 mt-1.5">Sotto questa soglia non sei prenotabile</p>
                     </div>
 
                     <div>
-                        <label className={LABEL}>Fin dove accetti</label>
+                        <label className={LABEL}>Accetti fino a</label>
                         <select
                             value={schedule.booking_horizon_weeks}
                             onChange={(e) => aggiorna('booking_horizon_weeks', Number(e.target.value))}
@@ -187,29 +172,9 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
                             <option value={26}>6 mesi</option>
                             <option value={52}>1 anno</option>
                         </select>
-                        <p className={HINT}>
-                            Oltre questo periodo il calendario non propone date: utile se non sai
-                            ancora come sarà la stagione.
-                        </p>
+                        <p className="text-xs text-stone-500 mt-1.5">Oltre, il calendario non propone date</p>
                     </div>
-                </div>
-            </div>
 
-            {/* Capacità */}
-            <div className={CARD}>
-                <div className="flex items-start gap-3.5 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-                        <Layers size={20} />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-bold text-stone-900">Quanti cantieri insieme</h3>
-                        <p className="text-xs text-stone-500 mt-0.5">
-                            Quante squadre riesci a tenere in campo nello stesso giorno
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <label className={LABEL}>Cantieri in parallelo</label>
                         <select
@@ -218,20 +183,14 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
                             className={SELECT}
                         >
                             {[1, 2, 3, 4, 5].map((n) => (
-                                <option key={n} value={n}>
-                                    {n === 1 ? 'Uno per volta' : `Fino a ${n}`}
-                                </option>
+                                <option key={n} value={n}>{n === 1 ? 'Uno per volta' : `Fino a ${n}`}</option>
                             ))}
                         </select>
-                        <p className={HINT}>
-                            {schedule.max_concurrent_jobs === 1
-                                ? 'Con un cantiere aperto quel giorno risulti occupato.'
-                                : `Resti prenotabile finché non hai ${schedule.max_concurrent_jobs} cantieri nello stesso giorno.`}
-                        </p>
+                        <p className="text-xs text-stone-500 mt-1.5">Quante squadre tieni in campo</p>
                     </div>
 
                     <div>
-                        <label className={LABEL}>Giorni di stacco fra un cantiere e l’altro</label>
+                        <label className={LABEL}>Stacco fra cantieri</label>
                         <select
                             value={schedule.buffer_days}
                             onChange={(e) => aggiorna('buffer_days', Number(e.target.value))}
@@ -242,83 +201,77 @@ export function ScheduleSettings({ professionalId, onSaved }: ScheduleSettingsPr
                             <option value={2}>2 giorni</option>
                             <option value={3}>3 giorni</option>
                         </select>
-                        <p className={HINT}>
-                            Tempo per smontare, spostarti e recuperare eventuali ritardi.
-                        </p>
+                        <p className="text-xs text-stone-500 mt-1.5">Per smontare e spostarti</p>
                     </div>
                 </div>
             </div>
 
-            {/* Pausa */}
-            <div className={`${CARD} ${inPausa ? 'ring-2 ring-amber-400/40 border-amber-200' : ''}`}>
-                <div className="flex items-start gap-3.5 mb-5">
+            {/* Pausa: una riga, non una scheda intera */}
+            <div className={`${CARD} p-5 ${inPausa ? 'ring-2 ring-amber-400/40 border-amber-200' : ''}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        inPausa ? 'bg-amber-50 text-amber-600' : 'bg-stone-100 text-stone-500'
+                        inPausa ? 'bg-amber-50 text-amber-600' : 'bg-stone-100 text-stone-400'
                     }`}>
-                        {inPausa ? <PauseCircle size={20} /> : <PlayCircle size={20} />}
+                        <PauseCircle size={20} />
                     </div>
-                    <div>
-                        <h3 className="text-base font-bold text-stone-900">
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-stone-900">
                             {inPausa ? 'Sei in pausa' : 'Sospendi le proposte'}
-                        </h3>
+                        </p>
                         <p className="text-xs text-stone-500 mt-0.5">
-                            Resti nella rete, ma non ricevi nuovi cantieri fino alla data indicata
+                            {inPausa
+                                ? `Nessuna nuova data fino al ${new Date(schedule.paused_until!).toLocaleDateString('it-IT')}. I cantieri confermati restano.`
+                                : 'Per ferie lunghe o periodi pieni. Resti nella rete.'}
                         </p>
                     </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-                    <div className="flex-1">
-                        <label className={LABEL}>Riprendo dal</label>
+                    <div className="flex items-center gap-2 flex-shrink-0">
                         <input
                             type="date"
+                            aria-label="Riprendo dal"
                             value={schedule.paused_until ?? ''}
                             min={new Date().toISOString().slice(0, 10)}
                             onChange={(e) => aggiorna('paused_until', e.target.value || null)}
-                            className={SELECT}
+                            className="px-3 py-2 rounded-xl border border-stone-200 bg-stone-50/50 text-sm font-bold outline-none focus:bg-white focus:ring-2 focus:ring-orange-500/20"
                         />
+                        {schedule.paused_until && (
+                            <button
+                                type="button"
+                                onClick={() => aggiorna('paused_until', null)}
+                                className="px-3 py-2 rounded-xl text-xs font-bold text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                            >
+                                Annulla
+                            </button>
+                        )}
                     </div>
-                    {schedule.paused_until && (
-                        <button
-                            type="button"
-                            onClick={() => aggiorna('paused_until', null)}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-stone-100 text-stone-700 rounded-xl border border-stone-200/90 text-sm font-bold shadow-2xs active:scale-95 transition-all"
-                        >
-                            Annulla pausa
-                        </button>
-                    )}
                 </div>
-                <p className={HINT}>
-                    {inPausa
-                        ? `I clienti non possono fissare date fino al ${new Date(schedule.paused_until!).toLocaleDateString('it-IT')}. I cantieri già confermati restano.`
-                        : 'Lascia vuoto se sei operativo. Utile per ferie o periodi pieni.'}
-                </p>
             </div>
 
-            {/* Riepilogo dell'effetto, prima di salvare */}
-            <div className="bg-stone-900 text-stone-100 rounded-2xl p-6">
-                <div className="flex items-start gap-3.5">
-                    <CalendarClock size={20} className="text-orange-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                        <p className="text-sm font-bold text-white">Come ti vede un cliente</p>
-                        <p className="text-sm text-stone-300 leading-relaxed mt-1.5">
-                            {inPausa
-                                ? 'In pausa: nessuna data selezionabile finché non riprendi.'
-                                : schedule.working_days.length === 0
-                                    ? 'Nessun giorno lavorativo: non compari fra le date disponibili.'
-                                    : `Può scegliere fra ${GIORNI_SETTIMANA.filter((g) => schedule.working_days.includes(g.iso)).map((g) => g.lungo.toLowerCase()).join(', ')}, a partire da ${schedule.min_notice_days === 0 ? 'domani' : `${schedule.min_notice_days} giorni da oggi`}, fino a ${schedule.booking_horizon_weeks} settimane in avanti.`}
-                        </p>
-                    </div>
+            {/* Effetto e salvataggio: restano a vista mentre si modifica */}
+            <div className="sticky bottom-4 bg-stone-900 text-stone-100 rounded-2xl p-5 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <CalendarClock size={20} className="text-orange-400 flex-shrink-0" />
+                    <p className="flex-1 text-sm text-stone-300 leading-relaxed">
+                        {inPausa
+                            ? 'In pausa: nessuna data selezionabile finché non riprendi.'
+                            : giorniAttivi.length === 0
+                                ? 'Nessun giorno lavorativo: non compari fra le date disponibili.'
+                                : <>
+                                    Il cliente sceglie fra{' '}
+                                    <strong className="text-white">{giorniAttivi.map((g) => g.breve).join(', ')}</strong>,
+                                    da <strong className="text-white">{schedule.min_notice_days === 0 ? 'domani' : `${schedule.min_notice_days} giorni`}</strong>
+                                    {' '}fino a <strong className="text-white">{schedule.booking_horizon_weeks} settimane</strong>.
+                                </>}
+                    </p>
+                    <button
+                        type="button"
+                        onClick={salva}
+                        disabled={saving}
+                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold shadow-md shadow-orange-500/20 active:scale-95 transition-all disabled:opacity-50 flex-shrink-0"
+                    >
+                        <Save size={16} />
+                        {saving ? 'Salvo…' : 'Salva'}
+                    </button>
                 </div>
-                <button
-                    type="button"
-                    onClick={salva}
-                    disabled={saving}
-                    className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold shadow-md shadow-orange-500/20 active:scale-95 transition-all disabled:opacity-50"
-                >
-                    <Save size={16} />
-                    {saving ? 'Salvataggio…' : 'Salva le regole'}
-                </button>
             </div>
         </div>
     )

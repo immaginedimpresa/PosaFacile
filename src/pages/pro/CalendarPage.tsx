@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { DayPicker } from 'react-day-picker'
-import { format, startOfMonth, endOfMonth, isSameDay, eachDayOfInterval, getDay } from 'date-fns'
+import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useProStore } from '@/store/proStore'
 import {
+    Plus,
+    Trash2,
     Calendar as CalendarIcon,
-    CalendarRange,
-    CheckCircle2,
-    Lock,
     RefreshCw,
     Hammer,
     CalendarX,
@@ -16,6 +15,7 @@ import {
 import { toast } from 'sonner'
 import 'react-day-picker/dist/style.css'
 import { ScheduleSettings } from '@/components/pro/calendar/ScheduleSettings'
+import { AddAbsenceModal } from '@/components/pro/calendar/AddAbsenceModal'
 import { fetchSchedule, isoWeekday, DEFAULT_SCHEDULE, type ProfessionalSchedule } from '@/services/scheduleService'
 import { useAuth } from '@/hooks/useAuth'
 import { SlidersHorizontal, CalendarDays } from 'lucide-react'
@@ -29,20 +29,11 @@ export function CalendarPage() {
     // Il calendario deve mostrare l'effetto delle regole, altrimenti le due
     // viste raccontano cose diverse dello stesso mese.
     const [schedule, setSchedule] = useState<ProfessionalSchedule | null>(null)
+    const [absenceOpen, setAbsenceOpen] = useState(false)
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const { jobs, availability, fetchJobs, fetchAvailability, toggleAvailability, bulkUpdateAvailability, loading } = useProStore()
 
     // Bulk Management State
-    const [bulkStart, setBulkStart] = useState<string>('')
-    const [bulkEnd, setBulkEnd] = useState<string>('')
-    const [previewDates, setPreviewDates] = useState<Date[]>([])
-
-    // Set default range for Recurring tab on load
-    useEffect(() => {
-        const today = new Date()
-        setBulkStart(format(today, 'yyyy-MM-dd'))
-        setBulkEnd(format(endOfMonth(today), 'yyyy-MM-dd'))
-    }, [])
 
     useEffect(() => {
         fetchJobs()
@@ -85,30 +76,6 @@ export function CalendarPage() {
     }, [jobs, availability, currentMonth])
 
     // Shared logic for calculating dates
-    const calculateTargetDates = (startStr: string, endStr: string, days: number[]) => {
-        if (!startStr || !endStr) return []
-
-        const [sY, sM, sD] = startStr.split('-').map(Number)
-        const [eY, eM, eD] = endStr.split('-').map(Number)
-
-        const start = new Date(sY, sM - 1, sD, 12, 0, 0)
-        const end = new Date(eY, eM - 1, eD, 12, 0, 0)
-
-        if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return []
-
-        try {
-            const interval = eachDayOfInterval({ start, end })
-            return interval.filter(d => days.includes(getDay(d)))
-        } catch (e) {
-            return []
-        }
-    }
-
-
-    useEffect(() => {
-        const targets = calculateTargetDates(bulkStart, bulkEnd, [0, 1, 2, 3, 4, 5, 6])
-        setPreviewDates(targets)
-    }, [bulkStart, bulkEnd])
 
     const handleDayClick = async (date: Date) => {
         const jobOnDay = jobs.find(j => j.scheduled_date && isSameDay(new Date(j.scheduled_date), date))
@@ -127,47 +94,18 @@ export function CalendarPage() {
         const isoDate = format(date, 'yyyy-MM-dd')
         try {
             await toggleAvailability(isoDate, 'busy')
-        } catch (e) {
-            toast.error('Errore durante la modifica della disponibilità')
+        } catch {
+            toast.error('Non sono riuscito a modificare la disponibilità')
         }
     }
 
-    const handleBulkAction = async (action: 'busy' | 'available') => {
-        const targets = calculateTargetDates(bulkStart, bulkEnd, [0, 1, 2, 3, 4, 5, 6])
-
-        if (targets.length === 0) {
-            toast.error(
-                !bulkStart || !bulkEnd
-                    ? 'Indica le date di inizio e fine del periodo.'
-                    : 'Nessuna giornata nel periodo scelto.',
-            )
-            return
-        }
-
-        const targetStrings = targets.map(d => format(d, 'yyyy-MM-dd'))
-
-        toast(`Vuoi modificare ${targetStrings.length} date?`, {
-            description: `Imposta come ${action === 'busy' ? 'NON DISPONIBILI' : 'DISPONIBILI'}`,
-            action: {
-                label: 'Conferma',
-                onClick: async () => {
-                    const toastId = toast.loading('Aggiornamento in corso...')
-                    try {
-                        await bulkUpdateAvailability(targetStrings, action)
-                        const mStart = startOfMonth(currentMonth)
-                        const mEnd = endOfMonth(currentMonth)
-                        await fetchAvailability(mStart, mEnd)
-                        toast.success(`Aggiornate ${targetStrings.length} date con successo!`, { id: toastId })
-                    } catch (error) {
-                        toast.error('Errore durante l\'aggiornamento', { id: toastId })
-                    }
-                }
-            },
-            cancel: {
-                label: 'Annulla',
-                onClick: () => { }
-            }
-        })
+    /** Salva le date scelte nella modale come assenza. */
+    const aggiungiAssenze = async (dates: string[]) => {
+        await bulkUpdateAvailability(dates, 'busy')
+        await fetchAvailability(startOfMonth(currentMonth), endOfMonth(currentMonth))
+        toast.success(
+            dates.length === 1 ? 'Assenza registrata' : `${dates.length} giornate segnate come assenza`,
+        )
     }
 
 
@@ -179,6 +117,11 @@ export function CalendarPage() {
         .filter(j => j.scheduled_date && (j.status === 'draft' || j.status === 'pending'))
         .map(j => new Date(j.scheduled_date!))
 
+    // Solo da oggi in avanti: le assenze passate non servono a nessuno.
+    const assenzeFuture = availability
+        .filter((a) => a.status === 'busy' && new Date(a.date) >= new Date(new Date().toDateString()))
+        .sort((a, b) => a.date.localeCompare(b.date))
+
     const busyDays = availability
         .filter(a => a.status === 'busy')
         .map(a => new Date(a.date))
@@ -189,7 +132,6 @@ export function CalendarPage() {
         booked: bookedDays,
         pending: pendingDays,
         busy: busyDays,
-        preview: previewDates,
         // Non è un'assenza da segnare: è la regola settimanale che lo esclude.
         nonLavorativo: (date: Date) => !regoleAttive.working_days.includes(isoWeekday(date)),
     }
@@ -236,41 +178,6 @@ export function CalendarPage() {
                 </div>
             </div>
 
-            {/* Le due viste: regole permanenti ed eccezioni puntuali */}
-            <div className="p-1.5 bg-stone-100/80 rounded-2xl border border-stone-200/60 inline-flex items-center gap-1.5 mb-8">
-                <button
-                    type="button"
-                    onClick={() => setVista('regole')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                        vista === 'regole'
-                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
-                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
-                    }`}
-                >
-                    <SlidersHorizontal size={16} className={vista === 'regole' ? 'text-orange-500' : ''} />
-                    <span>Come lavori di norma</span>
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setVista('eccezioni')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                        vista === 'eccezioni'
-                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
-                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
-                    }`}
-                >
-                    <CalendarDays size={16} className={vista === 'eccezioni' ? 'text-orange-500' : ''} />
-                    <span>Assenze e cantieri</span>
-                </button>
-            </div>
-
-            {/* Regole permanenti */}
-            {vista === 'regole' && user?.id && (
-                <ScheduleSettings professionalId={user.id} />
-            )}
-
-            {vista === 'eccezioni' && (
-            <>
             {/* 4-Card KPI Strip matching Admin/Pro style */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {/* 1. Cantieri del Mese */}
@@ -325,6 +232,41 @@ export function CalendarPage() {
                 </div>
             </div>
 
+            {/* Le due viste: regole permanenti ed eccezioni puntuali */}
+            <div className="p-1.5 bg-stone-100/80 rounded-2xl border border-stone-200/60 inline-flex items-center gap-1.5 mb-8">
+                <button
+                    type="button"
+                    onClick={() => setVista('regole')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                        vista === 'regole'
+                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
+                    }`}
+                >
+                    <SlidersHorizontal size={16} className={vista === 'regole' ? 'text-orange-500' : ''} />
+                    <span>Come lavori di norma</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setVista('eccezioni')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                        vista === 'eccezioni'
+                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
+                    }`}
+                >
+                    <CalendarDays size={16} className={vista === 'eccezioni' ? 'text-orange-500' : ''} />
+                    <span>Assenze e cantieri</span>
+                </button>
+            </div>
+
+            {/* Regole permanenti */}
+            {vista === 'regole' && user?.id && (
+                <ScheduleSettings professionalId={user.id} />
+            )}
+
+            {vista === 'eccezioni' && (
+            <>
             {/* Main Calendar + Management Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Calendar Card - 2/3 */}
@@ -503,77 +445,64 @@ export function CalendarPage() {
                     </div>
                 </div>
 
-                {/* Management Toolbar Card - 1/3 */}
-                <div className="space-y-6 lg:col-span-1">
-                    <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs sticky top-6 overflow-hidden">
-                        <div className="p-6 border-b border-stone-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
-                                    <CalendarRange size={20} />
-                                </div>
-                                <div>
-                                    <h2 className="text-base font-bold text-stone-900">Ferie e chiusure</h2>
-                                    <p className="text-xs text-stone-500">Un periodo intero, invece di un giorno per volta</p>
-                                </div>
+                {/* Assenze in programma: leggibili, non solo pallini rossi */}
+                <div className="space-y-4 lg:col-span-1">
+                    <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
+                        <div className="p-5 border-b border-stone-100 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-base font-bold text-stone-900">Le tue assenze</h2>
+                                <p className="text-xs text-stone-500 mt-0.5">Giorni in cui non ricevi proposte</p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setAbsenceOpen(true)}
+                                className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-500/20 transition-all active:scale-95 cursor-pointer flex-shrink-0"
+                            >
+                                <Plus size={15} />
+                                <span>Aggiungi</span>
+                            </button>
                         </div>
 
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2.5 block">
-                                    Dal
-                                </label>
-                                <input
-                                    type="date"
-                                    value={bulkStart}
-                                    onChange={(e) => setBulkStart(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2.5 block">
-                                    Al
-                                </label>
-                                <input
-                                    type="date"
-                                    value={bulkEnd}
-                                    min={bulkStart || undefined}
-                                    onChange={(e) => setBulkEnd(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
-                                />
-                            </div>
-
-                            {previewDates.length > 0 && (
-                                <p className="text-xs font-medium text-stone-600 bg-stone-50 border border-stone-200/80 rounded-xl px-3.5 py-2.5">
-                                    {previewDates.length} {previewDates.length === 1 ? 'giornata' : 'giornate'} da segnare come assenza.
-                                    I giorni non lavorativi sono già esclusi dalle tue regole.
-                                </p>
-                            )}
-
-                            <div className="pt-4 border-t border-stone-100 flex flex-col gap-2.5">
-                                <button
-                                    type="button"
-                                    onClick={() => handleBulkAction('busy')}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-md shadow-orange-500/20"
-                                >
-                                    <Lock size={15} />
-                                    <span>Segna come assenza</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleBulkAction('available')}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-stone-100 text-stone-700 border border-stone-200/90 text-sm font-bold rounded-xl transition-all active:scale-95 cursor-pointer shadow-2xs"
-                                >
-                                    <CheckCircle2 size={15} />
-                                    <span>Annulla l’assenza</span>
-                                </button>
-                            </div>
-                        </div>
+                        {assenzeFuture.length === 0 ? (
+                            <p className="p-5 text-sm text-stone-500 font-medium">
+                                Nessuna assenza in programma. Sei prenotabile in tutti i giorni
+                                lavorativi che hai impostato.
+                            </p>
+                        ) : (
+                            <ul className="divide-y divide-stone-100 max-h-[420px] overflow-y-auto">
+                                {assenzeFuture.map((assenza) => (
+                                    <li key={assenza.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-stone-800 capitalize">
+                                                {format(new Date(assenza.date), 'EEEE d MMMM', { locale: it })}
+                                            </p>
+                                            <p className="text-[11px] text-stone-400 font-medium">
+                                                {format(new Date(assenza.date), 'yyyy')}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleAvailability(assenza.date, 'busy')}
+                                            title="Rimuovi questa assenza"
+                                            className="p-2 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer flex-shrink-0"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </div>
             </div>
             </>
             )}
+
+            <AddAbsenceModal
+                isOpen={absenceOpen}
+                onClose={() => setAbsenceOpen(false)}
+                onConfirm={aggiungiAssenze}
+            />
 
         </div>
     )
