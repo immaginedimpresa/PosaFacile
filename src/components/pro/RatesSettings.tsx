@@ -109,99 +109,102 @@ export function RatesSettings({ professionalId, onSaved }: RatesSettingsProps) {
                 </div>
             </div>
 
-            {/* Posa */}
-            <div className={CARD}>
-                <div className="flex items-start gap-3.5 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-                        <Hammer size={20} />
-                    </div>
-                    <div>
-                        <h3 className="text-base font-bold text-stone-900">Posa, al metro quadro</h3>
-                        <p className="text-xs text-stone-500 mt-0.5">
-                            Uno schema più lento vale di più: la spina non si paga come la dritta
-                        </p>
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    {VOCI_POSA.map((voce) => (
-                        <div key={voce.campo} className="flex items-center gap-4">
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-stone-800">{voce.label}</p>
-                                <p className="text-xs text-stone-500">{voce.nota}</p>
-                            </div>
-                            <div className="w-32 flex-shrink-0">
-                                {campoPrezzo(voce.campo, rates[voce.campo] as number | null)}
-                            </div>
+            {/* Posa e lavorazioni affiancate: sono due listini paralleli */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+                <div className={CARD}>
+                    <div className="flex items-start gap-3.5 mb-5">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+                            <Hammer size={20} />
                         </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Lavorazioni accessorie */}
-            <div className={CARD}>
-                <div className="flex items-start gap-3.5 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
-                        <Wrench size={20} />
+                        <div>
+                            <h3 className="text-base font-bold text-stone-900">Posa, al metro quadro</h3>
+                            <p className="text-xs text-stone-500 mt-0.5">
+                                Uno schema più lento vale di più: la spina non si paga come la dritta
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-base font-bold text-stone-900">Lavorazioni accessorie</h3>
-                        <p className="text-xs text-stone-500 mt-0.5">
-                            Spegni quelle che non esegui: non verranno proposte ai tuoi clienti
-                        </p>
-                    </div>
-                </div>
 
-                <div className="space-y-3">
-                    {VOCI_SERVIZI.map((voce) => {
-                        const escluso = rates.servizi_esclusi?.includes(voce.chiave)
-                        return (
-                            <div
-                                key={voce.chiave}
-                                className={`flex items-center gap-4 rounded-xl transition-opacity ${escluso ? 'opacity-45' : ''}`}
-                            >
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={!escluso}
-                                    aria-label={`${voce.label}: ${escluso ? 'non la eseguo' : 'la eseguo'}`}
-                                    onClick={() => toggleServizio(voce.chiave)}
-                                    className={`w-10 h-6 rounded-full flex-shrink-0 transition-colors relative ${
-                                        escluso ? 'bg-stone-200' : 'bg-orange-500'
-                                    }`}
-                                >
-                                    <span
-                                        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                                            escluso ? 'left-0.5' : 'left-0.5 translate-x-4'
-                                        }`}
-                                    />
-                                </button>
-
+                    <div className="space-y-3">
+                        {VOCI_POSA.map((voce) => (
+                            <div key={voce.campo} className="flex items-center gap-4">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-bold text-stone-800">{voce.label}</p>
-                                    <p className="text-xs text-stone-500">
-                                        {escluso ? 'Non la esegui' : voce.nota}
-                                    </p>
+                                    <p className="text-xs text-stone-500">{voce.nota}</p>
                                 </div>
-
                                 <div className="w-32 flex-shrink-0">
-                                    {escluso ? (
-                                        <p className="text-right text-xs font-bold text-stone-400 pr-1">
-                                            esclusa
-                                        </p>
-                                    ) : (
-                                        <>
-                                            {campoPrezzo(voce.campo, rates[voce.campo] as number | null)}
-                                            <p className="text-[10px] text-stone-400 font-bold text-right mt-1">
-                                                {voce.unita}
-                                            </p>
-                                        </>
-                                    )}
+                                    {campoPrezzo(voce.campo, rates[voce.campo] as number | null)}
                                 </div>
                             </div>
-                        )
-                    })}
-                </div>
+                        ))}
+                    </div>
+            </div>
+
+                {/* Lavorazioni accessorie */}
+                <div className={CARD}>
+                    <div className="flex items-start gap-3.5 mb-5">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+                            <Wrench size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold text-stone-900">Lavorazioni accessorie</h3>
+                            <p className="text-xs text-stone-500 mt-0.5">
+                                Spegni quelle che non esegui: non verranno proposte ai tuoi clienti
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {VOCI_SERVIZI.map((voce) => {
+                            const escluso = rates.servizi_esclusi?.includes(voce.chiave)
+                            return (
+                                <div
+                                    key={voce.chiave}
+                                    className={`flex items-center gap-4 rounded-xl transition-opacity ${escluso ? 'opacity-45' : ''}`}
+                                >
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={!escluso}
+                                        aria-label={`${voce.label}: ${escluso ? 'non la eseguo' : 'la eseguo'}`}
+                                        onClick={() => toggleServizio(voce.chiave)}
+                                        className={`w-10 h-6 rounded-full flex-shrink-0 transition-colors relative ${
+                                            escluso ? 'bg-stone-200' : 'bg-orange-500'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                                                escluso ? 'left-0.5' : 'left-0.5 translate-x-4'
+                                            }`}
+                                        />
+                                    </button>
+
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-stone-800">{voce.label}</p>
+                                        <p className="text-xs text-stone-500">
+                                            {escluso ? 'Non la esegui' : voce.nota}
+                                        </p>
+                                    </div>
+
+                                    <div className="w-32 flex-shrink-0">
+                                        {escluso ? (
+                                            <p className="text-right text-xs font-bold text-stone-400 pr-1">
+                                                esclusa
+                                            </p>
+                                        ) : (
+                                            <>
+                                                {campoPrezzo(voce.campo, rates[voce.campo] as number | null)}
+                                                <p className="text-[10px] text-stone-400 font-bold text-right mt-1">
+                                                    {voce.unita}
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+            </div>
+
             </div>
 
             <button
