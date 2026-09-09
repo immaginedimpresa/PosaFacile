@@ -3,6 +3,7 @@ import { canCancelOrder, orderStatusColor, orderStatusLabel, type OrderStatus } 
 import { OrderTimelineCompact } from '@/components/orders/OrderTimeline'
 import { customerTimeline, type ResolvedStep } from '@/lib/orderTimeline'
 import { fetchMilestonesForOrders } from '@/services/orderTimelineService'
+import { useNotificationStore } from '@/store/notificationStore'
 import { Package, Clock, Settings, ChevronRight, Calendar, Trash2, ArrowRight, CheckCircle2, MapPin, Sparkles, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
@@ -46,6 +47,8 @@ export function CustomerDashboard() {
 
     // Orders state
     const [orders, setOrders] = useState<Order[]>([])
+    // Il contatore viene dallo store gia' alimentato dalla campanella.
+    const unreadCount = useNotificationStore((state) => state.unreadCount)
     /** Barra di stato compatta per ogni ordine dell'elenco. */
     const [timelines, setTimelines] = useState<Record<string, ResolvedStep[]>>({})
     const [loadingOrders, setLoadingOrders] = useState(true)
@@ -273,6 +276,11 @@ export function CustomerDashboard() {
                         <span className="flex items-center gap-2.5">
                             <Bell size={18} /> Notifiche
                         </span>
+                        {unreadCount > 0 && (
+                            <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-orange-500 text-white text-[10px] font-black flex items-center justify-center">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                        )}
                     </button>
 
                     <button

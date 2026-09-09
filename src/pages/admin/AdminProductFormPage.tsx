@@ -24,9 +24,14 @@ const generateSlug = (name: string): string => {
 export function AdminProductFormPage() {
     const navigate = useNavigate()
     const { id } = useParams<{ id: string }>()
-    const isEditing = id && id !== 'new'
+    // La rotta /admin/products/new non porta identificativo, ma se venisse
+    // raggiunta come :id il valore sarebbe la stringa 'new': in entrambi i
+    // casi non c'e' nulla da caricare, e passare 'new' al caricamento
+    // significherebbe cercare un prodotto che non esiste.
+    const isEditing = Boolean(id && id !== 'new')
+    const productId = isEditing ? (id as string) : ''
 
-    const { product, loading: productLoading, error: productError } = useProduct(id || '')
+    const { product, loading: productLoading, error: productError } = useProduct(productId)
     const { createProduct, updateProduct } = useProducts()
 
     const [saving, setSaving] = useState(false)
@@ -151,8 +156,8 @@ export function AdminProductFormPage() {
         }
 
         try {
-            if (isEditing && id) {
-                const { error: updateErr } = await updateProduct(id, formData as ProductUpdate)
+            if (isEditing && productId) {
+                const { error: updateErr } = await updateProduct(productId, formData as ProductUpdate)
                 if (updateErr) throw updateErr
                 toast.success('Prodotto aggiornato con successo')
             } else {

@@ -11,11 +11,15 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { useNotificationStore } from '@/store/notificationStore'
 import { LogoIcon } from '@/components/ui/Logo'
 
 export function ProLayout() {
     const location = useLocation()
     const { user, signOut } = useAuth()
+    // Lo store e' gia' alimentato dalla campanella in alto: la voce di menu
+    // riflette lo stesso contatore, senza query aggiuntive.
+    const unreadCount = useNotificationStore((state) => state.unreadCount)
 
     const navigation = [
         { name: 'Dashboard', href: '/pro', icon: LayoutDashboard, exact: true },
@@ -77,6 +81,13 @@ export function ProLayout() {
                             >
                                 <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-stone-400'}`} />
                                 <span>{item.name}</span>
+                                {item.href === '/pro/notifications' && unreadCount > 0 && (
+                                    <span className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-black flex items-center justify-center ${
+                                        active ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
+                                    }`}>
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
                             </Link>
                         )
                     })}
@@ -140,7 +151,14 @@ export function ProLayout() {
                                         : 'text-stone-400 hover:text-stone-200'
                                 }`}
                             >
-                                <Icon className={`w-4 h-4 mb-0.5 ${active ? 'text-orange-400' : 'text-stone-400'}`} />
+                                <span className="relative">
+                                    <Icon className={`w-4 h-4 mb-0.5 ${active ? 'text-orange-400' : 'text-stone-400'}`} />
+                                    {item.href === '/pro/notifications' && unreadCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 bg-orange-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </span>
                                 <span className="truncate">{item.name.replace(' & Zone', '')}</span>
                             </Link>
                         )

@@ -466,7 +466,10 @@ Sitemap: ${SITE_URL}/sitemap.xml
     console.log(`[seo] ${pages.length} pagine statiche (${productPages.length} prodotti), sitemap e robots.txt generati`)
 }
 
+// La generazione dei metadati non deve mai bloccare un deploy: se fallisce,
+// il sito va online con il guscio predefinito e un errore nel log, invece di
+// restare fermo alla versione precedente.
 main().catch((error) => {
-    console.error('[seo] generazione fallita:', error)
-    process.exit(1)
+    console.error('[seo] generazione saltata:', error?.message || error)
+    process.exit(0)
 })
