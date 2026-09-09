@@ -16,8 +16,16 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import 'react-day-picker/dist/style.css'
+import { ScheduleSettings } from '@/components/pro/calendar/ScheduleSettings'
+import { useAuth } from '@/hooks/useAuth'
+import { SlidersHorizontal, CalendarDays } from 'lucide-react'
+
 
 export function CalendarPage() {
+    const { user } = useAuth()
+    // Due piani distinti: le regole che valgono sempre e le eccezioni del
+    // singolo giorno. Tenerli separati è metà del problema di comprensione.
+    const [vista, setVista] = useState<'regole' | 'eccezioni'>('regole')
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const { jobs, availability, fetchJobs, fetchAvailability, toggleAvailability, bulkUpdateAvailability, loading } = useProStore()
 
@@ -198,12 +206,13 @@ export function CalendarPage() {
             {/* Header matching Admin style */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
+                    <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight flex items-center gap-3">
                         <CalendarIcon className="w-8 h-8 text-orange-500" />
-                        <span>Calendario & Disponibilità</span>
+                        <span>Disponibilità</span>
                     </h1>
                     <p className="text-sm text-stone-500 mt-1">
-                        Pianifica le tue disponibilità per i cantieri, blocca i giorni di ferie o gestisci periodi di chiusura.
+                        Decidi quando sei prenotabile: le regole valgono sempre, le eccezioni
+                        riguardano un giorno solo.
                     </p>
                 </div>
 
@@ -226,6 +235,41 @@ export function CalendarPage() {
                 </div>
             </div>
 
+            {/* Le due viste: regole permanenti ed eccezioni puntuali */}
+            <div className="p-1.5 bg-stone-100/80 rounded-2xl border border-stone-200/60 inline-flex items-center gap-1.5 mb-8">
+                <button
+                    type="button"
+                    onClick={() => setVista('regole')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                        vista === 'regole'
+                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
+                    }`}
+                >
+                    <SlidersHorizontal size={16} className={vista === 'regole' ? 'text-orange-500' : ''} />
+                    <span>Come lavori di norma</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setVista('eccezioni')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                        vista === 'eccezioni'
+                            ? 'bg-white text-stone-900 shadow-xs ring-1 ring-stone-900/5'
+                            : 'text-stone-500 hover:text-stone-900 hover:bg-white/50'
+                    }`}
+                >
+                    <CalendarDays size={16} className={vista === 'eccezioni' ? 'text-orange-500' : ''} />
+                    <span>Assenze e cantieri</span>
+                </button>
+            </div>
+
+            {/* Regole permanenti */}
+            {vista === 'regole' && user?.id && (
+                <ScheduleSettings professionalId={user.id} />
+            )}
+
+            {vista === 'eccezioni' && (
+            <>
             {/* 4-Card KPI Strip matching Admin/Pro style */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {/* 1. Cantieri del Mese */}
@@ -609,6 +653,9 @@ export function CalendarPage() {
                     </div>
                 </div>
             </div>
+            </>
+            )}
+
         </div>
     )
 }

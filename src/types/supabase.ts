@@ -848,6 +848,50 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_schedule: {
+        Row: {
+          booking_horizon_weeks: number
+          buffer_days: number
+          created_at: string
+          max_concurrent_jobs: number
+          min_notice_days: number
+          paused_until: string | null
+          professional_id: string
+          updated_at: string
+          working_days: number[]
+        }
+        Insert: {
+          booking_horizon_weeks?: number
+          buffer_days?: number
+          created_at?: string
+          max_concurrent_jobs?: number
+          min_notice_days?: number
+          paused_until?: string | null
+          professional_id: string
+          updated_at?: string
+          working_days?: number[]
+        }
+        Update: {
+          booking_horizon_weeks?: number
+          buffer_days?: number
+          created_at?: string
+          max_concurrent_jobs?: number
+          min_notice_days?: number
+          paused_until?: string | null
+          professional_id?: string
+          updated_at?: string
+          working_days?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_schedule_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "professional_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_skills: {
         Row: {
           created_at: string | null

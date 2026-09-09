@@ -1,17 +1,28 @@
 import { useEffect, useState } from 'react'
 import { DayPicker } from 'react-day-picker'
-import { format, isSameDay, startOfMonth, endOfMonth, addMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { useConfiguratorStore } from '@/store/configuratorStore'
 import { supabase } from '@/lib/supabase'
 import { Calendar as CalendarIcon, Truck } from 'lucide-react'
 import { earliestStartDate, materialWaitDays } from '@/lib/layingDuration'
 import { fetchLogisticsSettings, DEFAULT_LOGISTICS, type LogisticsSettings } from '@/services/settingsService'
+import {
+    fetchSchedule,
+    motivoIndisponibilita,
+    motivoLeggibile,
+    toIso,
+    DEFAULT_SCHEDULE,
+    type ProfessionalSchedule,
+} from '@/services/scheduleService'
 import 'react-day-picker/dist/style.css'
 
 export function Step8CalendarSelect() {
     const { selectedProfessional, selectedProduct, selectedDate, setSelectedDate } = useConfiguratorStore()
     const [logistics, setLogistics] = useState<LogisticsSettings>(DEFAULT_LOGISTICS)
+    // Le regole del posatore: giorni lavorativi, preavviso, pausa, capacità.
+    const [schedule, setSchedule] = useState<ProfessionalSchedule | null>(null)
+    const [motivoScarto, setMotivoScarto] = useState<string | null>(null)
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
     const [busyDates, setBusyDates] = useState<Date[]>([])
     const [jobDates, setJobDates] = useState<Date[]>([])
@@ -28,6 +39,16 @@ export function Step8CalendarSelect() {
     useEffect(() => {
         fetchLogisticsSettings().then(setLogistics)
     }, [])
+
+    useEffect(() => {
+        if (!selectedProfessional?.id) return
+        let attivo = true
+        void (async () => {
+            const regole = await fetchSchedule(selectedProfessional.id)
+            if (attivo) setSchedule(regole)
+        })()
+        return () => { attivo = false }
+    }, [selectedProfessional?.id])
 
     const fetchAvailability = async () => {
         if (!selectedProfessional) return
@@ -74,14 +95,41 @@ export function Step8CalendarSelect() {
     const primaDataUtile = earliestStartDate(leadInput)
     const giorniAttesa = materialWaitDays(leadInput)
 
-    const handleDayClick = (date: Date) => {
-        const isOccupied = [...busyDates, ...jobDates].some(d => isSameDay(d, date))
+    /** Insiemi usati dalle regole: assenze dichiarate e cantieri per data. */
+    const assenze = new Set(busyDates.map(toIso))
+    const cantieriPerData = jobDates.reduce((mappa, data) => {
+        const iso = toIso(data)
+        mappa.set(iso, (mappa.get(iso) ?? 0) + 1)
+        return mappa
+    }, new Map<string, number>())
 
-        // Prima che il materiale arrivi non c'è niente da posare.
-        if (isOccupied || date < primaDataUtile) {
+    const regole = schedule ?? { professional_id: selectedProfessional?.id ?? '', ...DEFAULT_SCHEDULE }
+
+    /**
+     * Perché una data non è selezionabile. Le regole del posatore valgono
+     * insieme al vincolo del materiale: vince il più restrittivo.
+     */
+    const perchePrecluso = (date: Date): string | null => {
+        if (date < primaDataUtile) {
+            return `Il materiale non può essere in cantiere prima del ${format(primaDataUtile, 'd MMMM', { locale: it })}`
+        }
+        const motivo = motivoIndisponibilita(date, {
+            schedule: regole,
+            assenze,
+            cantieriPerData,
+        })
+        return motivo ? motivoLeggibile(motivo) : null
+    }
+
+    const handleDayClick = (date: Date) => {
+        const motivo = perchePrecluso(date)
+        if (motivo) {
+            // Un giorno grigio senza spiegazione è la ragione per cui i
+            // calendari non si capiscono: qui il motivo si legge.
+            setMotivoScarto(motivo)
             return
         }
-
+        setMotivoScarto(null)
         setSelectedDate(date)
     }
 
@@ -121,6 +169,12 @@ export function Step8CalendarSelect() {
                 </p>
             </div>
 
+            {motivoScarto && (
+                <p className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-medium text-stone-700" role="status">
+                    {motivoScarto}
+                </p>
+            )}
+
             {/* Perché le prime date non sono selezionabili */}
             <div className="flex items-start gap-3 rounded-xl border border-amber-200/70 bg-amber-50/70 p-4">
                 <Truck className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
@@ -148,7 +202,7 @@ export function Step8CalendarSelect() {
                         modifiers={modifiers}
                         modifiersStyles={modifiersStyles}
                         locale={it}
-                        disabled={{ before: primaDataUtile }}
+                        disabled={(date: Date) => perchePrecluso(date) !== null}
                         footer={
                             <div className="mt-4 space-y-2 text-sm">
                                 <div className="flex items-center gap-2">
