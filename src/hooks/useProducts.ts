@@ -150,9 +150,17 @@ export function useProducts(options: UseProductsOptions = {}): UseProductsReturn
 }
 
 // Hook to get a single product by ID or slug
+/**
+ * Carica un prodotto per id o slug.
+ *
+ * Senza identificativo non c'e' niente da caricare: e' il caso della scheda
+ * di creazione, dove `loading` deve partire gia' a false. Lasciandolo a true
+ * la pagina restava bloccata su "Caricamento scheda prodotto" per sempre,
+ * perche' la fetch che avrebbe azzerato il flag non veniva mai eseguita.
+ */
 export function useProduct(idOrSlug: string) {
     const [product, setProduct] = useState<Product | null>(null)
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(Boolean(idOrSlug))
     const [error, setError] = useState<Error | null>(null)
 
     useEffect(() => {
@@ -185,6 +193,12 @@ export function useProduct(idOrSlug: string) {
 
         if (idOrSlug) {
             fetchProduct()
+        } else {
+            // Da scheda esistente a nuova scheda: si azzera invece di
+            // continuare a mostrare il prodotto precedente.
+            setProduct(null)
+            setError(null)
+            setLoading(false)
         }
     }, [idOrSlug])
 

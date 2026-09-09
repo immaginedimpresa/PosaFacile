@@ -31,16 +31,38 @@ interface UseAuthReturn extends AuthState {
  *
  * In caso di errore si assume il ruolo meno privilegiato.
  */
-async function fetchUserRole(userId: string): Promise<UserRole> {
+async function fetchUserRole(user: User): Promise<UserRole> {
     try {
         const { data, error } = await supabase
             .from('users')
             .select('role')
-            .eq('id', userId)
+            .eq('id', user.id)
             .maybeSingle()
 
-        if (error || !data?.role) return 'customer'
-        return data.role as UserRole
+        if (error) return 'customer'
+        if (data?.role) return data.role as UserRole
+
+        // Riga assente: succede se il trigger di registrazione e' fallito, e
+        // lascerebbe l'utente fuori dalla propria area senza spiegazione.
+        // Si ricrea al volo, con il ruolo dichiarato alla registrazione
+        // ridotto ai valori auto-assegnabili: 'admin' non passa mai da qui,
+        // e il trigger guard_user_role lo impedisce comunque lato database.
+        const dichiarato = user.user_metadata?.role
+        const ruolo: UserRole = dichiarato === 'professional' ? 'professional' : 'customer'
+
+        const { error: insertError } = await supabase.from('users').insert({
+            id: user.id,
+            email: user.email ?? '',
+            first_name: user.user_metadata?.first_name ?? '',
+            last_name: user.user_metadata?.last_name ?? '',
+            role: ruolo,
+        })
+
+        if (insertError) {
+            console.warn('Anagrafica utente non ricreata:', insertError.message)
+            return 'customer'
+        }
+        return ruolo
     } catch {
         return 'customer'
     }
@@ -65,7 +87,7 @@ export function useAuth(): UseAuthReturn {
                 if (!mounted) return
 
                 if (session?.user) {
-                    const role = await fetchUserRole(session.user.id)
+                    const role = await fetchUserRole(session.user)
                     if (!mounted) return
                     setState({
                         user: session.user,
@@ -98,7 +120,7 @@ export function useAuth(): UseAuthReturn {
                 // ruolo non arriva, per non far lampeggiare la schermata
                 // sbagliata a chi ha un ruolo diverso da 'customer'.
                 setState(s => ({ ...s, user: session.user, session, loading: true }))
-                fetchUserRole(session.user.id).then(role => {
+                fetchUserRole(session.user).then(role => {
                     if (!mounted) return
                     setState({ user: session.user, session, role, loading: false })
                 })
