@@ -15,6 +15,7 @@ import {
     Ruler,
     Sparkles,
 } from 'lucide-react'
+import { useProducts } from '@/hooks/useProducts'
 import { InstantEstimator } from '@/components/home/InstantEstimator'
 import { HomeFAQ } from '@/components/home/HomeFAQ'
 import './home.css'
@@ -52,6 +53,13 @@ const environments = [
 export default function HomePage() {
     const [active, setActive] = useState(0)
     const environment = environments[active]
+
+    // Le miniature della hero sono i prodotti reali a catalogo: la scelta
+    // fatta qui entra nella prova AI e da li' nel preventivo.
+    const { products } = useProducts({ status: 'active', limit: 6 })
+    const [tileIndex, setTileIndex] = useState(0)
+    const tile = products[tileIndex] ?? null
+    const provaAiLink = tile ? `/prova-ai?product=${tile.id}` : '/prova-ai'
     return (
         <div className="pf-home">
             <section
@@ -77,22 +85,19 @@ export default function HomePage() {
                         costruito intorno a te.
                     </p>
                     <div className="pf-hero-actions">
-                        <Link
-                            className="pf-button pf-button-orange"
-                            to="/configuratore"
-                        >
-                            Calcola il tuo preventivo <ArrowUpRight size={19} />
+                        <Link className="pf-button pf-button-orange" to={provaAiLink}>
+                            <Sparkles size={19} /> Provala nella tua stanza
                         </Link>
-                        <a className="pf-text-link" href="#ispirazioni">
-                            Trova il tuo stile <ArrowDown size={16} />
-                        </a>
+                        <Link className="pf-text-link" to="/configuratore">
+                            Vai al preventivo <ArrowUpRight size={16} />
+                        </Link>
                     </div>
                     <div className="pf-hero-assurances">
                         <span>
-                            <Check size={15} /> Preventivo gratuito
+                            <Check size={15} /> Carichi una foto, vedi il risultato
                         </span>
                         <span>
-                            <Check size={15} /> Senza impegno
+                            <Check size={15} /> Gratis e senza registrarti
                         </span>
                     </div>
                     <a href="#come-funziona" className="pf-hero-note">
@@ -149,30 +154,47 @@ export default function HomePage() {
                             </button>
                         </div>
                     </div>
-                    <div className="pf-material-selector">
-                        <span>
-                            Che atmosfera
-                            <br />
-                            <strong>ti somiglia?</strong>
-                        </span>
-                        <div>
-                            {environments.map((item, index) => (
-                                <button
-                                    key={item.mood}
-                                    aria-label={item.mood}
-                                    aria-pressed={active === index}
-                                    className={`pf-swatch ${item.swatch} ${active === index ? 'is-selected' : ''}`}
-                                    onClick={() => setActive(index)}
-                                >
-                                    {active === index && <Check size={18} />}
-                                </button>
-                            ))}
+                    {products.length > 0 && (
+                        <div className="pf-tile-picker">
+                            <span className="pf-tile-picker-label">
+                                Scegli una piastrella
+                                <br />
+                                <strong>e provala con l’AI</strong>
+                            </span>
+                            <div className="pf-tile-thumbs">
+                                {products.map((product, index) => {
+                                    const img = ((product.images as string[]) || [])[0]
+                                    const attiva = tileIndex === index
+                                    return (
+                                        <button
+                                            key={product.id}
+                                            type="button"
+                                            title={product.name}
+                                            aria-label={product.name}
+                                            aria-pressed={attiva}
+                                            className={`pf-tile-thumb ${attiva ? 'is-selected' : ''}`}
+                                            onClick={() => setTileIndex(index)}
+                                        >
+                                            {img && <img src={img} alt="" loading="lazy" />}
+                                            {attiva && (
+                                                <span className="pf-tile-check">
+                                                    <Check size={13} />
+                                                </span>
+                                            )}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            {tile && (
+                                <Link to={provaAiLink} className="pf-tile-current">
+                                    <strong>{tile.name}</strong>
+                                    <small>
+                                        € {Number(tile.price_per_sqm).toFixed(2)}/mq · Provala ora
+                                    </small>
+                                </Link>
+                            )}
                         </div>
-                        <span className="pf-selected-mood">
-                            {environment.mood}
-                            <small>Esplora gli ambienti</small>
-                        </span>
-                    </div>
+                    )}
                 </div>
             </section>
             <div className="pf-service-strip">

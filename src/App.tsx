@@ -19,6 +19,7 @@ import { CustomerDashboard } from '@/pages/private/CustomerDashboard'
 import { CustomerOrderDetailPage } from '@/pages/private/CustomerOrderDetailPage'
 import HomePage from '@/pages/public/HomePage'
 import { ProfessionalsPage } from '@/pages/public/ProfessionalsPage'
+import { AITryPage } from '@/pages/public/AITryPage'
 import { ScrollToTop } from '@/components/layout/ScrollToTop'
 import { ProLayout } from '@/components/layouts/ProLayout'
 import { DashboardPage } from '@/pages/pro/DashboardPage'
@@ -116,6 +117,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/professionisti" element={<ProfessionalsPage />} />
+          <Route path="/prova-ai" element={<AITryPage />} />
           <Route path="/products/:slug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CheckoutPage />} />
           <Route

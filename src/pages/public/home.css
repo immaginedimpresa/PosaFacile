@@ -1070,6 +1070,264 @@
 .pf-mobile-cta {
     display: none;
 }
+
+/* --- Selettore piastrelle della hero -------------------------------- */
+/* Sostituisce gli swatch d'atmosfera con i prodotti reali a catalogo:
+   la scelta fatta qui viaggia fino alla prova AI e al preventivo. */
+.pf-tile-picker {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 21px 5px 0;
+}
+.pf-tile-picker-label {
+    font-size: 11px;
+    color: #716a65;
+    line-height: 1.55;
+    flex-shrink: 0;
+}
+.pf-tile-picker-label strong {
+    color: #1c1917;
+    font-weight: 500;
+}
+.pf-tile-thumbs {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 3px 0;
+}
+.pf-tile-thumbs::-webkit-scrollbar {
+    display: none;
+}
+.pf-tile-thumb {
+    position: relative;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 11px;
+    overflow: hidden;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px #1c191714;
+    background: #e7e5e4;
+    transition:
+        transform 0.2s,
+        outline-color 0.2s;
+    outline: 1.5px solid transparent;
+}
+.pf-tile-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.pf-tile-thumb:hover {
+    transform: translateY(-3px);
+}
+.pf-tile-thumb.is-selected {
+    outline-color: #f97316;
+}
+.pf-tile-check {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #1c191759;
+    color: #fff;
+}
+.pf-tile-current {
+    margin-left: auto;
+    text-align: right;
+    flex-shrink: 0;
+}
+.pf-tile-current strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: #1c1917;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pf-tile-current small {
+    display: block;
+    color: #995b32;
+    font-size: 10px;
+    margin-top: 2px;
+}
+.pf-tile-current:hover small {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* --- Pagina prova AI ------------------------------------------------ */
+.pf-aitry-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 40px;
+    align-items: start;
+}
+.pf-aitry-picker h3 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #995b32;
+    margin-bottom: 16px;
+}
+.pf-aitry-thumbs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.pf-aitry-thumb {
+    position: relative;
+    border-radius: 13px;
+    overflow: hidden;
+    background: #f5f2ec;
+    border: 2px solid transparent;
+    text-align: left;
+    transition: border-color 0.2s;
+}
+.pf-aitry-thumb img,
+.pf-aitry-noimg {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #e7e5e4;
+}
+.pf-aitry-thumb small {
+    display: block;
+    padding: 7px 8px 8px;
+    font-size: 10px;
+    line-height: 1.35;
+    color: #57534e;
+}
+.pf-aitry-thumb.is-selected {
+    border-color: #f97316;
+}
+.pf-aitry-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 100%;
+    background: #f97316;
+    color: #1c1917;
+    display: grid;
+    place-items: center;
+}
+.pf-aitry-detail {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid #e7e5e4;
+}
+.pf-aitry-name {
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #1c1917;
+}
+.pf-aitry-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #716a65;
+    margin-top: 5px;
+}
+.pf-aitry-price {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin: 12px 0 14px;
+}
+.pf-aitry-price small {
+    font-size: 12px;
+    font-weight: 400;
+    color: #716a65;
+}
+.pf-aitry-empty {
+    font-size: 13px;
+    color: #716a65;
+    padding: 20px 0;
+}
+.pf-aitry-stage {
+    min-width: 0;
+}
+/* Il passo verso il preventivo resta sempre in vista: la prova AI è un
+   mezzo, non il traguardo. */
+.pf-aitry-next {
+    margin-top: 26px;
+    background: #f5f2ec;
+    border-radius: 18px;
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.pf-aitry-next-title {
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #1c1917;
+}
+.pf-aitry-next-text {
+    font-size: 13px;
+    color: #716a65;
+    margin-top: 5px;
+    max-width: 420px;
+    line-height: 1.7;
+}
+.pf-aitry .pf-image-disclaimer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 34px;
+}
+
+@media (max-width: 900px) {
+    .pf-aitry-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    .pf-aitry-thumbs {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    .pf-tile-picker {
+        gap: 14px;
+    }
+    .pf-tile-current {
+        display: none;
+    }
+}
+@media (max-width: 639px) {
+    .pf-tile-picker {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .pf-tile-thumbs {
+        width: 100%;
+    }
+    .pf-aitry-thumbs {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .pf-aitry-next {
+        padding: 20px;
+    }
+    .pf-aitry-next .pf-button {
+        width: 100%;
+    }
+}
+
 @media (min-width: 1600px) {
     .pf-hero {
         padding-block: 65px;
