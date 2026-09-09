@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
     ArrowDown,
     ArrowUpRight,
@@ -8,6 +8,7 @@ import {
     ChevronLeft,
     ChevronRight,
     ClipboardList,
+    ImagePlus,
     Layers,
     MapPin,
     MessageCircle,
@@ -15,6 +16,7 @@ import {
     Ruler,
     Sparkles,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { useProducts } from '@/hooks/useProducts'
 import { InstantEstimator } from '@/components/home/InstantEstimator'
 import { HomeFAQ } from '@/components/home/HomeFAQ'
@@ -56,10 +58,53 @@ export default function HomePage() {
 
     // Le miniature della hero sono i prodotti reali a catalogo: la scelta
     // fatta qui entra nella prova AI e da li' nel preventivo.
-    const { products } = useProducts({ status: 'active', limit: 6 })
+    const { products } = useProducts({ status: 'active', limit: 12 })
     const [tileIndex, setTileIndex] = useState(0)
     const tile = products[tileIndex] ?? null
-    const provaAiLink = tile ? `/prova-ai?product=${tile.id}` : '/prova-ai'
+    const navigate = useNavigate()
+    const stripRef = useRef<HTMLDivElement>(null)
+    const fileRef = useRef<HTMLInputElement>(null)
+
+    /** Scorre il carosello di una schermata per volta. */
+    const scorriMateriali = (verso: -1 | 1) => {
+        const strip = stripRef.current
+        if (!strip) return
+        strip.scrollBy({
+            left: verso * Math.max(strip.clientWidth * 0.8, 160),
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                ? 'instant'
+                : 'smooth',
+        })
+    }
+
+    /**
+     * La foto e' il vero inizio del percorso: si carica qui e viaggia in
+     * memoria fino alla pagina di anteprima, insieme al materiale scelto.
+     * Niente upload su server finche' l'utente non genera davvero.
+     */
+    const caricaFoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Serve un’immagine: JPG, PNG o HEIC.')
+            return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('La foto supera i 5 MB. Provane una più leggera.')
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            navigate('/prova-ai', {
+                state: { photo: reader.result as string, productId: tile?.id ?? null },
+            })
+        }
+        reader.onerror = () => toast.error('Non sono riuscito a leggere la foto. Riprova.')
+        reader.readAsDataURL(file)
+    }
     return (
         <div className="pf-home">
             <section
@@ -85,16 +130,27 @@ export default function HomePage() {
                         costruito intorno a te.
                     </p>
                     <div className="pf-hero-actions">
-                        <Link className="pf-button pf-button-orange" to={provaAiLink}>
-                            <Sparkles size={19} /> Provala nella tua stanza
-                        </Link>
-                        <Link className="pf-text-link" to="/configuratore">
-                            Vai al preventivo <ArrowUpRight size={16} />
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept="image/*"
+                            className="pf-visually-hidden"
+                            onChange={caricaFoto}
+                        />
+                        <button
+                            type="button"
+                            className="pf-button pf-button-orange"
+                            onClick={() => fileRef.current?.click()}
+                        >
+                            <ImagePlus size={19} /> Carica la foto della tua stanza
+                        </button>
+                        <Link className="pf-text-link" to="/prova-ai">
+                            Guarda un esempio <ArrowUpRight size={16} />
                         </Link>
                     </div>
                     <div className="pf-hero-assurances">
                         <span>
-                            <Check size={15} /> Carichi una foto, vedi il risultato
+                            <Check size={15} /> Pavimento o parete
                         </span>
                         <span>
                             <Check size={15} /> Gratis e senza registrarti
@@ -157,11 +213,19 @@ export default function HomePage() {
                     {products.length > 0 && (
                         <div className="pf-tile-picker">
                             <span className="pf-tile-picker-label">
-                                Scegli una piastrella
+                                1. Scegli il materiale
                                 <br />
-                                <strong>e provala con l’AI</strong>
+                                <strong>2. Carica la tua foto</strong>
                             </span>
-                            <div className="pf-tile-thumbs">
+                            <button
+                                type="button"
+                                className="pf-tile-arrow"
+                                aria-label="Materiali precedenti"
+                                onClick={() => scorriMateriali(-1)}
+                            >
+                                <ChevronLeft size={17} />
+                            </button>
+                            <div className="pf-tile-thumbs" ref={stripRef}>
                                 {products.map((product, index) => {
                                     const img = ((product.images as string[]) || [])[0]
                                     const attiva = tileIndex === index
@@ -185,13 +249,25 @@ export default function HomePage() {
                                     )
                                 })}
                             </div>
+                            <button
+                                type="button"
+                                className="pf-tile-arrow"
+                                aria-label="Materiali successivi"
+                                onClick={() => scorriMateriali(1)}
+                            >
+                                <ChevronRight size={17} />
+                            </button>
                             {tile && (
-                                <Link to={provaAiLink} className="pf-tile-current">
+                                <button
+                                    type="button"
+                                    className="pf-tile-current"
+                                    onClick={() => fileRef.current?.click()}
+                                >
                                     <strong>{tile.name}</strong>
                                     <small>
                                         € {Number(tile.price_per_sqm).toFixed(2)}/mq · Provala ora
                                     </small>
-                                </Link>
+                                </button>
                             )}
                         </div>
                     )}

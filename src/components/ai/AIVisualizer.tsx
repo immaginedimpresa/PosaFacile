@@ -10,6 +10,11 @@ interface AIVisualizerProps {
     tileWidth?: number
     tileHeight?: number
     initialLayingPattern?: LayingPattern
+    /** Foto gia' caricata altrove, per esempio dalla home. */
+    initialImage?: string | null
+    initialRoomType?: RoomType
+    /** Notifica la foto scelta, cosi' chi ospita il componente puo' conservarla. */
+    onImageChange?: (image: string | null) => void
     onResultGenerated?: (imageUrl: string) => void
 }
 
@@ -33,17 +38,23 @@ const ROOM_TYPES: { value: RoomType; label: string }[] = [
     { value: 'esterno', label: 'Esterno' },
 ]
 
-export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', onResultGenerated }: AIVisualizerProps) {
-    const [image, setImage] = useState<string | null>(null)
+export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', initialImage = null, initialRoomType = 'soggiorno', onImageChange, onResultGenerated }: AIVisualizerProps) {
+    const [image, setImage] = useState<string | null>(initialImage)
     const [resultImage, setResultImage] = useState<string | null>(null)
     const [processing, setProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [layingPattern, setLayingPattern] = useState<LayingPattern>(initialLayingPattern)
-    const [roomType, setRoomType] = useState<RoomType>('soggiorno')
+    const [roomType, setRoomType] = useState<RoomType>(initialRoomType)
 
     useEffect(() => {
         setLayingPattern(initialLayingPattern)
     }, [initialLayingPattern])
+
+    // La foto puo' arrivare dalla home: quando cambia va adottata, senza
+    // costringere l'utente a ricaricarla.
+    useEffect(() => {
+        if (initialImage) setImage(initialImage)
+    }, [initialImage])
 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -56,6 +67,7 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
             const reader = new FileReader()
             reader.onloadend = () => {
                 setImage(reader.result as string)
+                onImageChange?.(reader.result as string)
                 setResultImage(null)
                 setError(null)
             }
@@ -126,6 +138,7 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
 
     const handleReset = () => {
         setImage(null)
+        onImageChange?.(null)
         setResultImage(null)
         setError(null)
     }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpRight, Check, Ruler, Sparkles } from 'lucide-react'
 import { AIVisualizer } from '@/components/ai/AIVisualizer'
 import { useProducts } from '@/hooks/useProducts'
@@ -35,12 +35,22 @@ const formatoLeggibile = (w?: number | null, h?: number | null): string | null =
  */
 export function AITryPage() {
     const navigate = useNavigate()
+    const location = useLocation()
     const [searchParams] = useSearchParams()
+
+    // Foto e materiale scelti nella home viaggiano in memoria: nessun upload
+    // sul server finche' l'utente non genera davvero l'anteprima.
+    const daHome = (location.state ?? {}) as { photo?: string; productId?: string | null }
     const { products, loading } = useProducts({ status: 'active', limit: 12 })
     const { setSelectedProduct, setAiResultImage, setCurrentStep } = useConfiguratorStore()
 
-    const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('product'))
+    const [selectedId, setSelectedId] = useState<string | null>(
+        daHome.productId ?? searchParams.get('product'),
+    )
     const [risultato, setRisultato] = useState<string | null>(null)
+    // La foto vive qui e non nel visualizzatore: cambiando materiale il
+    // componente si rimonta, e chi ha gia' caricato non deve rifarlo.
+    const [foto, setFoto] = useState<string | null>(daHome.photo ?? null)
 
     // Il prodotto mostrato si deriva dalla selezione: se l'id nell'indirizzo
     // non corrisponde a niente si parte dal primo del catalogo.
@@ -74,9 +84,19 @@ export function AITryPage() {
                             <span className="pf-status-dot" /> ANTEPRIMA CON INTELLIGENZA ARTIFICIALE
                         </p>
                         <h2>
-                            La tua stanza,
-                            <br />
-                            con il pavimento che stai pensando.
+                            {daHome.photo ? (
+                                <>
+                                    La tua foto è pronta.
+                                    <br />
+                                    Scegli il materiale e guarda l’effetto.
+                                </>
+                            ) : (
+                                <>
+                                    La tua stanza,
+                                    <br />
+                                    con il pavimento che stai pensando.
+                                </>
+                            )}
                         </h2>
                     </div>
                     <p>
@@ -160,6 +180,8 @@ export function AITryPage() {
                                 productName={prodotto.name}
                                 tileWidth={prodotto.format_width ?? undefined}
                                 tileHeight={prodotto.format_height ?? undefined}
+                                initialImage={foto}
+                                onImageChange={setFoto}
                                 onResultGenerated={setRisultato}
                             />
                         ) : (
