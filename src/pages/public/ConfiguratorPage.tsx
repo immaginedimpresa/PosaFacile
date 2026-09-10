@@ -211,7 +211,7 @@ export function ConfiguratorPage() {
                     window.scrollTo(0, 0)
                 },
             },
-            cancel: { label: 'Annulla', onClick: () => {} },
+            cancel: { label: 'Annulla', onClick: () => { } },
             duration: 10000,
         })
     }
@@ -289,7 +289,7 @@ export function ConfiguratorPage() {
                 <div className="pf-container pf-config-layout">
                     <aside className="pf-config-sidebar">
                         <div className="pf-config-progress">
-                            <span>IL TUO PERCORSO</span>
+                            <span>IL TUO PREVENTIVO</span>
                             <span>{currentStep} / 9</span>
                         </div>
                         <nav aria-label="Passaggi del preventivo">
@@ -310,8 +310,8 @@ export function ConfiguratorPage() {
                                                 num === currentStep
                                                     ? 'is-current'
                                                     : num < currentStep
-                                                      ? 'is-complete'
-                                                      : ''
+                                                        ? 'is-complete'
+                                                        : ''
                                             }
                                         >
                                             <span>
@@ -363,7 +363,7 @@ export function ConfiguratorPage() {
                             {user ? (
                                 <>
                                     <span>
-                                        <Check size={14} /> Le tue scelte
+                                        <Check size={20} /> Le tue scelte
                                         restano memorizzate.
                                     </span>
                                     <Link to="/dashboard?tab=quotes">

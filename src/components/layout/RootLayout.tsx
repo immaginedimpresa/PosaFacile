@@ -1,7 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { Header } from './Header'
 import { Footer } from './Footer'
-import { useUserStore } from '@/store/userStore'
 import { useAuthSession } from '@/hooks/useAuthSession'
 
 interface RootLayoutProps {
@@ -10,18 +9,18 @@ interface RootLayoutProps {
 }
 
 export function RootLayout({ children, hideFooter }: RootLayoutProps) {
-    const { user, profile } = useUserStore()
     const location = useLocation()
 
     useAuthSession()
 
-    const userRole = profile?.role || user?.user_metadata?.role
-    const isStaffOrPro = userRole === 'admin' || userRole === 'professional'
-    const isPortalRoute =
-        location.pathname.startsWith('/admin') ||
-        location.pathname.startsWith('/pro')
+    // Match portal segments, not public routes such as /professionisti or /products.
+    const isPortalRoute = ['/admin', '/pro'].some(
+        (route) =>
+            location.pathname === route ||
+            location.pathname.startsWith(`${route}/`),
+    )
 
-    const shouldHideFooter = hideFooter || isPortalRoute || isStaffOrPro
+    const shouldHideFooter = hideFooter || isPortalRoute
 
     return (
         <div className="flex flex-col min-h-screen">

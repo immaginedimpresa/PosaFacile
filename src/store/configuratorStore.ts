@@ -10,6 +10,12 @@ import {
     type MarkupOverrides,
     type ProfessionalRates,
 } from '@/services/ratesService'
+import {
+    calculateDeliveryCost,
+    fetchLogisticsSettings,
+    type LogisticsSettings,
+    type DeliveryBreakdown,
+} from '@/services/settingsService'
 
 type Product = Database['public']['Tables']['products']['Row']
 
@@ -19,6 +25,19 @@ export interface ProjectInfo {
     intervento: 'nuova_costruzione' | 'ristrutturazione' | 'sostituzione' | null
     rimuoverePavimento: boolean
     fareMassetto: boolean
+}
+
+// Logistica di Consegna & Accesso al Cantiere (Piano, Scarico, Montacarichi, Sosta)
+export type FloorType = 'ground' | 'upper'
+export type DeliveryDestination = 'floor' | 'box'
+
+export interface DeliveryAccessInfo {
+    floorType: FloorType
+    floorNumber: number
+    destination: DeliveryDestination
+    hasUnloadingZone: boolean
+    hasFreightElevator: boolean
+    logisticsNotes: string
 }
 
 // Step 2: Product Selection
@@ -109,6 +128,8 @@ export interface ConfiguratorState {
     layingType: LayingType
     services: AdditionalServices
     location: LocationInfo
+    deliveryAccess: DeliveryAccessInfo
+    logisticsSettings: LogisticsSettings | null
     selectedProfessional: SelectedProfessional | null
     /** Tariffe del posatore scelto: sono loro a fare il preventivo. */
     professionalRates: ProfessionalRates | null
@@ -128,6 +149,8 @@ export interface ConfiguratorState {
     setLayingType: (type: LayingType) => void
     setServices: (services: Partial<AdditionalServices>) => void
     setLocation: (loc: Partial<LocationInfo>) => void
+    setDeliveryAccess: (access: Partial<DeliveryAccessInfo>) => void
+    loadLogisticsSettings: (force?: boolean) => Promise<void>
     setSelectedProfessional: (pro: SelectedProfessional | null) => void
     setProfessionalRates: (rates: ProfessionalRates | null) => void
     setSelectedDate: (date: Date | null) => void
@@ -138,6 +161,8 @@ export interface ConfiguratorState {
     getMaterialCost: () => number
     getLayingCost: () => number
     getServicesCost: () => number
+    getDeliveryBreakdown: () => DeliveryBreakdown
+    getDeliveryCost: () => number
     getSubtotal: () => number
     getVat: () => number
     getTotal: () => number
@@ -182,6 +207,15 @@ const initialState = {
         dataPreferita: null,
         flessibile: true,
     },
+    deliveryAccess: {
+        floorType: 'ground' as FloorType,
+        floorNumber: 0,
+        destination: 'floor' as DeliveryDestination,
+        hasUnloadingZone: true,
+        hasFreightElevator: false,
+        logisticsNotes: '',
+    },
+    logisticsSettings: null as LogisticsSettings | null,
     activeQuoteId: null,
     selectedProfessional: null,
     professionalRates: null,
@@ -255,6 +289,14 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                         dataPreferita: quote.scheduled_date || null,
                         flessibile: true,
                     },
+                    deliveryAccess: {
+                        floorType: (quote.delivery_access?.floorType || servicesObj.delivery_access?.floorType || 'ground'),
+                        floorNumber: Number(quote.delivery_access?.floorNumber ?? servicesObj.delivery_access?.floorNumber ?? 0),
+                        destination: (quote.delivery_access?.destination || servicesObj.delivery_access?.destination || 'floor'),
+                        hasUnloadingZone: (quote.delivery_access?.hasUnloadingZone ?? servicesObj.delivery_access?.hasUnloadingZone ?? true),
+                        hasFreightElevator: (quote.delivery_access?.hasFreightElevator ?? servicesObj.delivery_access?.hasFreightElevator ?? false),
+                        logisticsNotes: quote.delivery_access?.logisticsNotes || servicesObj.delivery_access?.logisticsNotes || '',
+                    },
                     selectedDate: quote.scheduled_date ? new Date(quote.scheduled_date) : null,
                     aiResultImage: quote.ai_result_image || null,
                 })
@@ -287,6 +329,19 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                         : {}),
                 }
             }),
+
+            setDeliveryAccess: (access) => set((state) => ({
+                deliveryAccess: { ...state.deliveryAccess, ...access }
+            })),
+
+            loadLogisticsSettings: async (force = false) => {
+                try {
+                    const settings = await fetchLogisticsSettings(force)
+                    set({ logisticsSettings: settings })
+                } catch (e) {
+                    console.warn('Errore nel caricamento impostazioni logistica:', e)
+                }
+            },
 
             setSelectedProfessional: (pro) => set({ selectedProfessional: pro }),
             setProfessionalRates: (rates) => set({ professionalRates: rates }),
@@ -345,8 +400,20 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                 return cost
             },
 
+            getDeliveryBreakdown: () => {
+                const { deliveryAccess, logisticsSettings } = get()
+                if (!logisticsSettings) {
+                    get().loadLogisticsSettings()
+                }
+                return calculateDeliveryCost(deliveryAccess, logisticsSettings)
+            },
+
+            getDeliveryCost: () => {
+                return get().getDeliveryBreakdown().total
+            },
+
             getSubtotal: () => {
-                return get().getMaterialCost() + get().getLayingCost() + get().getServicesCost()
+                return get().getMaterialCost() + get().getLayingCost() + get().getServicesCost() + get().getDeliveryCost()
             },
 
             getVat: () => {

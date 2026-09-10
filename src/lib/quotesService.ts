@@ -85,7 +85,11 @@ export async function saveCurrentQuote(
             floor_sqm: state.dimensions.pavimentoMq || 0,
             wall_sqm: state.dimensions.paretiMq || 0,
             laying_type: state.layingType || 'dritta',
-            services: state.services,
+            services: {
+                ...state.services,
+                delivery_access: state.deliveryAccess,
+                delivery_cost: state.getDeliveryCost(),
+            },
             address: state.location.indirizzo || '',
             city: state.location.citta || '',
             provincia: state.location.provincia || '',
@@ -221,7 +225,9 @@ export async function convertSavedQuoteToOrder(
                 street: quote.address,
                 city: quote.city,
                 province: quote.provincia,
-                postal_code: quote.cap
+                postal_code: quote.cap,
+                delivery_access: (quote.services as any)?.delivery_access || null,
+                delivery_cost: (quote.services as any)?.delivery_cost || 0,
             },
             installation_date: quote.scheduled_date,
             installation_professional_id: quote.professional_id || null,

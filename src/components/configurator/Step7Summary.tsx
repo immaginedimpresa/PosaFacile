@@ -19,9 +19,11 @@ export function Step7Summary() {
         layingType,
         services,
         location,
+        deliveryAccess,
         getTotalMq,
         getMaterialCost,
         getLayingCost,
+        getDeliveryCost,
         getSubtotal,
         getVat,
         getTotal,
@@ -42,6 +44,7 @@ export function Step7Summary() {
     const totalMq = getTotalMq()
     const materialCost = getMaterialCost()
     const layingCost = getLayingCost()
+    const deliveryCost = getDeliveryCost()
     const subtotal = getSubtotal()
     const vat = getVat()
     const total = getTotal()
@@ -141,8 +144,8 @@ export function Step7Summary() {
                 }
             }
 
-            // Create initial draft order
-            let orderData;
+            let orderData: any = null
+
             try {
                 // Try to link both User and Profile (Best effort)
                 const { data, error } = await supabase
@@ -160,14 +163,19 @@ export function Step7Summary() {
                             projectInfo,
                             dimensions,
                             services,
-                            layingType
+                            layingType,
+                            delivery_access: deliveryAccess,
+                            delivery_cost: deliveryCost,
                         }],
                         installation_address: {
                             street: location.indirizzo,
                             city: location.citta,
                             province: location.provincia,
-                            postal_code: location.cap
+                            postal_code: location.cap,
+                            delivery_access: deliveryAccess,
+                            delivery_cost: deliveryCost,
                         },
+                        notes: deliveryAccess.logisticsNotes || null,
                         installation_date: effectiveDate,
                         professional_id: selectedProfessional?.id, // Legacy link (User)
                         installation_professional_id: selectedProfessional?.id, // Correct link (Profile)
@@ -213,14 +221,19 @@ export function Step7Summary() {
                                 projectInfo,
                                 dimensions,
                                 services,
-                                layingType
+                                layingType,
+                                delivery_access: deliveryAccess,
+                                delivery_cost: deliveryCost,
                             }],
                             installation_address: {
                                 street: location.indirizzo,
                                 city: location.citta,
                                 province: location.provincia,
-                                postal_code: location.cap
+                                postal_code: location.cap,
+                                delivery_access: deliveryAccess,
+                                delivery_cost: deliveryCost,
                             },
+                            notes: deliveryAccess.logisticsNotes || null,
                             installation_date: effectiveDate,
                             professional_id: null, // Skip legacy link
                             installation_professional_id: selectedProfessional?.id, // Keep Profile link
@@ -347,9 +360,9 @@ export function Step7Summary() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-orange-500" />
-                    Luogo di lavoro
+                    Luogo di lavoro & Accesso Cantiere
                 </h4>
-                <p className="text-sm">{location.indirizzo}</p>
+                <p className="text-sm font-semibold text-stone-900">{location.indirizzo}</p>
                 <p className="text-sm text-gray-500">{location.cap} {location.citta} ({location.provincia})</p>
 
                 <div className="flex items-center gap-2 mt-3">
@@ -364,6 +377,37 @@ export function Step7Summary() {
                         Cantiere di {formatDays(durata.calendarDays)}, da confermare con il posatore.
                     </p>
                 )}
+
+                {/* Badges Accesso & Scarico */}
+                <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2 text-xs">
+                    <span className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 ${
+                        deliveryAccess.destination === 'box'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    }`}>
+                        {deliveryAccess.destination === 'box'
+                            ? '📦 Scarico nel Box / Garage (Piano Terra)'
+                            : `🏢 Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                        }
+                    </span>
+                    {deliveryAccess.destination === 'floor' && deliveryAccess.floorType === 'upper' && (
+                        <span className="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 font-medium">
+                            {deliveryAccess.hasFreightElevator ? '🛗 Con montacarichi' : '🚶 A piedi via scale'}
+                        </span>
+                    )}
+                    <span className={`px-2.5 py-1 rounded-lg font-medium border ${
+                        deliveryAccess.hasUnloadingZone
+                            ? 'bg-stone-50 text-stone-600 border-stone-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                        {deliveryAccess.hasUnloadingZone ? '🚚 Sosta adiacente (≤50m)' : '⚠️ Sosta distante (>50m)'}
+                    </span>
+                    {deliveryAccess.logisticsNotes && (
+                        <p className="w-full text-xs text-stone-500 italic mt-1">
+                            Note autista: &ldquo;{deliveryAccess.logisticsNotes}&rdquo;
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* Durata stimata del cantiere */}
@@ -428,6 +472,32 @@ export function Step7Summary() {
                             <span>€{costoServizio('soglie', services.soglieQty).toFixed(2)}</span>
                         </div>
                     )}
+
+                    {/* Consegna e Facchinaggio */}
+                    <div className="flex justify-between text-gray-600">
+                        <div className="flex flex-col">
+                            <span>
+                                {deliveryAccess.destination === 'box'
+                                    ? 'Consegna & Scarico nel Box/Garage'
+                                    : `Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                                }
+                            </span>
+                            <span className="text-[11px] text-gray-400">
+                                {deliveryAccess.destination === 'box'
+                                    ? 'Scarico a livello strada nel box (nessun supplemento piano)'
+                                    : deliveryAccess.floorType === 'ground'
+                                        ? 'Scarico a terra'
+                                        : deliveryAccess.hasFreightElevator
+                                            ? 'Con montacarichi abilitato'
+                                            : 'A piedi via scale (senza montacarichi)'
+                                }
+                                {!deliveryAccess.hasUnloadingZone && ' • Sosta distante (>50m)'}
+                            </span>
+                        </div>
+                        <span className="font-medium text-gray-900">
+                            {deliveryCost > 0 ? `€${deliveryCost.toFixed(2)}` : 'Incluso'}
+                        </span>
+                    </div>
 
                     <div className="border-t border-gray-200 pt-3 mt-3">
                         <div className="flex justify-between">

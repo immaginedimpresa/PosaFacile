@@ -12,7 +12,10 @@ import {
     UserCheck,
     FileText,
     AlertCircle,
-    ListChecks
+    ListChecks,
+    Truck,
+    Package,
+    Building2
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ORDER_STATUSES, type OrderStatus, orderStatusLabel, orderStatusColor } from '@/lib/orderStatus'
@@ -168,8 +171,24 @@ export function OrderDetailDrawer({
 
     const currentStatusColor = orderStatusColor(status)
     const currentStatusText = orderStatusLabel(status)
-
     const jobId = order?.jobs?.[0]?.id
+
+    const deliveryAccess =
+        (typeof order?.installation_address === 'object' && order?.installation_address !== null
+            ? order.installation_address.delivery_access
+            : null) ||
+        (order?.items?.[0]?.delivery_access ?? null)
+
+    const deliveryCost =
+        (typeof order?.installation_address === 'object' && order?.installation_address !== null
+            ? order.installation_address.delivery_cost
+            : null) ||
+        (order?.items?.[0]?.delivery_cost ?? 0)
+
+    const logisticsNotes =
+        deliveryAccess?.logisticsNotes ||
+        order?.notes ||
+        null
 
     return (
         <AnimatePresence>
@@ -387,11 +406,128 @@ export function OrderDetailDrawer({
                                             <p className="text-sm font-semibold text-stone-900">
                                                 {typeof order.installation_address === 'string'
                                                     ? order.installation_address
-                                                    : order.shipping_address?.address || order.installation_address?.address || 'Non specificato'}
+                                                    : order.shipping_address?.address || order.installation_address?.address || order.installation_address?.street || 'Non specificato'}
                                             </p>
                                             <p className="text-xs text-stone-500 mt-0.5">
-                                                {order.shipping_address?.city || order.installation_address?.city} {order.shipping_address?.cap || order.installation_address?.cap}
+                                                {order.shipping_address?.city || order.installation_address?.city} {order.shipping_address?.cap || order.installation_address?.postal_code || order.installation_address?.cap}
                                             </p>
+                                        </div>
+
+                                        {/* Logistica di Consegna & Accesso Cantiere */}
+                                        <div className="bg-white rounded-2xl p-5 border border-stone-200 space-y-4">
+                                            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
+                                                    <Truck size={14} className="text-orange-500" />
+                                                    <span>Logistica di Consegna & Accesso Cantiere</span>
+                                                </h3>
+                                                {Number(deliveryCost) > 0 ? (
+                                                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80">
+                                                        Supplemento: +€ {Number(deliveryCost).toFixed(2)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                                                        Scarico base a terra
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {deliveryAccess ? (
+                                                <div className="space-y-3">
+                                                    {deliveryAccess.destination === 'box' ? (
+                                                        <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 flex items-start gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                                                                <Package size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                                                                        Scarico nel Box / Garage
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
+                                                                        Piano Terra
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-emerald-800 mt-0.5">
+                                                                    I materiali pesanti vengono scaricati a livello strada nel garage/box. Nessun facchinaggio ai piani superiori.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200/80 flex items-start gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shrink-0">
+                                                                <Building2 size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-bold text-blue-950 uppercase tracking-wide">
+                                                                        Consegna al Piano ({deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`})
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-blue-800 mt-0.5">
+                                                                    I colli devono essere trasportati all&apos;interno dell&apos;abitazione / cantiere al piano indicato.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dettagli Dotazioni & Sosta */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                                        {/* Montacarichi */}
+                                                        <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400">Dotazione Montacarichi</span>
+                                                            <div className="flex items-center gap-1.5 font-semibold">
+                                                                {deliveryAccess.destination === 'box' ? (
+                                                                    <span className="text-stone-600">Non richiesto (scarico a terra)</span>
+                                                                ) : deliveryAccess.floorType === 'ground' ? (
+                                                                    <span className="text-stone-600">Non necessario (piano terra)</span>
+                                                                ) : deliveryAccess.hasFreightElevator ? (
+                                                                    <span className="text-emerald-700 flex items-center gap-1">
+                                                                        <CheckCircle2 size={13} className="text-emerald-600" />
+                                                                        Montacarichi abilitato presente
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-amber-800 flex items-center gap-1">
+                                                                        <AlertCircle size={13} className="text-amber-600" />
+                                                                        A piedi via scale (senza ascensore)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Sosta Furgone */}
+                                                        <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400">Sosta & Scarico Furgone</span>
+                                                            <div className="flex items-center gap-1.5 font-semibold">
+                                                                {deliveryAccess.hasUnloadingZone !== false ? (
+                                                                    <span className="text-emerald-700 flex items-center gap-1">
+                                                                        <CheckCircle2 size={13} className="text-emerald-600" />
+                                                                        Sosta adiacente (≤ 50m)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-amber-800 flex items-center gap-1">
+                                                                        <AlertCircle size={13} className="text-amber-600" />
+                                                                        Sosta distante (&gt; 50m) / ZTL
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Note autista se presenti */}
+                                                    {logisticsNotes && (
+                                                        <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 text-xs">
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400 block mb-0.5">Note Trasportatore / Autista</span>
+                                                            <p className="text-stone-800 italic font-medium">
+                                                                &ldquo;{logisticsNotes}&rdquo;
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-stone-400 py-1">
+                                                    Nessun dato logistico avanzato specificato per questo ordine (ordine precedente o scarico standard).
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Articoli & Servizi */}
