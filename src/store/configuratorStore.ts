@@ -29,7 +29,7 @@ export interface ProjectInfo {
 
 // Logistica di Consegna & Accesso al Cantiere (Piano, Scarico, Montacarichi, Sosta)
 export type FloorType = 'ground' | 'upper'
-export type DeliveryDestination = 'floor' | 'box'
+export type DeliveryDestination = 'floor' | 'box' | 'street'
 
 export interface DeliveryAccessInfo {
     floorType: FloorType

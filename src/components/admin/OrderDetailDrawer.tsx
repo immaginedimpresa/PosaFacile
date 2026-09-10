@@ -433,7 +433,26 @@ export function OrderDetailDrawer({
 
                                             {deliveryAccess ? (
                                                 <div className="space-y-3">
-                                                    {deliveryAccess.destination === 'box' ? (
+                                                    {deliveryAccess.destination === 'street' ? (
+                                                        <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 flex items-start gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                                                <Truck size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                                                                        Scarico a Bordo Strada (Ci pensa il cliente)
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
+                                                                        Sponda Idraulica • €0
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-emerald-800 mt-0.5">
+                                                                    Il trasportatore scarica a bordo strada con sponda idraulica a livello terra. Il cliente si occupa in autonomia della movimentazione e salita al piano dei materiali.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : deliveryAccess.destination === 'box' ? (
                                                         <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200/80 flex items-start gap-3">
                                                             <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
                                                                 <Package size={16} />
@@ -476,7 +495,9 @@ export function OrderDetailDrawer({
                                                         <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
                                                             <span className="text-[10px] uppercase font-bold text-stone-400">Dotazione Montacarichi</span>
                                                             <div className="flex items-center gap-1.5 font-semibold">
-                                                                {deliveryAccess.destination === 'box' ? (
+                                                                {deliveryAccess.destination === 'street' ? (
+                                                                    <span className="text-stone-600">Non richiesto (bordo strada)</span>
+                                                                ) : deliveryAccess.destination === 'box' ? (
                                                                     <span className="text-stone-600">Non richiesto (scarico a terra)</span>
                                                                 ) : deliveryAccess.floorType === 'ground' ? (
                                                                     <span className="text-stone-600">Non necessario (piano terra)</span>
@@ -498,7 +519,12 @@ export function OrderDetailDrawer({
                                                         <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
                                                             <span className="text-[10px] uppercase font-bold text-stone-400">Sosta & Scarico Furgone</span>
                                                             <div className="flex items-center gap-1.5 font-semibold">
-                                                                {deliveryAccess.hasUnloadingZone !== false ? (
+                                                                {deliveryAccess.destination === 'street' ? (
+                                                                    <span className="text-emerald-700 flex items-center gap-1">
+                                                                        <CheckCircle2 size={13} className="text-emerald-600" />
+                                                                        Scarico diretto con sponda su strada
+                                                                    </span>
+                                                                ) : deliveryAccess.hasUnloadingZone !== false ? (
                                                                     <span className="text-emerald-700 flex items-center gap-1">
                                                                         <CheckCircle2 size={13} className="text-emerald-600" />
                                                                         Sosta adiacente (≤ 50m)

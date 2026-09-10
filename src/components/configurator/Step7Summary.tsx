@@ -381,13 +381,17 @@ export function Step7Summary() {
                 {/* Badges Accesso & Scarico */}
                 <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2 text-xs">
                     <span className={`px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 ${
-                        deliveryAccess.destination === 'box'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        deliveryAccess.destination === 'street'
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : deliveryAccess.destination === 'box'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
                     }`}>
-                        {deliveryAccess.destination === 'box'
-                            ? '📦 Scarico nel Box / Garage (Piano Terra)'
-                            : `🏢 Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                        {deliveryAccess.destination === 'street'
+                            ? '🚚 Scarico a Bordo Strada (Ci penso io!)'
+                            : deliveryAccess.destination === 'box'
+                                ? '📦 Scarico nel Box / Garage (Piano Terra)'
+                                : `🏢 Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
                         }
                     </span>
                     {deliveryAccess.destination === 'floor' && deliveryAccess.floorType === 'upper' && (
@@ -395,13 +399,15 @@ export function Step7Summary() {
                             {deliveryAccess.hasFreightElevator ? '🛗 Con montacarichi' : '🚶 A piedi via scale'}
                         </span>
                     )}
-                    <span className={`px-2.5 py-1 rounded-lg font-medium border ${
-                        deliveryAccess.hasUnloadingZone
-                            ? 'bg-stone-50 text-stone-600 border-stone-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                        {deliveryAccess.hasUnloadingZone ? '🚚 Sosta adiacente (≤50m)' : '⚠️ Sosta distante (>50m)'}
-                    </span>
+                    {deliveryAccess.destination !== 'street' && (
+                        <span className={`px-2.5 py-1 rounded-lg font-medium border ${
+                            deliveryAccess.hasUnloadingZone
+                                ? 'bg-stone-50 text-stone-600 border-stone-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                            {deliveryAccess.hasUnloadingZone ? '🚚 Sosta adiacente (≤50m)' : '⚠️ Sosta distante (>50m)'}
+                        </span>
+                    )}
                     {deliveryAccess.logisticsNotes && (
                         <p className="w-full text-xs text-stone-500 italic mt-1">
                             Note autista: &ldquo;{deliveryAccess.logisticsNotes}&rdquo;
@@ -477,21 +483,25 @@ export function Step7Summary() {
                     <div className="flex justify-between text-gray-600">
                         <div className="flex flex-col">
                             <span>
-                                {deliveryAccess.destination === 'box'
-                                    ? 'Consegna & Scarico nel Box/Garage'
-                                    : `Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                                {deliveryAccess.destination === 'street'
+                                    ? 'Scarico a Bordo Strada (Ci penso io!)'
+                                    : deliveryAccess.destination === 'box'
+                                        ? 'Consegna & Scarico nel Box/Garage'
+                                        : `Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
                                 }
                             </span>
                             <span className="text-[11px] text-gray-400">
-                                {deliveryAccess.destination === 'box'
-                                    ? 'Scarico a livello strada nel box (nessun supplemento piano)'
-                                    : deliveryAccess.floorType === 'ground'
-                                        ? 'Scarico a terra'
-                                        : deliveryAccess.hasFreightElevator
-                                            ? 'Con montacarichi abilitato'
-                                            : 'A piedi via scale (senza montacarichi)'
+                                {deliveryAccess.destination === 'street'
+                                    ? 'Scarico a terra con sponda idraulica (nessun supplemento)'
+                                    : deliveryAccess.destination === 'box'
+                                        ? 'Scarico a livello strada nel box (nessun supplemento piano)'
+                                        : deliveryAccess.floorType === 'ground'
+                                            ? 'Scarico a terra'
+                                            : deliveryAccess.hasFreightElevator
+                                                ? 'Con montacarichi abilitato'
+                                                : 'A piedi via scale (senza montacarichi)'
                                 }
-                                {!deliveryAccess.hasUnloadingZone && ' • Sosta distante (>50m)'}
+                                {deliveryAccess.destination !== 'street' && !deliveryAccess.hasUnloadingZone && ' • Sosta distante (>50m)'}
                             </span>
                         </div>
                         <span className="font-medium text-gray-900">

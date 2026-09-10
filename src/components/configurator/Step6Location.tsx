@@ -71,15 +71,50 @@ export function Step6Location() {
                     )}
                 </div>
 
-                {/* 1. Destinazione di Scarico: Box vs Appartamento */}
+                {/* 1. Destinazione di Scarico: Strada vs Box vs Appartamento */}
                 <div className="space-y-3">
                     <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">
                         1. Destinazione di Scarico del Materiale
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                        {/* A Bordo Strada - Ci penso io! */}
+                        <div
+                            onClick={() => setDeliveryAccess({ destination: 'street', floorType: 'ground', floorNumber: 0, hasUnloadingZone: true })}
+                            className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                deliveryAccess.destination === 'street'
+                                    ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/10'
+                                    : 'border-stone-200 hover:border-stone-300 bg-stone-50/40'
+                            }`}
+                        >
+                            <div className="flex items-start gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                    deliveryAccess.destination === 'street' ? 'bg-emerald-500 text-white' : 'bg-stone-200 text-stone-600'
+                                }`}>
+                                    <Truck className="w-5 h-5" />
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <h4 className="font-bold text-stone-900 text-sm">A Bordo Strada</h4>
+                                        <span className="text-[10px] uppercase font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                                            Ci penso io!
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-stone-500 leading-relaxed">
+                                        Scarico a piano terra con sponda idraulica; alla salita al piano o dentro casa ci pensi tu in autonomia.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center justify-between text-xs font-semibold">
+                                <span className="text-emerald-700 flex items-center gap-1">
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Nessun costo aggiuntivo
+                                </span>
+                                <span className="font-bold text-emerald-700">€ 0.00</span>
+                            </div>
+                        </div>
+
                         {/* Box / Garage */}
                         <div
-                            onClick={() => setDeliveryAccess({ destination: 'box' })}
+                            onClick={() => setDeliveryAccess({ destination: 'box', floorType: 'ground', floorNumber: 0 })}
                             className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                                 deliveryAccess.destination === 'box'
                                     ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/10'
@@ -95,7 +130,7 @@ export function Step6Location() {
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <h4 className="font-bold text-stone-900 text-sm">Scarico nel Box / Garage</h4>
-                                        <span className="text-[10px] uppercase font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                                        <span className="text-[10px] uppercase font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
                                             Piano Terra
                                         </span>
                                     </div>
@@ -106,7 +141,7 @@ export function Step6Location() {
                             </div>
                             <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center justify-between text-xs font-semibold">
                                 <span className="text-emerald-700 flex items-center gap-1">
-                                    <ShieldCheck className="w-3.5 h-3.5" /> Nessun costo facchinaggio ai piani
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Nessun costo piani
                                 </span>
                                 <span className="font-bold text-emerald-700">€ 0.00</span>
                             </div>
@@ -129,7 +164,7 @@ export function Step6Location() {
                                 </div>
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
-                                        <h4 className="font-bold text-stone-900 text-sm">Consegna al Piano (Appartamento)</h4>
+                                        <h4 className="font-bold text-stone-900 text-sm">Consegna al Piano</h4>
                                     </div>
                                     <p className="text-xs text-stone-500 leading-relaxed">
                                         I materiali vengono portati direttamente al piano e all&apos;interno dell&apos;immobile / cantiere.
@@ -138,7 +173,7 @@ export function Step6Location() {
                             </div>
                             <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center justify-between text-xs font-semibold">
                                 <span className="text-blue-700 flex items-center gap-1">
-                                    <Info className="w-3.5 h-3.5" /> Tariffa in base al piano e montacarichi
+                                    <Info className="w-3.5 h-3.5" /> In base al piano e ascensore
                                 </span>
                                 <span className="font-bold text-stone-700">
                                     {deliveryAccess.floorType === 'ground' ? '€ 0.00' : `+€ ${breakdown.floorCost.toFixed(2)}`}
@@ -259,61 +294,63 @@ export function Step6Location() {
                 )}
 
                 {/* 3. Zona di Sosta e Scarico Furgone */}
-                <div className="space-y-3 pt-2 border-t border-stone-100">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">
-                        3. Sosta e Spazio di Scarico per il Furgone
-                    </label>
+                {deliveryAccess.destination !== 'street' && (
+                    <div className="space-y-3 pt-2 border-t border-stone-100">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">
+                            3. Sosta e Spazio di Scarico per il Furgone
+                        </label>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div
-                            onClick={() => setDeliveryAccess({ hasUnloadingZone: true })}
-                            className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
-                                deliveryAccess.hasUnloadingZone
-                                    ? 'border-stone-900 bg-stone-50 ring-1 ring-stone-900/10'
-                                    : 'border-stone-200 bg-white hover:border-stone-300'
-                            }`}
-                        >
-                            <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${
-                                deliveryAccess.hasUnloadingZone ? 'text-emerald-600' : 'text-stone-300'
-                            }`} />
-                            <div>
-                                <h4 className="font-bold text-stone-900 text-xs sm:text-sm">Sosta adiacente all&apos;ingresso (≤ 50m)</h4>
-                                <p className="text-stone-500 text-xs mt-0.5">
-                                    Il mezzo può sostare regolarmente in prossimità del portone / cancello.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div
-                            onClick={() => setDeliveryAccess({ hasUnloadingZone: false })}
-                            className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
-                                !deliveryAccess.hasUnloadingZone
-                                    ? 'border-amber-500 bg-amber-50/50 ring-1 ring-amber-500/10'
-                                    : 'border-stone-200 bg-white hover:border-stone-300'
-                            }`}
-                        >
-                            <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
-                                !deliveryAccess.hasUnloadingZone ? 'text-amber-600' : 'text-stone-300'
-                            }`} />
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <h4 className="font-bold text-stone-900 text-xs sm:text-sm">Sosta distante / ZTL (&gt; 50m)</h4>
-                                    <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
-                                        +€ {(logisticsSettings?.noUnloadingZoneSurcharge ?? 35).toFixed(0)}
-                                    </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div
+                                onClick={() => setDeliveryAccess({ hasUnloadingZone: true })}
+                                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                                    deliveryAccess.hasUnloadingZone
+                                        ? 'border-stone-900 bg-stone-50 ring-1 ring-stone-900/10'
+                                        : 'border-stone-200 bg-white hover:border-stone-300'
+                                }`}
+                            >
+                                <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${
+                                    deliveryAccess.hasUnloadingZone ? 'text-emerald-600' : 'text-stone-300'
+                                }`} />
+                                <div>
+                                    <h4 className="font-bold text-stone-900 text-xs sm:text-sm">Sosta adiacente all&apos;ingresso (≤ 50m)</h4>
+                                    <p className="text-stone-500 text-xs mt-0.5">
+                                        Il mezzo può sostare regolarmente in prossimità del portone / cancello.
+                                    </p>
                                 </div>
-                                <p className="text-stone-500 text-xs mt-0.5">
-                                    ZTL, via pedonale o divieto di fermata che richiede trasbordo manuale prolungato.
-                                </p>
+                            </div>
+
+                            <div
+                                onClick={() => setDeliveryAccess({ hasUnloadingZone: false })}
+                                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                                    !deliveryAccess.hasUnloadingZone
+                                        ? 'border-amber-500 bg-amber-50/50 ring-1 ring-amber-500/10'
+                                        : 'border-stone-200 bg-white hover:border-stone-300'
+                                }`}
+                            >
+                                <AlertCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
+                                    !deliveryAccess.hasUnloadingZone ? 'text-amber-600' : 'text-stone-300'
+                                }`} />
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <h4 className="font-bold text-stone-900 text-xs sm:text-sm">Sosta distante / ZTL (&gt; 50m)</h4>
+                                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                                            +€ {(logisticsSettings?.noUnloadingZoneSurcharge ?? 35).toFixed(0)}
+                                        </span>
+                                    </div>
+                                    <p className="text-stone-500 text-xs mt-0.5">
+                                        ZTL, via pedonale o divieto di fermata che richiede trasbordo manuale prolungato.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* 4. Note Logistiche */}
                 <div className="space-y-1.5 pt-2 border-t border-stone-100">
                     <label className="block text-xs font-bold uppercase tracking-wider text-stone-500">
-                        4. Note per l&apos;Autista o Trasportatore (Opzionale)
+                        {deliveryAccess.destination === 'street' ? '2.' : '4.'} Note per l&apos;Autista o Trasportatore (Opzionale)
                     </label>
                     <textarea
                         rows={2}
@@ -329,13 +366,15 @@ export function Step6Location() {
                     <div className="flex items-center gap-2 text-stone-600">
                         <Info className="w-4 h-4 text-orange-500 shrink-0" />
                         <span>
-                            {deliveryAccess.destination === 'box'
-                                ? 'Scarico a livello strada nel box: nessun costo di piano applicato.'
-                                : deliveryAccess.floorType === 'ground'
-                                    ? 'Consegna al piano terra: nessun supplemento di piano.'
-                                    : `Consegna al ${deliveryAccess.floorNumber}° piano (${deliveryAccess.hasFreightElevator ? 'con montacarichi' : 'a piedi via scale'}).`
+                            {deliveryAccess.destination === 'street'
+                                ? 'Scarico a bordo strada con sponda idraulica (ci penso io): nessun costo o supplemento applicato!'
+                                : deliveryAccess.destination === 'box'
+                                    ? 'Scarico a livello strada nel box: nessun costo di piano applicato.'
+                                    : deliveryAccess.floorType === 'ground'
+                                        ? 'Consegna al piano terra: nessun supplemento di piano.'
+                                        : `Consegna al ${deliveryAccess.floorNumber}° piano (${deliveryAccess.hasFreightElevator ? 'con montacarichi' : 'a piedi via scale'}).`
                             }
-                            {!deliveryAccess.hasUnloadingZone ? ' (Inclusa maggiorazione sosta distante).' : ''}
+                            {deliveryAccess.destination !== 'street' && !deliveryAccess.hasUnloadingZone ? ' (Inclusa maggiorazione sosta distante).' : ''}
                         </span>
                     </div>
                     <div className="font-bold text-stone-900 shrink-0">

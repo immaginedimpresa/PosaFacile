@@ -36,17 +36,18 @@ export interface DeliveryBreakdown {
     floorCost: number
     parkingSurcharge: number
     isBoxDelivery: boolean
+    isStreetDelivery: boolean
 }
 
 /**
  * Calcola il costo totale di consegna e facchinaggio in base al piano,
- * alla presenza di montacarichi, allo scarico nel box e alla distanza della sosta.
+ * alla presenza di montacarichi, allo scarico nel box o a bordo strada.
  */
 export function calculateDeliveryCost(
     delivery: {
         floorType?: 'ground' | 'upper'
         floorNumber?: number
-        destination?: 'floor' | 'box'
+        destination?: 'floor' | 'box' | 'street'
         hasUnloadingZone?: boolean
         hasFreightElevator?: boolean
     } | null | undefined,
@@ -54,14 +55,19 @@ export function calculateDeliveryCost(
 ): DeliveryBreakdown {
     const cfg = settings || DEFAULT_LOGISTICS
     const base = Number(cfg.baseDeliveryCost) || 0
-    const parkingSurcharge = (delivery?.hasUnloadingZone === false)
+    const isFloorDelivery = delivery?.destination === 'floor'
+    const isStreetDelivery = delivery?.destination === 'street'
+    const isBox = delivery?.destination === 'box'
+
+    // Se scarico a bordo strada (ci penso io!), lo scarico avviene direttamente a terra
+    // dal furgone con sponda idraulica, senza supplementi di sosta o piano
+    const parkingSurcharge = (!isStreetDelivery && delivery?.hasUnloadingZone === false)
         ? (Number(cfg.noUnloadingZoneSurcharge) || 0)
         : 0
 
-    const isBox = delivery?.destination === 'box'
     let floorCost = 0
 
-    if (!isBox && delivery?.floorType === 'upper') {
+    if (isFloorDelivery && delivery?.floorType === 'upper') {
         const floors = Math.max(1, Number(delivery?.floorNumber) || 1)
         const ratePerFloor = delivery?.hasFreightElevator
             ? (Number(cfg.costPerFloorWithLift) || 0)
@@ -75,6 +81,7 @@ export function calculateDeliveryCost(
         floorCost,
         parkingSurcharge,
         isBoxDelivery: isBox,
+        isStreetDelivery,
     }
 }
 

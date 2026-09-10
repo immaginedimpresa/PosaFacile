@@ -642,11 +642,11 @@ export function AdminSettingsPage() {
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                                         <div className="p-3 bg-white rounded-xl border border-stone-200/70 space-y-1">
-                                            <p className="text-stone-500 font-medium">1. Scarico nel Box / Garage (PT)</p>
+                                            <p className="text-stone-500 font-medium">1. Bordo Strada (ci penso io) / Box</p>
                                             <p className="text-base font-bold text-emerald-600">
                                                 € {((logistics.baseDeliveryCost || 0)).toFixed(2)}
                                             </p>
-                                            <p className="text-[10px] text-stone-400">Zero costi piani, solo base se impostata</p>
+                                            <p className="text-[10px] text-stone-400">Zero costi piani o supplementi sosta</p>
                                         </div>
 
                                         <div className="p-3 bg-white rounded-xl border border-stone-200/70 space-y-1">
