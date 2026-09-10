@@ -1,7 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { AIVisualizer } from '@/components/ai/AIVisualizer'
 import { useConfiguratorStore, LAYING_TYPE_LABELS, type LayingType } from '@/store/configuratorStore'
-import { layingRate } from '@/services/ratesService'
+import { layingRate, markupMultiplier, campoPosa } from '@/services/ratesService'
 
 
 const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
@@ -20,9 +20,14 @@ export function Step4LayingType() {
 
     const layingCost = getLayingCost()
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
-    const margine = 1 + (selectedProfessional?.markup_percent ?? 0) / 100
+    const multiplierFor = (type: LayingType) =>
+        markupMultiplier(
+            campoPosa(type),
+            selectedProfessional?.markup_percent,
+            selectedProfessional?.markup_overrides,
+        )
     // Riferimento per il confronto: lo schema piu' semplice.
-    const costoDritta = layingRate(professionalRates, 'dritta') * margine * baseMq
+    const costoDritta = layingRate(professionalRates, 'dritta') * multiplierFor('dritta') * baseMq
 
     return (
         <div className="space-y-6">
@@ -37,7 +42,7 @@ export function Step4LayingType() {
                     const isSelected = layingType === value
                     // Costo della posa con questo schema su questa superficie:
                     // il confronto utile e' fra importi, non fra percentuali.
-                    const costo = layingRate(professionalRates, value) * margine * baseMq
+                    const costo = layingRate(professionalRates, value) * multiplierFor(value) * baseMq
                     const differenza = costo - costoDritta
 
                     return (

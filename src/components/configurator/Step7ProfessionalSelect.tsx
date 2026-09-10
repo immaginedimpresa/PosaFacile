@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useConfiguratorStore } from '@/store/configuratorStore'
-import { fetchRates, layingRate } from '@/services/ratesService'
+import { fetchRates, layingRate, markupMultiplier, campoPosa } from '@/services/ratesService'
 import { supabase } from '@/lib/supabase'
 import { Star, Briefcase, AlertCircle, MapPin } from 'lucide-react'
 import { loadComuni, provincesInSameRegion } from '@/lib/comuni'
@@ -210,21 +210,47 @@ export function Step7ProfessionalSelect() {
                                         {pro.bio && <p className="text-gray-600 text-sm mt-2 line-clamp-2">{pro.bio}</p>}
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        {ratesById[pro.id] !== undefined && (
-                                            <>
-                                                <div className="text-xl font-bold text-gray-900">
-                                                    € {(
-                                                        ratesById[pro.id]
-                                                        * (dimensions.pavimentoMq + dimensions.paretiMq)
-                                                        * (1 + (pro.markup_percent ?? 0) / 100)
-                                                        + (pro.markup_fixed ?? 0)
-                                                    ).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                    posa di questo progetto
-                                                </div>
-                                            </>
-                                        )}
+                                        {ratesById[pro.id] !== undefined && (() => {
+                                            const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
+                                            const patternCampo = campoPosa(layingType || 'dritta')
+                                            const multiplier = markupMultiplier(
+                                                patternCampo,
+                                                pro.markup_percent,
+                                                pro.markup_overrides,
+                                            )
+                                            const rawRate = ratesById[pro.id] ?? 0
+                                            const unitRateWithMarkup = rawRate * multiplier
+                                            const totalLayingEstimate =
+                                                baseMq * unitRateWithMarkup + (pro.markup_fixed ?? 0)
+
+                                            return (
+                                                <>
+                                                    {baseMq > 0 ? (
+                                                        <>
+                                                            <div className="text-xl font-bold text-gray-900">
+                                                                € {totalLayingEstimate.toLocaleString('it-IT', {
+                                                                    minimumFractionDigits: 0,
+                                                                    maximumFractionDigits: 0,
+                                                                })}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                posa stimata ({baseMq} m²)
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="text-xl font-bold text-gray-900">
+                                                                da € {Math.round(unitRateWithMarkup)}{' '}
+                                                                <span className="text-xs font-normal text-gray-500">/ m²</span>
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                tariffa posa base
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </>
+                                            )
+                                        })()}
                                         {isSelected && (
                                             <div className="text-orange-600 font-bold mt-2">✓ Selezionato</div>
                                         )}

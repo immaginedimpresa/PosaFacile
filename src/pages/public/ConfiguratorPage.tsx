@@ -29,16 +29,16 @@ import { useSeo } from '@/hooks/useSeo'
 import { STATIC_PAGES } from '@/lib/seo'
 
 
-// Il luogo viene chiesto per primo: conoscendo la provincia si può usare la
-// tariffa del professionista che copre quella zona invece di una stima generica.
+// Il luogo viene chiesto per primo: conoscendo la provincia si può scegliere
+// il professionista al passo 2 e calcolare posa e servizi sulle sue tariffe reali + markup.
 const STEPS = [
     { num: 1, label: 'Luogo' },
-    { num: 2, label: 'Progetto' },
-    { num: 3, label: 'Piastrella' },
-    { num: 4, label: 'Dimensioni' },
-    { num: 5, label: 'Posa' },
-    { num: 6, label: 'Servizi' },
-    { num: 7, label: 'Professionista' },
+    { num: 2, label: 'Professionista' },
+    { num: 3, label: 'Progetto' },
+    { num: 4, label: 'Piastrella' },
+    { num: 5, label: 'Dimensioni' },
+    { num: 6, label: 'Posa' },
+    { num: 7, label: 'Servizi' },
     { num: 8, label: 'Data' },
     { num: 9, label: 'Riepilogo' },
 ]
@@ -128,30 +128,30 @@ export function ConfiguratorPage() {
 
     const canProceed = (() => {
         switch (currentStep) {
-            case 1:
+            case 1: // Luogo
                 return Boolean(
                     location.indirizzo &&
                     location.citta &&
                     location.provincia &&
                     location.cap,
                 )
-            case 2:
+            case 2: // Professionista
+                return Boolean(selectedProfessional)
+            case 3: // Progetto
                 return Boolean(projectInfo.ambiente && projectInfo.intervento)
-            case 3:
+            case 4: // Piastrella
                 return Boolean(selectedProduct)
-            case 4:
+            case 5: // Dimensioni
                 return Boolean(
                     dimensions.pavimentoMq > 0 || dimensions.paretiMq > 0,
                 )
-            case 5:
+            case 6: // Posa
                 return Boolean(layingType)
-            case 6:
+            case 7: // Servizi
                 return true
-            case 7:
-                return Boolean(selectedProfessional)
-            case 8:
+            case 8: // Data
                 return Boolean(selectedDate || location.dataPreferita)
-            case 9:
+            case 9: // Riepilogo
                 return true
             default:
                 return true
@@ -221,17 +221,17 @@ export function ConfiguratorPage() {
             case 1:
                 return <Step6Location />
             case 2:
-                return <Step1ProjectType />
-            case 3:
-                return <Step2ProductSelect />
-            case 4:
-                return <Step3Dimensions />
-            case 5:
-                return <Step4LayingType />
-            case 6:
-                return <Step5Services />
-            case 7:
                 return <Step7ProfessionalSelect />
+            case 3:
+                return <Step1ProjectType />
+            case 4:
+                return <Step2ProductSelect />
+            case 5:
+                return <Step3Dimensions />
+            case 6:
+                return <Step4LayingType />
+            case 7:
+                return <Step5Services />
             case 8:
                 return <Step8CalendarSelect />
             case 9:
@@ -243,12 +243,12 @@ export function ConfiguratorPage() {
 
     const stepDescriptions = [
         'Partiamo da casa tua.',
+        'Scegli il tuo professionista.',
         'Che cosa immagini?',
         'La materia del tuo progetto.',
         'Diamo spazio alle tue idee.',
         'Il dettaglio che cambia tutto.',
         'A ogni progetto, i suoi servizi.',
-        'Le persone che fanno la differenza.',
         'Troviamo il momento giusto.',
         'Il tuo progetto, in ogni dettaglio.',
     ]
@@ -382,7 +382,7 @@ export function ConfiguratorPage() {
                                 </>
                             )}
                         </div>
-                        {selectedProduct && currentStep > 1 && (
+                        {selectedProduct && currentStep > 4 && (
                             <div className="pf-config-selected">
                                 {selectedProduct.images[0] && (
                                     <img

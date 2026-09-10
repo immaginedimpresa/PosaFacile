@@ -1,5 +1,5 @@
 import { useConfiguratorStore } from '@/store/configuratorStore'
-import { serviceRate, servizioEscluso } from '@/services/ratesService'
+import { serviceRate, servizioEscluso, markupMultiplier } from '@/services/ratesService'
 import { Trash2, Layers, Droplets, Truck, Square, DoorOpen } from 'lucide-react'
 
 const SERVICES = [
@@ -17,7 +17,6 @@ export function Step5Services() {
 
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
     const servicesCost = getServicesCost()
-    const margine = 1 + (selectedProfessional?.markup_percent ?? 0) / 100
 
     /**
      * Quanto costa quella lavorazione su questo progetto.
@@ -25,7 +24,13 @@ export function Step5Services() {
      * sapere quanto spende, non il listino di chi esegue.
      */
     const costoDi = (chiave: string, quantita = baseMq) =>
-        serviceRate(professionalRates, chiave) * margine * quantita
+        serviceRate(professionalRates, chiave) *
+        markupMultiplier(
+            chiave,
+            selectedProfessional?.markup_percent,
+            selectedProfessional?.markup_overrides,
+        ) *
+        quantita
 
     // Pre-check services based on project info
     const handleServiceToggle = (key: keyof typeof services) => {

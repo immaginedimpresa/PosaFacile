@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useConfiguratorStore, LAYING_TYPE_LABELS } from '@/store/configuratorStore'
-import { serviceRate } from '@/services/ratesService'
+import { serviceRate, markupMultiplier } from '@/services/ratesService'
 import { MapPin, Calendar, Package, Sparkles, AlertCircle, LogIn, Bookmark, CheckCircle2, ArrowRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
@@ -51,9 +51,14 @@ export function Step7Summary() {
     const { professionalRates } = useConfiguratorStore()
     // Le voci del riepilogo usano le tariffe del posatore scelto, come il
     // totale: mostrarle con valori diversi renderebbe il conto incoerente.
-    const margine = 1 + (selectedProfessional?.markup_percent ?? 0) / 100
     const costoServizio = (chiave: string, quantita: number) =>
-        serviceRate(professionalRates, chiave) * margine * quantita
+        serviceRate(professionalRates, chiave) *
+        markupMultiplier(
+            chiave,
+            selectedProfessional?.markup_percent,
+            selectedProfessional?.markup_overrides,
+        ) *
+        quantita
 
     // Determine the actual date to use (Calendar selection > Initial preference)
     const effectiveDate = selectedDate
@@ -130,7 +135,7 @@ export function Step7Summary() {
                     alert('Il professionista selezionato non è più disponibile. Per favore selezionane un altro.')
                     // Reset stale data
                     useConfiguratorStore.getState().setSelectedProfessional(null)
-                    useConfiguratorStore.getState().setCurrentStep(7) // Go back to Pro selection
+                    useConfiguratorStore.getState().setCurrentStep(2) // Go back to Pro selection
                     setSubmitting(false)
                     return
                 }

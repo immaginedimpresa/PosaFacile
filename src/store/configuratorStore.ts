@@ -276,9 +276,17 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                 services: { ...state.services, ...services }
             })),
 
-            setLocation: (loc) => set((state) => ({
-                location: { ...state.location, ...loc }
-            })),
+            setLocation: (loc) => set((state) => {
+                const provinceChanged =
+                    loc.provincia !== undefined &&
+                    loc.provincia.trim().toUpperCase() !== state.location.provincia.trim().toUpperCase()
+                return {
+                    location: { ...state.location, ...loc },
+                    ...(provinceChanged
+                        ? { selectedProfessional: null, professionalRates: null }
+                        : {}),
+                }
+            }),
 
             setSelectedProfessional: (pro) => set({ selectedProfessional: pro }),
             setProfessionalRates: (rates) => set({ professionalRates: rates }),
