@@ -6,6 +6,50 @@ davvero, e portare al preventivo**.
 
 ---
 
+## 0. Stato attuale: sito schermato dai motori
+
+**Il sito è volutamente invisibile a Google.** Tutto quello che segue è pronto e
+funziona, ma resta spento finché non si va online davvero.
+
+Lo schermo è su tre livelli, perché nessuno dei tre da solo basta:
+
+| Livello | Dove | Copre |
+| :--- | :--- | :--- |
+| Header `X-Robots-Tag: noindex` | `netlify.toml` | ogni risposta, anche immagini e file non HTML, senza dipendere da JavaScript |
+| `<meta name="robots" content="noindex…">` | HTML statico di ogni pagina, guscio `index.html`, hook `useSeo` | i crawler che leggono il `<head>` |
+| `robots.txt` | generato dalla build | i crawler dei modelli linguistici, che leggono solo quello |
+
+Insieme allo schermo la build non scrive la sitemap e non emette dati
+strutturati: sono inviti all'indicizzazione, e a sito nascosto non hanno senso.
+
+### Perché robots.txt non dice `Disallow: /` per Google
+
+Sembra la mossa ovvia ed è quella sbagliata. Una pagina vietata in robots.txt
+non viene **letta**, quindi Google non vede mai il `noindex` — e se trova
+l'indirizzo citato altrove può comunque elencarlo nei risultati, nudo, senza
+titolo né descrizione. Per non comparire bisogna lasciarsi leggere e dire
+esplicitamente "non indicizzare".
+
+Il divieto secco resta invece per GPTBot, ClaudeBot, PerplexityBot, CCBot e
+simili: quelli ignorano `noindex` e robots.txt è l'unica leva che hanno.
+
+### Come si riaccende, al lancio
+
+Due cose, e servono entrambe:
+
+1. build con `VITE_SITE_INDEXABLE=true`;
+2. rimuovere il blocco `X-Robots-Tag` da `netlify.toml`.
+
+Se si fa solo la prima, la build lo dice a schermo con un avviso: l'header di
+Netlify vince comunque su tutto e il sito resterebbe invisibile.
+
+> Da sistemare prima di pubblicare: `SITE.url` e `SITE_URL` puntano ancora a
+> `https://posafacile.it`, mentre il dominio è `posafacile.com`. Finché il sito
+> è schermato non fa danni, ma al lancio genererebbe canonical e sitemap su un
+> dominio sbagliato. Si corregge con `VITE_SITE_URL`.
+
+---
+
 ## 1. Da dove si partiva
 
 Un'applicazione a pagina singola serviva lo stesso HTML per ogni indirizzo:

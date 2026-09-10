@@ -13,6 +13,19 @@
   to = "/index.html"
   status = 200
 
+# Sito non ancora pubblico: nessun motore deve indicizzarlo.
+#
+# Questo header e' la difesa che conta davvero. Vale per ogni risposta, non solo
+# per l'HTML — immagini, PDF, JSON — e non dipende dal fatto che un crawler
+# esegua JavaScript o legga il <head>. Il meta robots nelle pagine lo affianca,
+# non lo sostituisce.
+#
+# Al lancio: togliere questo blocco e ricostruire con VITE_SITE_INDEXABLE=true.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive, nosnippet, noimageindex"
+
 # Gli asset con hash nel nome non cambiano mai a parità di nome: si possono
 # tenere in cache a lungo. L'index.html no, altrimenti i browser continuano a
 # servire il bundle vecchio dopo un deploy.
