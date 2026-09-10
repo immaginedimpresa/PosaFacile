@@ -388,29 +388,49 @@ export function Step7Summary() {
                                 : 'bg-blue-50 text-blue-700 border border-blue-200'
                     }`}>
                         {deliveryAccess.destination === 'street'
-                            ? '🚚 Scarico a Bordo Strada (Ci penso io!)'
+                            ? '🚚 Scarico a Bordo Strada'
                             : deliveryAccess.destination === 'box'
-                                ? '📦 Scarico nel Box / Garage (Piano Terra)'
-                                : `🏢 Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                                ? '📦 Scarico nel Box / Garage'
+                                : `🏢 Consegna al Piano`
                         }
                     </span>
-                    {deliveryAccess.destination === 'floor' && deliveryAccess.floorType === 'upper' && (
+
+                    {/* Piano di Lavoro */}
+                    <span className="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 font-medium">
+                        {deliveryAccess.floorType === 'ground' ? '🏠 Piano Terra' : `🏢 Lavori al ${deliveryAccess.floorNumber}° Piano`}
+                    </span>
+
+                    {/* Movimentazione al Piano */}
+                    {deliveryAccess.destination !== 'floor' && (
+                        <span className={`px-2.5 py-1 rounded-lg font-medium border ${
+                            deliveryAccess.handlingBy === 'pro'
+                                ? 'bg-orange-50 text-orange-800 border-orange-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        }`}>
+                            {deliveryAccess.handlingBy === 'pro'
+                                ? '👷 Movimentazione: Posatore'
+                                : '👤 Movimentazione: Cliente (Ci penso io)'
+                            }
+                        </span>
+                    )}
+
+                    {deliveryAccess.floorType === 'upper' && (
                         <span className="px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 font-medium">
                             {deliveryAccess.hasFreightElevator ? '🛗 Con montacarichi' : '🚶 A piedi via scale'}
                         </span>
                     )}
-                    {deliveryAccess.destination !== 'street' && (
-                        <span className={`px-2.5 py-1 rounded-lg font-medium border ${
-                            deliveryAccess.hasUnloadingZone
-                                ? 'bg-stone-50 text-stone-600 border-stone-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
-                            {deliveryAccess.hasUnloadingZone ? '🚚 Sosta adiacente (≤50m)' : '⚠️ Sosta distante (>50m)'}
-                        </span>
-                    )}
+
+                    <span className={`px-2.5 py-1 rounded-lg font-medium border ${
+                        deliveryAccess.hasUnloadingZone
+                            ? 'bg-stone-50 text-stone-600 border-stone-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                        {deliveryAccess.hasUnloadingZone ? '🚚 Sosta vicina (≤50m)' : '⚠️ Sosta distante (>50m)'}
+                    </span>
+
                     {deliveryAccess.logisticsNotes && (
                         <p className="w-full text-xs text-stone-500 italic mt-1">
-                            Note autista: &ldquo;{deliveryAccess.logisticsNotes}&rdquo;
+                            Note logistiche: &ldquo;{deliveryAccess.logisticsNotes}&rdquo;
                         </p>
                     )}
                 </div>
@@ -483,25 +503,25 @@ export function Step7Summary() {
                     <div className="flex justify-between text-gray-600">
                         <div className="flex flex-col">
                             <span>
-                                {deliveryAccess.destination === 'street'
-                                    ? 'Scarico a Bordo Strada (Ci penso io!)'
-                                    : deliveryAccess.destination === 'box'
-                                        ? 'Consegna & Scarico nel Box/Garage'
-                                        : `Consegna al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                                {deliveryAccess.destination === 'floor'
+                                    ? `Consegna diretta al ${deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`}`
+                                    : deliveryAccess.handlingBy === 'pro'
+                                        ? `Scarico a ${deliveryAccess.destination === 'street' ? 'bordo strada' : 'box'} + salita al ${deliveryAccess.floorNumber}° piano (posatore)`
+                                        : `Scarico a ${deliveryAccess.destination === 'street' ? 'bordo strada' : 'box'} (movimentazione a cura del cliente)`
                                 }
                             </span>
                             <span className="text-[11px] text-gray-400">
-                                {deliveryAccess.destination === 'street'
-                                    ? 'Scarico a terra con sponda idraulica (nessun supplemento)'
-                                    : deliveryAccess.destination === 'box'
-                                        ? 'Scarico a livello strada nel box (nessun supplemento piano)'
-                                        : deliveryAccess.floorType === 'ground'
-                                            ? 'Scarico a terra'
-                                            : deliveryAccess.hasFreightElevator
-                                                ? 'Con montacarichi abilitato'
-                                                : 'A piedi via scale (senza montacarichi)'
+                                {deliveryAccess.destination === 'floor'
+                                    ? (deliveryAccess.floorType === 'ground'
+                                        ? 'Facchini del corriere a piano terra'
+                                        : `Facchini del corriere • ${deliveryAccess.hasFreightElevator ? 'Con montacarichi' : 'A piedi via scale'}`)
+                                    : deliveryAccess.handlingBy === 'pro'
+                                        ? (deliveryAccess.floorType === 'ground'
+                                            ? 'Facchinaggio a piano terra a carico del posatore'
+                                            : `Facchinaggio a cura del posatore • ${deliveryAccess.hasFreightElevator ? 'Con montacarichi' : 'A piedi via scale'}`)
+                                        : 'Nessun costo: il cliente provvede personalmente alla movimentazione al piano'
                                 }
-                                {deliveryAccess.destination !== 'street' && !deliveryAccess.hasUnloadingZone && ' • Sosta distante (>50m)'}
+                                {!deliveryAccess.hasUnloadingZone && ' • Sosta distante (>50m)'}
                             </span>
                         </div>
                         <span className="font-medium text-gray-900">

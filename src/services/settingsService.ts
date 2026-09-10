@@ -30,6 +30,8 @@ export const DEFAULT_LOGISTICS: LogisticsSettings = {
     noUnloadingZoneSurcharge: 35,
 }
 
+export type MaterialHandling = 'client' | 'pro' | 'carrier'
+
 export interface DeliveryBreakdown {
     total: number
     base: number
@@ -37,17 +39,20 @@ export interface DeliveryBreakdown {
     parkingSurcharge: number
     isBoxDelivery: boolean
     isStreetDelivery: boolean
+    handlingBy: MaterialHandling
 }
 
 /**
  * Calcola il costo totale di consegna e facchinaggio in base al piano,
- * alla presenza di montacarichi, allo scarico nel box o a bordo strada.
+ * alla presenza di montacarichi, allo scarico nel box o a bordo strada,
+ * e a chi si occupa del trasporto dei colli fino al piano di posa (cliente vs posatore vs corriere).
  */
 export function calculateDeliveryCost(
     delivery: {
         floorType?: 'ground' | 'upper'
         floorNumber?: number
         destination?: 'floor' | 'box' | 'street'
+        handlingBy?: MaterialHandling
         hasUnloadingZone?: boolean
         hasFreightElevator?: boolean
     } | null | undefined,
@@ -55,19 +60,34 @@ export function calculateDeliveryCost(
 ): DeliveryBreakdown {
     const cfg = settings || DEFAULT_LOGISTICS
     const base = Number(cfg.baseDeliveryCost) || 0
-    const isFloorDelivery = delivery?.destination === 'floor'
-    const isStreetDelivery = delivery?.destination === 'street'
-    const isBox = delivery?.destination === 'box'
+    const destination = delivery?.destination || 'street'
+    const isFloorDelivery = destination === 'floor'
+    const isStreetDelivery = destination === 'street'
+    const isBox = destination === 'box'
 
-    // Se scarico a bordo strada (ci penso io!), lo scarico avviene direttamente a terra
-    // dal furgone con sponda idraulica, senza supplementi di sosta o piano
-    const parkingSurcharge = (!isStreetDelivery && delivery?.hasUnloadingZone === false)
+    // Chi trasporta il materiale al piano:
+    // Se consegna diretta al piano: i facchini del corriere ('carrier')
+    // Se a bordo strada o box: il cliente ('client') oppure il posatore ('pro')
+    const handlingBy: MaterialHandling = isFloorDelivery
+        ? 'carrier'
+        : (delivery?.handlingBy || 'client')
+
+    // Sosta distante: se scarico a bordo strada con il cliente che fa da sé,
+    // lo scarico avviene velocemente sulla strada senza sosta prolungata.
+    // Se invece c'è il posatore che effettua la salita al piano, o scarico nel box,
+    // o consegna al piano con sosta distante (>50m), si applica il supplemento sosta.
+    const parkingSurcharge = (!isStreetDelivery || handlingBy === 'pro') && (delivery?.hasUnloadingZone === false)
         ? (Number(cfg.noUnloadingZoneSurcharge) || 0)
         : 0
 
     let floorCost = 0
 
-    if (isFloorDelivery && delivery?.floorType === 'upper') {
+    // Il costo del piano si applica solo se il piano è superiore E il materiale viene
+    // trasportato dal corriere ('carrier') o dal posatore ('pro').
+    // Se ci pensa il cliente ('client'), il costo è zero (€ 0.00).
+    const needsPaidFloorCarrying = (isFloorDelivery || handlingBy === 'pro') && delivery?.floorType === 'upper'
+
+    if (needsPaidFloorCarrying) {
         const floors = Math.max(1, Number(delivery?.floorNumber) || 1)
         const ratePerFloor = delivery?.hasFreightElevator
             ? (Number(cfg.costPerFloorWithLift) || 0)
@@ -82,6 +102,7 @@ export function calculateDeliveryCost(
         parkingSurcharge,
         isBoxDelivery: isBox,
         isStreetDelivery,
+        handlingBy,
     }
 }
 

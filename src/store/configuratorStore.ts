@@ -30,11 +30,13 @@ export interface ProjectInfo {
 // Logistica di Consegna & Accesso al Cantiere (Piano, Scarico, Montacarichi, Sosta)
 export type FloorType = 'ground' | 'upper'
 export type DeliveryDestination = 'floor' | 'box' | 'street'
+export type MaterialHandling = 'client' | 'pro' | 'carrier'
 
 export interface DeliveryAccessInfo {
     floorType: FloorType
     floorNumber: number
     destination: DeliveryDestination
+    handlingBy: MaterialHandling
     hasUnloadingZone: boolean
     hasFreightElevator: boolean
     logisticsNotes: string
@@ -210,7 +212,8 @@ const initialState = {
     deliveryAccess: {
         floorType: 'ground' as FloorType,
         floorNumber: 0,
-        destination: 'floor' as DeliveryDestination,
+        destination: 'street' as DeliveryDestination,
+        handlingBy: 'client' as MaterialHandling,
         hasUnloadingZone: true,
         hasFreightElevator: false,
         logisticsNotes: '',
@@ -264,8 +267,8 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                     },
                     selectedProduct: product,
                     dimensions: {
-                        pavimentoMq: Number(quote.floor_sqm) || 0,
-                        paretiMq: Number(quote.wall_sqm) || 0,
+                        pavimentoMq: Number(quote.square_meters) || 0,
+                        paretiMq: 0,
                         sfridoPercent: 10,
                     },
                     layingType: (quote.laying_type as LayingType) || 'dritta',
@@ -292,7 +295,8 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                     deliveryAccess: {
                         floorType: (quote.delivery_access?.floorType || servicesObj.delivery_access?.floorType || 'ground'),
                         floorNumber: Number(quote.delivery_access?.floorNumber ?? servicesObj.delivery_access?.floorNumber ?? 0),
-                        destination: (quote.delivery_access?.destination || servicesObj.delivery_access?.destination || 'floor'),
+                        destination: (quote.delivery_access?.destination || servicesObj.delivery_access?.destination || 'street'),
+                        handlingBy: (quote.delivery_access?.handlingBy || servicesObj.delivery_access?.handlingBy || (quote.delivery_access?.destination === 'floor' ? 'carrier' : 'client')),
                         hasUnloadingZone: (quote.delivery_access?.hasUnloadingZone ?? servicesObj.delivery_access?.hasUnloadingZone ?? true),
                         hasFreightElevator: (quote.delivery_access?.hasFreightElevator ?? servicesObj.delivery_access?.hasFreightElevator ?? false),
                         logisticsNotes: quote.delivery_access?.logisticsNotes || servicesObj.delivery_access?.logisticsNotes || '',

@@ -441,14 +441,14 @@ export function OrderDetailDrawer({
                                                             <div>
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
-                                                                        Scarico a Bordo Strada (Ci pensa il cliente)
+                                                                        Scarico a Bordo Strada
                                                                     </span>
                                                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
-                                                                        Sponda Idraulica • €0
+                                                                        Sponda Idraulica
                                                                     </span>
                                                                 </div>
                                                                 <p className="text-xs text-emerald-800 mt-0.5">
-                                                                    Il trasportatore scarica a bordo strada con sponda idraulica a livello terra. Il cliente si occupa in autonomia della movimentazione e salita al piano dei materiali.
+                                                                    Il trasportatore scarica sul ciglio stradale a quota terra con sponda idraulica.
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -467,7 +467,7 @@ export function OrderDetailDrawer({
                                                                     </span>
                                                                 </div>
                                                                 <p className="text-xs text-emerald-800 mt-0.5">
-                                                                    I materiali pesanti vengono scaricati a livello strada nel garage/box. Nessun facchinaggio ai piani superiori.
+                                                                    I materiali pesanti vengono depositati a piano terra nel garage/box.
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -479,38 +479,42 @@ export function OrderDetailDrawer({
                                                             <div>
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-xs font-bold text-blue-950 uppercase tracking-wide">
-                                                                        Consegna al Piano ({deliveryAccess.floorType === 'ground' ? 'Piano Terra' : `${deliveryAccess.floorNumber}° Piano`})
+                                                                        Consegna Diretta al Piano
                                                                     </span>
                                                                 </div>
                                                                 <p className="text-xs text-blue-800 mt-0.5">
-                                                                    I colli devono essere trasportati all&apos;interno dell&apos;abitazione / cantiere al piano indicato.
+                                                                    I facchini del corriere trasportano i bancali direttamente all&apos;interno dell&apos;immobile al piano indicato.
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     )}
 
-                                                    {/* Dettagli Dotazioni & Sosta */}
+                                                    {/* Dettagli Dotazioni, Movimentazione & Piano */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                                        {/* Montacarichi */}
+                                                        {/* Piano Cantiere */}
                                                         <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
-                                                            <span className="text-[10px] uppercase font-bold text-stone-400">Dotazione Montacarichi</span>
-                                                            <div className="flex items-center gap-1.5 font-semibold">
-                                                                {deliveryAccess.destination === 'street' ? (
-                                                                    <span className="text-stone-600">Non richiesto (bordo strada)</span>
-                                                                ) : deliveryAccess.destination === 'box' ? (
-                                                                    <span className="text-stone-600">Non richiesto (scarico a terra)</span>
-                                                                ) : deliveryAccess.floorType === 'ground' ? (
-                                                                    <span className="text-stone-600">Non necessario (piano terra)</span>
-                                                                ) : deliveryAccess.hasFreightElevator ? (
-                                                                    <span className="text-emerald-700 flex items-center gap-1">
-                                                                        <CheckCircle2 size={13} className="text-emerald-600" />
-                                                                        Montacarichi abilitato presente
-                                                                    </span>
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400">Piano dei Lavori</span>
+                                                            <div className="flex items-center gap-1.5 font-semibold text-stone-900">
+                                                                {deliveryAccess.floorType === 'ground' ? (
+                                                                    <span>Piano Terra / Rialzato</span>
                                                                 ) : (
-                                                                    <span className="text-amber-800 flex items-center gap-1">
-                                                                        <AlertCircle size={13} className="text-amber-600" />
-                                                                        A piedi via scale (senza ascensore)
+                                                                    <span>
+                                                                        {deliveryAccess.floorNumber}° Piano {deliveryAccess.hasFreightElevator ? '(Con ascensore/montacarichi)' : '(A piedi via scale)'}
                                                                     </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Chi porta il materiale al piano */}
+                                                        <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400">Movimentazione al Piano</span>
+                                                            <div className="flex items-center gap-1.5 font-semibold">
+                                                                {deliveryAccess.destination === 'floor' ? (
+                                                                    <span className="text-blue-800">Facchini del corriere (inclusi nel trasporto)</span>
+                                                                ) : deliveryAccess.handlingBy === 'pro' ? (
+                                                                    <span className="text-orange-800">Affidata al Posatore (+ tariffa piano)</span>
+                                                                ) : (
+                                                                    <span className="text-emerald-800">A cura del Cliente (Ci pensa lui prima della posa)</span>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -519,12 +523,7 @@ export function OrderDetailDrawer({
                                                         <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
                                                             <span className="text-[10px] uppercase font-bold text-stone-400">Sosta & Scarico Furgone</span>
                                                             <div className="flex items-center gap-1.5 font-semibold">
-                                                                {deliveryAccess.destination === 'street' ? (
-                                                                    <span className="text-emerald-700 flex items-center gap-1">
-                                                                        <CheckCircle2 size={13} className="text-emerald-600" />
-                                                                        Scarico diretto con sponda su strada
-                                                                    </span>
-                                                                ) : deliveryAccess.hasUnloadingZone !== false ? (
+                                                                {deliveryAccess.hasUnloadingZone !== false ? (
                                                                     <span className="text-emerald-700 flex items-center gap-1">
                                                                         <CheckCircle2 size={13} className="text-emerald-600" />
                                                                         Sosta adiacente (≤ 50m)
@@ -537,12 +536,32 @@ export function OrderDetailDrawer({
                                                                 )}
                                                             </div>
                                                         </div>
+
+                                                        {/* Dotazione Montacarichi */}
+                                                        <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400">Ascensore / Montacarichi</span>
+                                                            <div className="flex items-center gap-1.5 font-semibold">
+                                                                {deliveryAccess.floorType === 'ground' ? (
+                                                                    <span className="text-stone-600">Non necessario (piano terra)</span>
+                                                                ) : deliveryAccess.hasFreightElevator ? (
+                                                                    <span className="text-emerald-700 flex items-center gap-1">
+                                                                        <CheckCircle2 size={13} className="text-emerald-600" />
+                                                                        Idoneo ai carichi pesanti
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-amber-800 flex items-center gap-1">
+                                                                        <AlertCircle size={13} className="text-amber-600" />
+                                                                        Solo scale a piedi (senza ascensore)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
 
                                                     {/* Note autista se presenti */}
                                                     {logisticsNotes && (
                                                         <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 text-xs">
-                                                            <span className="text-[10px] uppercase font-bold text-stone-400 block mb-0.5">Note Trasportatore / Autista</span>
+                                                            <span className="text-[10px] uppercase font-bold text-stone-400 block mb-0.5">Note Trasportatore / Posatore</span>
                                                             <p className="text-stone-800 italic font-medium">
                                                                 &ldquo;{logisticsNotes}&rdquo;
                                                             </p>
