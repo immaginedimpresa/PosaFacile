@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpRight, Check, Ruler, Sparkles } from 'lucide-react'
 import { AIVisualizer } from '@/components/ai/AIVisualizer'
+import { tileSampleUrl } from '@/lib/tileVisualizer'
 import { useProducts } from '@/hooks/useProducts'
 import { useConfiguratorStore, type SelectedProduct } from '@/store/configuratorStore'
 import type { Database } from '@/types/supabase'
@@ -18,6 +19,7 @@ const toSelectedProduct = (product: Product): SelectedProduct => ({
     slug: product.slug,
     price_per_sqm: Number(product.price_per_sqm) || 0,
     images: (product.images as string[]) || [],
+    tileable_image_url: product.tileable_image_url,
     category: product.category,
     material: product.material,
     format_width: product.format_width,
@@ -184,7 +186,7 @@ export function AITryPage() {
                         {prodotto ? (
                             <AIVisualizer
                                 key={prodotto.id}
-                                productImageUrl={((prodotto.images as string[]) || [])[0] ?? null}
+                                productImageUrl={tileSampleUrl(prodotto)}
                                 productId={prodotto.id}
                                 productName={prodotto.name}
                                 tileWidth={prodotto.format_width ?? undefined}

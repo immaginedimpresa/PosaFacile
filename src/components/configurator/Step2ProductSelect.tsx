@@ -21,6 +21,7 @@ export function Step2ProductSelect() {
             slug: product.slug,
             price_per_sqm: product.price_per_sqm,
             images: (product.images as string[]) || [],
+            tileable_image_url: product.tileable_image_url,
             category: product.category,
             material: product.material,
             format_width: product.format_width,

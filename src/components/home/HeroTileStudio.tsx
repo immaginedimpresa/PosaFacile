@@ -8,7 +8,7 @@ import {
     RotateCcw,
     Sparkles,
 } from 'lucide-react'
-import { readPhoto, visualizeTile, type LayingPattern, type RoomType, type Surface } from '@/lib/tileVisualizer'
+import { readPhoto, tileSampleUrl, visualizeTile, type LayingPattern, type RoomType, type Surface } from '@/lib/tileVisualizer'
 import type { Database } from '@/types/supabase'
 
 type Product = Database['public']['Tables']['products']['Row']
@@ -75,7 +75,7 @@ export function HeroTileStudio({
     }
 
     const genera = async () => {
-        const tileImage = ((tile?.images as string[]) || [])[0]
+        const tileImage = tileSampleUrl(tile)
         if (!photo || !tileImage) return
 
         setGenerating(true)
@@ -83,7 +83,6 @@ export function HeroTileStudio({
         const { image, error: genError } = await visualizeTile({
             roomImage: photo,
             tileImage,
-            tileName: tile?.name,
             productId: tile?.id,
             layingPattern: posa,
             roomType: ambiente,

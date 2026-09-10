@@ -56,9 +56,20 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
     const [roomType, setRoomType] = useState<RoomType>(initialRoomType)
     const [surface, setSurface] = useState<Surface>(initialSurface)
 
+    // Le scelte fatte altrove nel configuratore vanno adottate anche quando
+    // cambiano dopo il primo render: si puo' tornare indietro a correggere i
+    // metri quadri, e la superficie da mostrare cambia di conseguenza.
     useEffect(() => {
         setLayingPattern(initialLayingPattern)
     }, [initialLayingPattern])
+
+    useEffect(() => {
+        setSurface(initialSurface)
+    }, [initialSurface])
+
+    useEffect(() => {
+        setRoomType(initialRoomType)
+    }, [initialRoomType])
 
     // La foto puo' arrivare dalla home: quando cambia va adottata, senza
     // costringere l'utente a ricaricarla.
@@ -94,7 +105,6 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
         const { image: generated, error: genError } = await visualizeTile({
             roomImage: image,
             tileImage: productImageUrl,
-            tileName: productName,
             productId,
             layingPattern,
             roomType,

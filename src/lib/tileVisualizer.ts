@@ -13,12 +13,29 @@ export type RoomType = 'bagno' | 'cucina' | 'soggiorno' | 'camera' | 'esterno'
 /** Superficie da sostituire: cambia il prompt e cosa resta intatto. */
 export type Surface = 'floor' | 'wall'
 
+/**
+ * L'immagine del prodotto da mandare all'anteprima.
+ *
+ * `images[0]` è la foto di vetrina: serve a far cliccare, quindi a volte è un
+ * ambiente arredato invece che il materiale. Nel catalogo attuale quattro
+ * prodotti su nove hanno lì una foto di stock che non contiene nemmeno una
+ * piastrella. `tileable_image_url` è il campo pensato per il campione, e va
+ * preferito quando c'è: da quando il prompt non legge più il nome, questa
+ * immagine è l'unica cosa che decide come viene il risultato.
+ */
+export function tileSampleUrl(
+    product: { images?: unknown; tileable_image_url?: string | null } | null | undefined,
+): string | null {
+    if (!product) return null
+    const gallery = Array.isArray(product.images) ? (product.images as string[]) : []
+    return product.tileable_image_url || gallery[0] || null
+}
+
 export interface VisualizeInput {
     /** Foto della stanza, come data URL. */
     roomImage: string
-    /** Immagine della piastrella scelta. */
+    /** Immagine della piastrella scelta: è l'unica fonte sull'aspetto del materiale. */
     tileImage: string
-    tileName?: string
     productId?: string
     layingPattern?: LayingPattern
     roomType?: RoomType
@@ -44,7 +61,6 @@ export async function visualizeTile(input: VisualizeInput): Promise<VisualizeRes
             body: {
                 roomImage: input.roomImage,
                 tileImage: input.tileImage,
-                tileName: input.tileName,
                 productId: input.productId,
                 layingPattern: input.layingPattern ?? 'dritta',
                 roomType: input.roomType ?? 'soggiorno',

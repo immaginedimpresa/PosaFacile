@@ -5,12 +5,21 @@
 //   2. le MISURE del formato — quanto è grande una piastrella, quindi la scala;
 //   3. il TIPO DI POSA scelto — come sono disposte.
 //
-// Nome, descrizione, materiale, colore e finitura del prodotto NON entrano nel
-// prompt. Sono campi compilati a mano e possono essere sbagliati: nel catalogo
-// attuale lo sono quasi tutti (un prodotto chiamato "Marmo Nero Marquina" ha
-// come immagine listelli di granito grigio). Finché il testo era un input, il
-// modello risolveva la contraddizione a caso, e con lo stesso prodotto rendeva
-// un pavimento nero e una parete grigia. Adesso decide l'immagine, punto.
+// Nessun testo del prodotto entra nel prompt: né nome, né descrizione, né
+// materiale, colore o finitura. Sono campi compilati a mano e possono essere
+// sbagliati: nel catalogo attuale lo sono quasi tutti (un prodotto chiamato
+// "Marmo Nero Marquina" ha come immagine listelli di granito grigio). Finché il
+// testo era un input, il modello risolveva la contraddizione a caso, e con lo
+// stesso prodotto rendeva un pavimento nero e una parete grigia.
+//
+// La garanzia non è affidata al prompt ma alla forma dei dati: la query al
+// catalogo chiede tre colonne numeriche e basta (vedi più sotto), quindi il
+// testo non arriva nemmeno a questo processo. Chi in futuro volesse rimetterlo
+// dentro dovrebbe allargare quella `select`, che è un gesto visibile.
+//
+// Per lo stesso motivo è uscito dal prompt anche il tipo di ambiente: è una
+// scelta a tendina che può contraddire la foto — nel configuratore vale sempre
+// "soggiorno" — e la stanza si vede benissimo nella foto stessa.
 //
 // La pipeline è in tre passaggi:
 //   generazione → segmentazione della superficie → ricomposizione sull'originale
@@ -28,6 +37,8 @@ import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts"
 import { getSurfaceMask, featherMask, maskCoverage } from './mask.ts'
 import { estimateAlignment, compositeSurface } from './composite.ts'
 import { deriveChangeMask } from './changemask.ts'
+import { buildPatternSwatch, type Pattern } from './pattern.ts'
+import { resizeBox, base64ToBytes, bytesToBase64, parseDataUrl } from './imageops.ts'
 
 // --- Configurazione Vertex AI ---
 const REGION = "us-central1"
@@ -61,11 +72,10 @@ interface RequestBody {
     roomImage: string
     tileImage: string
     surface?: 'floor' | 'wall'
-    /** Solo per i log: non entra nel prompt. */
-    tileName?: string
     productId?: string
     layingPattern: 'dritta' | 'diagonale' | 'correre' | 'spina' | 'mosaico'
-    roomType: 'bagno' | 'cucina' | 'soggiorno' | 'camera' | 'esterno'
+    /** Solo per i log: non entra nel prompt, la stanza si vede nella foto. */
+    roomType?: 'bagno' | 'cucina' | 'soggiorno' | 'camera' | 'esterno'
     /** Formato in millimetri, come nel catalogo. */
     tileWidth?: number
     tileHeight?: number
@@ -73,20 +83,20 @@ interface RequestBody {
     debug?: boolean
 }
 
-const LAYING_PATTERN_PROMPTS: Record<string, string> = {
-    dritta: 'straight grid pattern (grid layout), tiles perfectly aligned in orthogonal grid, continuous straight grout lines',
-    diagonale: 'diagonal pattern (diamond layout), tiles rotated 45 degrees to walls, diamond-shaped grout grid',
-    correre: 'running bond / brick offset pattern, tiles staggered 50% per row, no aligned vertical grout lines',
-    spina: 'herringbone pattern, rectangular tiles arranged in L-shape at 90 degrees creating zigzag, precise herringbone geometry',
-    mosaico: 'mosaic pattern, repeating geometric tile module with precise decorative pattern alignment',
-}
-
-const ROOM_TYPE_EN: Record<string, string> = {
-    bagno: 'bathroom',
-    cucina: 'kitchen',
-    soggiorno: 'living room',
-    camera: 'bedroom',
-    esterno: 'outdoor terrace',
+/**
+ * Il nome dello schema, in inglese, per una riga sola del prompt.
+ *
+ * Prima qui c'era un paragrafo per schema che descriveva la geometria a parole
+ * ("rectangular tiles arranged in L-shape at 90 degrees creating zigzag").
+ * Adesso la geometria è disegnata nello swatch e il modello la vede: la parola
+ * serve solo a dargli il nome di quello che sta guardando.
+ */
+const PATTERN_NAME: Record<string, string> = {
+    dritta: 'straight grid',
+    diagonale: 'diagonal (diamond)',
+    correre: 'running bond',
+    spina: 'herringbone',
+    mosaico: 'mosaic sheets',
 }
 
 const corsHeaders = {
@@ -137,17 +147,6 @@ async function getVertexAccessToken(serviceAccount: any): Promise<string> {
     return (await resp.json()).access_token
 }
 
-const bytesToBase64 = (bytes: Uint8Array): string => {
-    let binary = ''
-    // A blocchi: String.fromCharCode con centinaia di migliaia di argomenti
-    // fa saltare lo stack.
-    const CHUNK = 0x8000
-    for (let i = 0; i < bytes.length; i += CHUNK) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
-    }
-    return btoa(binary)
-}
-
 /**
  * Ritenta quando Vertex risponde 429.
  *
@@ -173,13 +172,11 @@ async function withRetry(fn: () => Promise<Response>, attempts = 3): Promise<Res
     return last!
 }
 
-async function urlToBase64(url: string): Promise<{ data: string; mimeType: string }> {
+/** Scarica un'immagine come byte: da qui viene decodificata, non rispedita. */
+async function fetchBytes(url: string): Promise<Uint8Array> {
     const response = await fetch(url)
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    return {
-        data: bytesToBase64(bytes),
-        mimeType: (response.headers.get('content-type') || 'image/jpeg').split(';')[0]
-    }
+    if (!response.ok) throw new Error(`Immagine della piastrella non raggiungibile (${response.status})`)
+    return new Uint8Array(await response.arrayBuffer())
 }
 
 /**
@@ -203,8 +200,13 @@ function tileFormatCm(product: any, bodyW?: number, bodyH?: number): { w: number
 
 // --- Aspect ratio: il modello normalizza a 1:1 se non glielo diciamo ---
 
+// L'elenco completo di quelli che il modello accetta. `2:3` mancava, e non e'
+// un dettaglio: e' il taglio di una foto scattata in verticale col telefono,
+// cioe' il caso piu' frequente. Senza, la piu' vicina risultava 3:4, il modello
+// re-inquadrava, e l'allineamento doveva rimediare a uno scarto che non
+// avrebbe dovuto esserci.
 const SUPPORTED_RATIOS: [string, number][] = [
-    ["9:16", 9 / 16], ["3:4", 3 / 4], ["4:5", 4 / 5], ["1:1", 1],
+    ["9:16", 9 / 16], ["2:3", 2 / 3], ["3:4", 3 / 4], ["4:5", 4 / 5], ["1:1", 1],
     ["5:4", 5 / 4], ["4:3", 4 / 3], ["3:2", 3 / 2], ["16:9", 16 / 9], ["21:9", 21 / 9],
 ]
 
@@ -221,15 +223,16 @@ function nearestAspectRatio(width: number, height: number): string | null {
 /**
  * Il prompt di sostituzione.
  *
- * Il campione è una texture già "posata": mostra un suo schema, una sua
- * proporzione e le sue fughe. Senza separare in modo esplicito l'aspetto del
- * materiale dalla geometria della posa, il modello copia lo schema del campione
- * e ignora quello richiesto.
+ * La seconda immagine non è più la foto del campione: è la vista dall'alto
+ * della superficie finita, ricostruita da noi (vedi pattern.ts). Cambia il modo
+ * di chiedere. Prima si diceva "riproduci questo materiale ma IGNORA la
+ * disposizione che vedi", che è una richiesta contraddittoria e infatti veniva
+ * disattesa. Adesso si dice "riproduci questa superficie", e basta: materiale e
+ * geometria nell'immagine coincidono già con quello che vogliamo.
  */
 function buildEditPrompt(
     surface: 'floor' | 'wall',
-    roomLabel: string,
-    pattern: string,
+    patternName: string,
     w: number,
     h: number,
     thicknessMm: number | null,
@@ -239,40 +242,40 @@ function buildEditPrompt(
         ? 'floor, ceiling, furniture, sanitary ware, mirrors, doors, windows, objects'
         : 'walls, ceiling, furniture, rugs, doors, windows, objects'
 
-    return `Photorealistic interior edit of the ${roomLabel} in the FIRST image.
+    return `Photorealistic interior edit of the room in the FIRST image.
 
 THE TWO IMAGES HAVE DIFFERENT ROLES:
 - FIRST image: the real photo to edit. Its perspective, framing and lighting are fixed.
-- SECOND image: a photograph of the tile material. It is the ONLY source of truth for how the
-  material looks: colour, tone, veining, grain, mottling and surface texture must be taken from
-  this image and reproduced faithfully. Do not substitute any other material. If the material in
-  the sample looks like grey stone, the result must be grey stone; if it looks like light oak,
-  the result must be light oak.
-  IGNORE completely the tile arrangement, the tile proportions, the grout width and the scale
-  visible in the sample: it is a material photograph, not the layout to reproduce.
+- SECOND image: a flat, straight-on view of the finished surface, seen from directly above with
+  no perspective. This is the surface to lay. Reproduce it faithfully — its material (colour,
+  tone, veining, grain, texture), its tile shape, its ${patternName} layout and its grout lines —
+  the only thing you change is the viewpoint: it must be seen in the room's perspective instead
+  of from above.
 
-TASK: replace ONLY the ${surfaceLabel} of the ${roomLabel} with this material.
+TASK: replace ONLY the ${surfaceLabel} of the room with the surface in the SECOND image.
 
-GEOMETRY OF THE NEW SURFACE (this, not what the sample shows):
-- Tile size: ${w}x${h} cm, rendered at true scale relative to the room, so the number of tiles
-  across the surface is physically correct for its real dimensions.${
+HOW THE NEW SURFACE MUST SIT IN THE ROOM:
+- Real tile size: ${w}x${h} cm. Render at true scale, so the number of tiles across the surface
+  is physically correct for its real dimensions.${
         thicknessMm ? `\n- Tile thickness: ${thicknessMm} mm.` : ''}
-- Layout: ${pattern}
-- Grout lines: realistic width proportional to a ${w}x${h} cm tile, colour coherent with the material.
-- The surface must follow the room's exact perspective and vanishing point, with tile scale
-  decreasing correctly toward the background.
-- Apply the new material across the WHOLE visible ${surfaceLabel}, including the parts currently
-  covered by a different material, and make the change clearly visible even if the existing
-  surface already resembles the sample.${surface === 'floor' ? `
+- Keep the ${patternName} layout of the SECOND image exactly: same arrangement, same tile
+  proportions, same grout lines. Do not substitute a different layout, and do not straighten,
+  rotate or simplify it.
+- Follow the room's exact perspective and vanishing point, with tile scale decreasing correctly
+  toward the background.
+- Apply it across the WHOLE visible ${surfaceLabel}, including the parts currently covered by a
+  different material, and make the change clearly visible even if the existing surface already
+  resembles the new one.${surface === 'floor' ? `
 - Rugs and carpets are NOT the floor. They stay exactly as they are, lying on top of the new
   tiles: do not retexture them, do not restyle them, do not remove them. The new tiles go on the
   bare floor visible around and beyond them. If a rug hides most of the room, still retile every
   visible strip of bare floor.` : `
 - Skirting boards, door frames and window frames are NOT the wall: leave them as they are.`}
 
-MATERIAL APPEARANCE: the SECOND image decides, and nothing else. Colour, veining and texture must
-match it closely, with natural variation between tiles rather than the identical swatch repeated
-on every tile. Judge how much light the surface reflects from the sample itself.
+MATERIAL: the SECOND image decides, and nothing else. Do not substitute any other material. If it
+looks like grey stone, the result must be grey stone; if it looks like light oak, the result must
+be light oak. Judge how much light the surface reflects from that image too. Relight it to match
+the room's own light, keeping the tile-to-tile variation it already shows.
 
 CRITICAL: everything except the ${surfaceLabel} must remain identical to the FIRST image —
 ${otherSurfaces}, framing and lighting are unchanged. Do not move, remove or restyle anything.
@@ -291,40 +294,40 @@ serve(async (req: Request) => {
 
         const body: RequestBody = await req.json()
 
-        const { roomImage, tileImage, tileName, productId, layingPattern, roomType, tileWidth, tileHeight } = body
+        const { roomImage, tileImage, productId, layingPattern, roomType, tileWidth, tileHeight } = body
         const surface = body.surface === 'wall' ? 'wall' : 'floor'
         if (!roomImage || !tileImage) throw new Error('Missing images')
 
         // --- Foto della stanza, a piena risoluzione ---
-        const roomRaw = Uint8Array.from(
-            atob(roomImage.replace(/^data:image\/\w+;base64,/, '')),
-            (c) => c.charCodeAt(0),
-        )
-        let original = await Image.decode(roomRaw)
+        const room = parseDataUrl(roomImage)
+        let original = await Image.decode(base64ToBytes(room.base64))
         if (Math.max(original.width, original.height) > MAX_OUTPUT_EDGE) {
             const k = MAX_OUTPUT_EDGE / Math.max(original.width, original.height)
-            original = original.resize(Math.round(original.width * k), Math.round(original.height * k))
+            // Media sull'area, non nearest neighbour: ridurre una foto di
+            // piastrelle scartando pixel invece che mediandoli produce moiré
+            // proprio sulle fughe (vedi imageops.ts).
+            original = resizeBox(original,
+                Math.round(original.width * k), Math.round(original.height * k))
         }
-        const roomMimeType = roomImage.match(/^data:(image\/\w+);/)?.[1] || 'image/jpeg'
         // Si rimanda al modello la versione normalizzata, non l'originale: così
         // le coordinate della maschera e quelle della generata parlano della
         // stessa immagine.
         const roomBase64 = bytesToBase64(await original.encodeJPEG(92))
 
         // --- Campione ---
-        let tileBase64: string, tileMimeType: string
-        if (tileImage.startsWith('data:')) {
-            tileBase64 = tileImage.replace(/^data:image\/\w+;base64,/, '')
-            tileMimeType = tileImage.match(/^data:(image\/\w+);/)?.[1] || 'image/jpeg'
-        } else {
-            const td = await urlToBase64(tileImage)
-            tileBase64 = td.data; tileMimeType = td.mimeType
-        }
+        const sample = await Image.decode(
+            tileImage.startsWith('data:')
+                ? base64ToBytes(parseDataUrl(tileImage).base64)
+                : await fetchBytes(tileImage),
+        )
 
         // --- Misure dal catalogo: solo quelle ---
-        // Nome, materiale, finitura, colore e descrizione non vengono letti di
-        // proposito. Sono i campi che possono essere sbagliati, e quando entrano
-        // nel prompt vincono sull'immagine.
+        //
+        // Questa `select` è la garanzia che il testo del prodotto non venga
+        // usato come istruzione: tre colonne numeriche, nome e descrizione non
+        // arrivano nemmeno in memoria. Sono i campi che possono essere
+        // sbagliati, e quando entravano nel prompt vincevano sull'immagine.
+        // Non allargarla senza una ragione.
         let product: any = null
         if (productId) {
             const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -343,12 +346,28 @@ serve(async (req: Request) => {
 
         const { w, h } = tileFormatCm(product, tileWidth, tileHeight)
         const thickness = Number(product?.thickness)
-        const pattern = LAYING_PATTERN_PROMPTS[layingPattern] || LAYING_PATTERN_PROMPTS.dritta
-        const roomLabel = ROOM_TYPE_EN[roomType] || 'room'
+        const patternKey = (layingPattern in PATTERN_NAME ? layingPattern : 'dritta') as Pattern
+        const patternName = PATTERN_NAME[patternKey]
 
+        // --- Lo schema di posa, disegnato ---
+        //
+        // Da qui in poi il modello non vede più la foto del campione: vede
+        // questa. È lo stesso materiale — sono i suoi pixel — ma disposto come
+        // ha chiesto il cliente, alle proporzioni vere del formato.
+        const swatch = buildPatternSwatch(sample, patternKey, Math.max(w, h), Math.min(w, h))
+        const swatchBase64 = bytesToBase64(await swatch.image.encodeJPEG(94))
+
+        // `roomType` compare qui e da nessun'altra parte: serve a capire, dai
+        // log, se l'utente ha scelto un ambiente che la foto smentisce.
         console.log(
             `${surface} · ${w}x${h} cm · posa ${layingPattern} · `
-            + `foto ${original.width}x${original.height}${tileName ? ` · ${tileName}` : ''}`,
+            + `foto ${original.width}x${original.height}${roomType ? ` · ambiente dichiarato: ${roomType}` : ''}`,
+        )
+        console.log(
+            `Swatch ${patternKey}: campione ${sample.width}x${sample.height} → `
+            + `${swatch.cells} piastrelle riconosciute`
+            + (swatch.discarded ? ` (${swatch.discarded} scartate perché contenevano una fuga)` : '')
+            + (swatch.detected ? '' : ' — nessuna griglia riconosciuta, campione usato intero'),
         )
 
         const accessToken = await getVertexAccessToken(serviceAccount)
@@ -358,7 +377,7 @@ serve(async (req: Request) => {
         // risultato. Farle insieme dimezza l'attesa.
         const aspectRatio = nearestAspectRatio(original.width, original.height)
         const editPrompt = buildEditPrompt(
-            surface, roomLabel, pattern, w, h,
+            surface, patternName, w, h,
             Number.isFinite(thickness) && thickness > 0 ? thickness : null,
         )
 
@@ -379,8 +398,8 @@ serve(async (req: Request) => {
                         contents: [{
                             role: "user",
                             parts: [
-                                { inlineData: { mimeType: roomMimeType, data: roomBase64 } },
-                                { inlineData: { mimeType: tileMimeType, data: tileBase64 } },
+                                { inlineData: { mimeType: 'image/jpeg', data: roomBase64 } },
+                                { inlineData: { mimeType: 'image/jpeg', data: swatchBase64 } },
                                 { text: editPrompt },
                             ],
                         }],
@@ -400,9 +419,7 @@ serve(async (req: Request) => {
 
                 for (const part of result.candidates?.[0]?.content?.parts || []) {
                     if (part.inlineData?.data) {
-                        return await Image.decode(
-                            Uint8Array.from(atob(part.inlineData.data), (c) => c.charCodeAt(0)),
-                        )
+                        return await Image.decode(base64ToBytes(part.inlineData.data))
                     }
                 }
                 lastReason = result.candidates?.[0]?.finishReason || 'unknown'
@@ -490,6 +507,7 @@ serve(async (req: Request) => {
         // In debug si restituiscono anche i passaggi intermedi: senza, capire
         // se ha sbagliato la generazione o la maschera è indovinare.
         if (body.debug) {
+            payload.swatch = `data:image/jpeg;base64,${swatchBase64}`
             payload.rawGenerated = `data:image/jpeg;base64,${bytesToBase64(await generated.encodeJPEG(88))}`
             if (mask) {
                 const vis = new Image(original.width, original.height)

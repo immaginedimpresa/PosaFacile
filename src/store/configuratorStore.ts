@@ -49,6 +49,8 @@ export interface SelectedProduct {
     slug: string
     price_per_sqm: number
     images: string[]
+    /** Il campione per l'anteprima AI: vedi `tileSampleUrl`. */
+    tileable_image_url?: string | null
     category: Product['category']
     material: Product['material']
     /** Formato in mm: determina la resa di posa, quindi i giorni di cantiere. */

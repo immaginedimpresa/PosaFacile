@@ -2,6 +2,7 @@ import { Sparkles } from 'lucide-react'
 import { AIVisualizer } from '@/components/ai/AIVisualizer'
 import { useConfiguratorStore, LAYING_TYPE_LABELS, type LayingType } from '@/store/configuratorStore'
 import { layingRate, markupMultiplier, campoPosa } from '@/services/ratesService'
+import { tileSampleUrl, type RoomType, type Surface } from '@/lib/tileVisualizer'
 
 
 const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
@@ -15,11 +16,23 @@ const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
 export function Step4LayingType() {
     const {
         layingType, setLayingType, getLayingCost, selectedProduct, setAiResultImage,
-        professionalRates, selectedProfessional, dimensions,
+        professionalRates, selectedProfessional, dimensions, projectInfo,
     } = useConfiguratorStore()
 
     const layingCost = getLayingCost()
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
+
+    // L'anteprima riceveva sempre "pavimento" e "soggiorno", qualunque cosa
+    // avesse configurato il cliente. Sono le due informazioni che decidono cosa
+    // viene sostituito nella foto, e le abbiamo gia' chieste due passi fa: chi
+    // ha messo a preventivo solo il rivestimento di un bagno vedeva rifare il
+    // pavimento di un soggiorno.
+    const superficie: Surface = dimensions.paretiMq > dimensions.pavimentoMq ? 'wall' : 'floor'
+    // 'altro' non e' un ambiente che il generatore conosca: meglio tacere che
+    // dichiarare il valore sbagliato.
+    const ambiente = projectInfo.ambiente && projectInfo.ambiente !== 'altro'
+        ? (projectInfo.ambiente as RoomType)
+        : undefined
     const multiplierFor = (type: LayingType) =>
         markupMultiplier(
             campoPosa(type),
@@ -105,10 +118,14 @@ export function Step4LayingType() {
                         Carica una foto della tua stanza per vedere l'effetto finale con la posa {LAYING_TYPE_LABELS[layingType].toLowerCase()}.
                     </p>
                     <AIVisualizer
-                        productImageUrl={selectedProduct.images[0]}
+                        productImageUrl={tileSampleUrl(selectedProduct)}
                         productId={selectedProduct.id}
                         productName={selectedProduct.name}
+                        tileWidth={selectedProduct.format_width ?? undefined}
+                        tileHeight={selectedProduct.format_height ?? undefined}
                         initialLayingPattern={layingType}
+                        initialSurface={superficie}
+                        initialRoomType={ambiente}
                         onResultGenerated={(img) => setAiResultImage(img)}
                     />
                 </div>
