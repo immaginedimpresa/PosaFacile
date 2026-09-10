@@ -4,6 +4,7 @@ import { useProducts } from '@/hooks/useProducts'
 import type { Database } from '@/types/supabase'
 import {
     Package,
+    FileUp,
     Plus,
     Search,
     RefreshCw,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CreateProductModal } from '@/components/admin/CreateProductModal'
+import { ImportProductsDialog } from '@/components/admin/ImportProductsDialog'
 
 
 type Product = Database['public']['Tables']['products']['Row']
@@ -38,6 +40,7 @@ const CATEGORY_LABELS: Record<NonNullable<ProductCategory>, string> = {
 
 export function AdminProductsPage() {
     const [createOpen, setCreateOpen] = useState(false)
+    const [csvOpen, setCsvOpen] = useState(false)
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState<ProductStatus | undefined>()
     const [categoryFilter, setCategoryFilter] = useState<ProductCategory | undefined>()
@@ -124,7 +127,15 @@ export function AdminProductsPage() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setCsvOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+                    >
+                        <FileUp size={16} className="text-orange-500" />
+                        <span>Carica CSV</span>
+                    </button>
                     <button
                         type="button"
                         onClick={() => setCreateOpen(true)}
@@ -477,6 +488,12 @@ export function AdminProductsPage() {
                 onClose={() => setCreateOpen(false)}
                 onCreated={handleRefresh}
             />
+            {csvOpen && (
+                <ImportProductsDialog
+                    onClose={() => setCsvOpen(false)}
+                    onImported={handleRefresh}
+                />
+            )}
 
         </div>
     )
