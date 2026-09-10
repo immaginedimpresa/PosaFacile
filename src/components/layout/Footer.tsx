@@ -43,13 +43,17 @@ export function Footer() {
                             links: [
                                 {
                                     label: 'Come funziona',
-                                    to: '/#come-funziona',
+                                    to: '/come-funziona',
+                                },
+                                {
+                                    label: 'Per le imprese (B2B)',
+                                    to: '/come-funziona#imprese',
                                 },
                                 {
                                     label: 'Crea un preventivo',
                                     to: '/configuratore',
                                 },
-                                { label: 'Domande frequenti', to: '/#domande' },
+                                { label: 'Domande frequenti', to: '/come-funziona#domande-servizio' },
                             ],
                         },
                         {

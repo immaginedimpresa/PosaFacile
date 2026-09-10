@@ -436,6 +436,51 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 26px;
 }
+.pf-steps-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+.pf-b2b-callout {
+    margin-top: 40px;
+    background: #f5f2ec;
+    border: 1px solid #e7e5e4;
+    border-radius: 16px;
+    padding: 24px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.pf-b2b-callout-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.pf-b2b-callout-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e7e5e4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ea580c;
+    flex-shrink: 0;
+}
+.pf-b2b-callout-text strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1c1917;
+}
+.pf-b2b-callout-text p {
+    font-size: 13px;
+    color: #57534e;
+    margin-top: 2px;
+    line-height: 1.5;
+}
 .pf-step {
     border-top: 1px solid #d6d3d1;
     padding: 24px 20px 0 0;
@@ -1773,6 +1818,10 @@
     .pf-steps {
         gap: 20px;
     }
+    .pf-steps-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
     .pf-step h3 {
         font-size: 19px;
     }
@@ -1967,7 +2016,8 @@
         font-size: 9px;
         margin-bottom: 14px;
     }
-    .pf-steps {
+    .pf-steps,
+    .pf-steps-4 {
         grid-template-columns: 1fr;
         gap: 27px;
     }

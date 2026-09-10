@@ -3,16 +3,20 @@ import { Link } from 'react-router-dom'
 import {
     ArrowDown,
     ArrowUpRight,
+    Award,
+    Building2,
+    Calculator,
     Check,
     CheckCheck,
     ChevronLeft,
     ChevronRight,
-    ClipboardList,
     Layers,
     MapPin,
     MessageCircle,
     PackageCheck,
     Ruler,
+    Sparkles,
+    Truck,
 } from 'lucide-react'
 import { useProducts } from '@/hooks/useProducts'
 import { InstantEstimator } from '@/components/home/InstantEstimator'
@@ -251,61 +255,95 @@ export default function HomePage() {
             <section id="come-funziona" className="pf-section pf-container">
                 <div className="pf-section-heading">
                     <div>
-                        <p className="pf-eyebrow">MENO PENSIERI, PIÙ CASA</p>
+                        <p className="pf-eyebrow">
+                            <span className="pf-status-dot" /> IL SERVIZIO POSAFACILE
+                        </p>
                         <h2>
-                            Un bel risultato.
+                            Materiali, preventivo e posa.
                             <br />
-                            Un percorso semplice.
+                            In un unico posto, senza sorprese.
                         </h2>
                     </div>
-                    <p>
-                        Materiali, preventivo e posa: finalmente insieme.
-                        <br />
-                        Ogni scelta al posto giusto, dall’inizio alla fine.
-                    </p>
+                    <div>
+                        <p>
+                            Dalla scelta della piastrella al collaudo finale: gestiamo la fornitura
+                            al piano, ti assegniamo posatori verificati e blocchiamo il prezzo al centesimo.
+                        </p>
+                        <Link className="pf-text-link mt-3" to="/come-funziona">
+                            Scopri come funziona nel dettaglio <ArrowUpRight size={17} />
+                        </Link>
+                    </div>
                 </div>
-                <div className="pf-steps">
+                <div className="pf-steps-4">
                     {[
                         {
                             number: '01',
-                            icon: Layers,
-                            title: 'Trova il tuo pavimento',
-                            text: 'Esplora il catalogo e scegli il materiale che dà carattere ai tuoi spazi.',
+                            icon: Sparkles,
+                            title: 'Configura & Visualizza',
+                            text: 'Scegli le piastrelle dal catalogo, calcola le metrature e guarda il risultato sulla tua stanza con l’anteprima AI o i campioni a casa.',
                             link: '/catalog',
-                            action: 'Esplora il catalogo',
+                            action: 'Esplora i materiali',
                         },
                         {
                             number: '02',
-                            icon: ClipboardList,
-                            title: 'Dai forma al progetto',
-                            text: 'Indica zona, superficie e servizi. Scopri le singole voci del tuo preventivo.',
+                            icon: Calculator,
+                            title: 'Preventivo Trasparente',
+                            text: 'Prezzo bloccato al centesimo: materiale, sfrido geometrico esatto, colle H40 e manodopera inclusi voce per voce.',
                             link: '/configuratore',
                             action: 'Crea il preventivo',
                         },
                         {
                             number: '03',
-                            icon: PackageCheck,
-                            title: 'Facciamo spazio al nuovo',
-                            text: 'Scegli il professionista e la data disponibile, poi segui il lavoro dalla tua area.',
-                            link: '/configuratore',
-                            action: 'Calcola il preventivo',
+                            icon: Truck,
+                            title: 'Consegna al Piano',
+                            text: 'Ricevi piastrelle, collanti e accessori direttamente al piano prima dell’avvio cantiere. Nessun magazzino da visitare.',
+                            link: '/come-funziona',
+                            action: 'Dettagli fornitura',
+                        },
+                        {
+                            number: '04',
+                            icon: Award,
+                            title: 'Posa Certificata & Collaudo',
+                            text: 'Posatori qualificati con DURC e assicurazione RC. Segui i lavori dall’area personale e collaudi a norma UNI 11493.',
+                            link: '/come-funziona',
+                            action: 'Garanzia e tutela',
                         },
                     ].map(
                         ({ number, icon: Icon, title, text, link, action }) => (
                             <article key={number} className="pf-step">
                                 <div className="pf-step-top">
                                     <span>{number}</span>
-                                    <Icon size={28} strokeWidth={1.4} />
+                                    <Icon size={26} strokeWidth={1.5} />
                                 </div>
                                 <h3>{title}</h3>
                                 <p>{text}</p>
                                 <Link to={link}>
                                     {action}
-                                    <ArrowUpRight size={17} />
+                                    <ArrowUpRight size={16} />
                                 </Link>
                             </article>
                         ),
                     )}
+                </div>
+
+                {/* Callout dedicato alle Imprese e ai Professionisti B2B */}
+                <div className="pf-b2b-callout">
+                    <div className="pf-b2b-callout-content">
+                        <div className="pf-b2b-callout-icon">
+                            <Building2 size={22} />
+                        </div>
+                        <div className="pf-b2b-callout-text">
+                            <strong>Sei un’impresa edile, uno studio di progettazione o uno showroom?</strong>
+                            <p>Mettiamo a disposizione squadre di posa su commessa, fatturazione unica B2B e rispetto dei cronoprogrammi.</p>
+                        </div>
+                    </div>
+                    <Link
+                        to="/come-funziona#imprese"
+                        className="pf-text-link"
+                        style={{ fontWeight: 700, color: '#1c1917', flexShrink: 0 }}
+                    >
+                        Vantaggi per le aziende <ArrowUpRight size={17} />
+                    </Link>
                 </div>
             </section>
             <section id="ispirazioni" className="pf-inspiration">

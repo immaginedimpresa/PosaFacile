@@ -25,6 +25,20 @@ export const SITE = {
     twitter: undefined as string | undefined,
 } as const
 
+/**
+ * Interruttore di pre-lancio.
+ *
+ * Finché il sito non è pronto per il pubblico non deve comparire nei motori di
+ * ricerca. Spento, ogni pagina esce con `noindex` e senza dati strutturati.
+ * Si riaccende impostando `VITE_SITE_INDEXABLE=true` nell'ambiente di build.
+ *
+ * Il valore predefinito è "non indicizzabile" di proposito: un ambiente in cui
+ * qualcuno si è dimenticato di configurare la variabile deve restare nascosto,
+ * non finire in Google.
+ */
+export const SITE_INDEXABLE =
+    (import.meta.env?.VITE_SITE_INDEXABLE as string | undefined) === 'true'
+
 export interface SeoMeta {
     title: string
     description: string
@@ -290,6 +304,12 @@ export const STATIC_PAGES: Record<string, SeoMeta> = {
             'Calcola quanto costa il tuo nuovo pavimento: materiale, manodopera, demolizione, '
             + 'massetto e battiscopa voce per voce, con i giorni di cantiere stimati.',
     },
+    howItWorks: {
+        path: '/come-funziona',
+        title: 'Come funziona PosaFacile — Pavimenti, posa e preventivo online',
+        description:
+            'Scopri come funziona PosaFacile per privati e imprese: piastrelle e colle consegnate al piano, preventivo al centesimo e posatori verificati con DURC e RC.',
+    },
 }
 
 /** Rotte che non devono essere indicizzate: aree riservate e flussi di acquisto. */
@@ -299,4 +319,7 @@ export const NOINDEX_PREFIXES = [
 ]
 
 export const isNoindexPath = (path: string): boolean =>
-    NOINDEX_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+    // Sito schermato: non si distingue fra pagine pubbliche e private, non si
+    // indicizza niente.
+    !SITE_INDEXABLE
+    || NOINDEX_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))

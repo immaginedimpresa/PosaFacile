@@ -18,6 +18,7 @@ import { AdminNotificationsPage } from '@/pages/admin/AdminNotificationsPage'
 import { CustomerDashboard } from '@/pages/private/CustomerDashboard'
 import { CustomerOrderDetailPage } from '@/pages/private/CustomerOrderDetailPage'
 import HomePage from '@/pages/public/HomePage'
+import { HowItWorksPage } from '@/pages/public/HowItWorksPage'
 import { ProfessionalsPage } from '@/pages/public/ProfessionalsPage'
 import { AITryPage } from '@/pages/public/AITryPage'
 import { ScrollToTop } from '@/components/layout/ScrollToTop'
@@ -116,6 +117,7 @@ function App() {
         <Route element={<RootLayout />}>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/come-funziona" element={<HowItWorksPage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/professionisti" element={<ProfessionalsPage />} />
           <Route path="/prova-ai" element={<AITryPage />} />

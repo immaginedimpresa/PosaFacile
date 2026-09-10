@@ -1,0 +1,312 @@
+/* Pagina Come Funziona: eredita stili base da home.css e scrollytelling da professionals.css */
+
+.pf-scrolly-panel header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+    font-size: 9px;
+    letter-spacing: 0.11em;
+    font-weight: 700;
+    color: #a8a29e;
+}
+.pf-scrolly-panel header > span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fdba74;
+}
+
+/* --- Hero Card specifica per il cliente privato --------------------------- */
+.pf-how-hero-visual {
+    display: grid;
+    gap: 18px;
+}
+.pf-how-hero-card {
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    border-radius: 18px;
+    padding: 26px;
+    box-shadow: 0 18px 40px #1c191708;
+}
+.pf-how-hero-card > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #e7e5e4;
+    padding-bottom: 16px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #716a65;
+}
+.pf-how-hero-card > header > span:first-child {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #1c1917;
+}
+.pf-how-project {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 20px;
+}
+.pf-how-project small {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    color: #995b32;
+}
+.pf-how-project h3 {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.025em;
+    margin-top: 6px;
+}
+.pf-how-project p {
+    font-size: 12px;
+    color: #716a65;
+    margin-top: 6px;
+    line-height: 1.7;
+}
+.pf-how-total {
+    text-align: right;
+    flex-shrink: 0;
+}
+.pf-how-total strong {
+    display: block;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: #ea580c;
+}
+.pf-how-total small {
+    font-size: 10px;
+    color: #716a65;
+}
+.pf-how-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #e7e5e4;
+}
+.pf-how-meta div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.pf-how-meta span {
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+    color: #a8a29e;
+}
+.pf-how-meta strong {
+    font-size: 13px;
+    font-weight: 500;
+}
+.pf-how-hero-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+}
+.pf-how-hero-actions > span:first-child {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    background: #1c1917;
+    color: #fff;
+    border-radius: 11px;
+    padding: 13px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.pf-how-hero-actions > span:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d6d3d1;
+    border-radius: 11px;
+    padding-inline: 16px;
+    font-size: 12px;
+    color: #716a65;
+}
+
+/* --- Sezione Imprese & B2B ---------------------------------------------- */
+.pf-b2b-section {
+    background: #1c1917;
+    color: #fafaf9;
+    border-radius: 28px;
+    padding: 64px 56px;
+    margin-block: 40px;
+}
+.pf-b2b-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+    border-bottom: 1px solid #ffffff15;
+    padding-bottom: 36px;
+    margin-bottom: 44px;
+}
+.pf-b2b-heading h2 {
+    font-size: clamp(30px, 3vw, 42px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    margin-top: 14px;
+    text-wrap: balance;
+}
+.pf-b2b-heading h2 span {
+    color: #fb923c;
+}
+.pf-b2b-heading p {
+    max-width: 420px;
+    color: #a8a29e;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.pf-b2b-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+}
+.pf-b2b-card {
+    background: #ffffff0a;
+    border: 1px solid #ffffff14;
+    border-radius: 18px;
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: background 0.2s, border-color 0.2s;
+}
+.pf-b2b-card:hover {
+    background: #ffffff10;
+    border-color: #f9731640;
+}
+.pf-b2b-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #f9731626;
+    border: 1px solid #f9731640;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fb923c;
+    margin-bottom: 22px;
+}
+.pf-b2b-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+.pf-b2b-card p {
+    color: #a8a29e;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-top: 10px;
+}
+.pf-b2b-footer {
+    margin-top: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: #ffffff08;
+    border: 1px solid #ffffff12;
+    border-radius: 18px;
+    padding: 24px 32px;
+}
+.pf-b2b-footer-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.pf-b2b-footer-info svg {
+    color: #fb923c;
+    flex-shrink: 0;
+}
+.pf-b2b-footer-info strong {
+    display: block;
+    font-size: 15px;
+    color: #ffffff;
+}
+.pf-b2b-footer-info p {
+    font-size: 12px;
+    color: #a8a29e;
+    margin-top: 2px;
+}
+
+/* --- Badge e garanzie --------------------------------------------------- */
+.pf-guarantee-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #f5f2ec;
+    border: 1px solid #e7e5e4;
+    border-radius: 30px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #1c1917;
+    margin-bottom: 16px;
+}
+.pf-guarantee-badge svg {
+    color: #ea580c;
+}
+
+/* --- Responsive per Come Funziona --------------------------------------- */
+@media (max-width: 1024px) {
+    .pf-b2b-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .pf-b2b-heading {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+    }
+}
+@media (max-width: 768px) {
+    .pf-b2b-section {
+        padding: 40px 24px;
+        border-radius: 20px;
+    }
+    .pf-b2b-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+    }
+}
+@media (max-width: 639px) {
+    .pf-how-hero-card {
+        padding: 20px;
+    }
+    .pf-how-project h3 {
+        font-size: 17px;
+    }
+    .pf-how-total strong {
+        font-size: 21px;
+    }
+    .pf-how-meta {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .pf-b2b-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+}

@@ -258,7 +258,8 @@
     transform: none;
     pointer-events: auto;
 }
-.pf-scrolly-panel > header {
+.pf-scrolly-panel > header,
+.pf-scrolly-panel header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -268,7 +269,8 @@
     font-weight: 700;
     color: #a8a29e;
 }
-.pf-scrolly-panel > header > span:first-child {
+.pf-scrolly-panel > header > span:first-child,
+.pf-scrolly-panel header > span:first-child {
     display: flex;
     align-items: center;
     gap: 8px;

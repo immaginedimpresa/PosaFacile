@@ -8,7 +8,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 const navigation = [
     { to: '/catalog', label: 'Materiali' },
-    { to: '/#come-funziona', label: 'Come funziona' },
+    { to: '/come-funziona', label: 'Come funziona' },
     { to: '/#ispirazioni', label: 'Ispirazioni' },
     { to: '/#stima', label: 'Calcola il budget' },
     { to: '/professionisti', label: 'Sei un professionista?' },

@@ -18,7 +18,7 @@
  * restano allineati.
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -28,6 +28,15 @@ const ROOT = resolve(__dirname, '..')
 const DIST = join(ROOT, 'dist')
 
 const SITE_URL = (process.env.VITE_SITE_URL || 'https://posafacile.it').replace(/\/$/, '')
+
+/**
+ * Interruttore di pre-lancio, gemello di SITE_INDEXABLE in src/lib/seo.ts.
+ *
+ * Spento (predefinito): ogni pagina esce con `noindex`, non si scrive la
+ * sitemap e robots.txt chiude la porta ai crawler che ignorano gli header.
+ * Si riaccende con VITE_SITE_INDEXABLE=true nell'ambiente di build.
+ */
+const INDEXABLE = process.env.VITE_SITE_INDEXABLE === 'true'
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://dgkejtsseshiankefhgy.supabase.co'
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY
     || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRna2VqdHNzZXNoaWFua2VmaGd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDk1NTMsImV4cCI6MjEwMzkyNTU1M30.QNbBnL4zwK6xjMQuJSt7uJyCw_RABueogMRXmQLebeE'
@@ -278,6 +287,28 @@ const staticPages = [
           </ol>`,
     },
     {
+        path: '/come-funziona',
+        priority: '0.9',
+        changefreq: 'weekly',
+        title: 'Come funziona PosaFacile — Fornitura materiale e posatori verificati',
+        description:
+            'Scopri come funziona PosaFacile per privati e imprese: piastrelle di prima scelta, preventivo fisso al centesimo, consegna al piano e posatori certificati con DURC e assicurazione.',
+        jsonLd: [breadcrumb([{ name: 'Home', path: '/' }, { name: 'Come funziona', path: '/come-funziona' }])],
+        content: `<h1>Come funziona PosaFacile: pavimenti e posa senza sorprese</h1>
+          <p>Materiali di prima scelta consegnati al piano, preventivo chiaro al centesimo con sfrido calcolato,
+             posatori qualificati con DURC e assicurazione e un unico committente responsabile.</p>
+          <h2>Le 5 fasi per i privati</h2>
+          <ol>
+            <li>Scelta del materiale o anteprima AI sulla foto della tua stanza.</li>
+            <li>Preventivo trasparente con calcolo dello sfrido e manodopera inclusa.</li>
+            <li>Scelta del maestro posatore e blocco data sul calendario.</li>
+            <li>Consegna diretta al piano di piastrelle e colle prima dell’avvio lavori.</li>
+            <li>Esecuzione a regola d’arte, aggiornamenti in tempo reale e collaudo finale.</li>
+          </ol>
+          <h2>Per le imprese e i professionisti (B2B)</h2>
+          <p>Squadre di posa specializzate su commessa, fatturazione unica, DURC sempre valido e rispetto dei cronoprogrammi per imprese edili, general contractor e showroom.</p>`,
+    },
+    {
         path: '/prova-ai',
         priority: '0.8',
         changefreq: 'monthly',
@@ -335,7 +366,9 @@ function buildHtml(shell, page) {
         `<title>${escapeHtml(page.title)}</title>`,
         `<meta name="description" content="${escapeHtml(page.description)}" />`,
         `<link rel="canonical" href="${canonical}" />`,
-        '<meta name="robots" content="index, follow, max-image-preview:large" />',
+        INDEXABLE
+            ? '<meta name="robots" content="index, follow, max-image-preview:large" />'
+            : '<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />',
         `<meta property="og:type" content="${page.type || 'website'}" />`,
         `<meta property="og:site_name" content="${SITE_NAME}" />`,
         '<meta property="og:locale" content="it_IT" />',
@@ -347,7 +380,7 @@ function buildHtml(shell, page) {
         `<meta name="twitter:title" content="${escapeHtml(page.title)}" />`,
         `<meta name="twitter:description" content="${escapeHtml(page.description)}" />`,
         `<meta name="twitter:image" content="${image}" />`,
-        ...(page.jsonLd || []).map(
+        ...(INDEXABLE ? (page.jsonLd || []) : []).map(
             (block) => `<script type="application/ld+json">${JSON.stringify(block)}</script>`,
         ),
     ].join('\n    ')
@@ -358,6 +391,12 @@ function buildHtml(shell, page) {
         .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
         .replace(/<meta\s+name="description"[^>]*>\s*/i, '')
         .replace('</head>', `  ${head}\n  </head>`)
+
+    // A sito schermato la sitemap non viene scritta: lasciarne il rimando
+    // significherebbe indicare ai crawler un file che non esiste.
+    if (!INDEXABLE) {
+        html = html.replace(/\n?\s*<link rel="sitemap"[^>]*>/i, '')
+    }
 
     // Il contenuto testuale sta in <noscript>: è quello che vede chi non
     // esegue JavaScript, e coincide con quanto mostra la pagina.
@@ -376,11 +415,35 @@ async function writePage(page, shell) {
     await writeFile(join(dir, 'index.html'), buildHtml(shell, page), 'utf8')
 }
 
+/**
+ * Il meta robots delle pagine e l'header di Netlify sono due leve separate, e
+ * al lancio si dimentica la seconda: si mette VITE_SITE_INDEXABLE=true, la
+ * build dice che tutto è a posto, e il sito resta invisibile perché ogni
+ * risposta continua a uscire con X-Robots-Tag: noindex. Meglio accorgersene qui
+ * che fra tre settimane guardando Search Console.
+ */
+async function warnHeaderMismatch() {
+    if (!INDEXABLE) return
+    const config = join(ROOT, 'netlify.toml')
+    if (!existsSync(config)) return
+
+    const content = await readFile(config, 'utf8')
+    if (/X-Robots-Tag\s*=\s*"[^"]*noindex/i.test(content)) {
+        console.warn(
+            '\n[seo] ATTENZIONE: le pagine sono indicizzabili, ma netlify.toml serve ancora\n'
+            + '      X-Robots-Tag: noindex su tutte le risposte. Finché quel blocco resta,\n'
+            + '      il sito NON verrà indicizzato. Rimuovilo da netlify.toml.\n',
+        )
+    }
+}
+
 async function main() {
     if (!existsSync(DIST)) {
         console.error('[seo] cartella dist assente: eseguire dopo la build di Vite')
         process.exit(0)
     }
+
+    await warnHeaderMismatch()
 
     const shell = cleanShell(await readFile(join(DIST, 'index.html'), 'utf8'))
     const products = await fetchProducts()
@@ -426,12 +489,27 @@ async function main() {
         '',
     ].join('\n')
 
-    await writeFile(join(DIST, 'sitemap.xml'), sitemap, 'utf8')
+    if (INDEXABLE) {
+        await writeFile(join(DIST, 'sitemap.xml'), sitemap, 'utf8')
+    } else if (existsSync(join(DIST, 'sitemap.xml'))) {
+        // Una sitemap rimasta da una build precedente continuerebbe a invitare
+        // i motori su pagine che vogliamo nascoste.
+        await rm(join(DIST, 'sitemap.xml'))
+    }
 
     // --- robots ---
-    // I crawler dei modelli linguistici sono ammessi in modo esplicito: è da
-    // lì che passa una quota crescente delle richieste di preventivo.
-    const robots = `# ${SITE_NAME}
+    //
+    // A sito schermato NON si usa un semplice "Disallow: /" per Google: una
+    // pagina bloccata da robots.txt non viene letta, quindi Google non vede il
+    // noindex e può comunque elencare l'indirizzo se lo trova citato altrove.
+    // La strada corretta è lasciarla leggere e dirle a chiare lettere di non
+    // indicizzarla, cosa che fanno l'header X-Robots-Tag e il meta robots.
+    //
+    // Per i crawler che ignorano quei segnali — gli scraper dei modelli
+    // linguistici, che leggono solo robots.txt — l'unica leva è il divieto
+    // esplicito, e qui viene usata.
+    const robots = INDEXABLE
+        ? `# ${SITE_NAME}
 User-agent: *
 Allow: /
 Disallow: /admin
@@ -461,9 +539,62 @@ Allow: /
 
 Sitemap: ${SITE_URL}/sitemap.xml
 `
+        : `# ${SITE_NAME} — sito non ancora pubblico, nessuna indicizzazione.
+#
+# La scansione resta permessa di proposito: e' l'unico modo perche' i motori
+# leggano il noindex servito nell'header X-Robots-Tag e nel meta robots. Un
+# divieto di scansione qui otterrebbe l'effetto opposto, lasciando comparire
+# l'indirizzo nudo nei risultati.
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /pro
+Disallow: /dashboard
+Disallow: /booking
+Disallow: /checkout
+Disallow: /cart
+Disallow: /login
+Disallow: /register
+Disallow: /invite-accept
+Disallow: /unauthorized
+
+# Crawler che leggono solo robots.txt e ignorano il noindex: qui il divieto
+# esplicito e' l'unica leva che funziona.
+User-agent: GPTBot
+Disallow: /
+User-agent: OAI-SearchBot
+Disallow: /
+User-agent: ChatGPT-User
+Disallow: /
+User-agent: PerplexityBot
+Disallow: /
+User-agent: ClaudeBot
+Disallow: /
+User-agent: anthropic-ai
+Disallow: /
+User-agent: Google-Extended
+Disallow: /
+User-agent: CCBot
+Disallow: /
+User-agent: Bytespider
+Disallow: /
+User-agent: Amazonbot
+Disallow: /
+User-agent: Applebot-Extended
+Disallow: /
+User-agent: meta-externalagent
+Disallow: /
+`
     await writeFile(join(DIST, 'robots.txt'), robots, 'utf8')
 
-    console.log(`[seo] ${pages.length} pagine statiche (${productPages.length} prodotti), sitemap e robots.txt generati`)
+    console.log(
+        INDEXABLE
+            ? `[seo] ${pages.length} pagine statiche (${productPages.length} prodotti), sitemap e robots.txt generati`
+            : `[seo] ${pages.length} pagine statiche (${productPages.length} prodotti) con noindex: `
+              + 'sito schermato dai motori, nessuna sitemap. '
+              + 'Per pubblicarlo: VITE_SITE_INDEXABLE=true',
+    )
 }
 
 // La generazione dei metadati non deve mai bloccare un deploy: se fallisce,
