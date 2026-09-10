@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Upload, Camera, Sparkles, Download, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase'
+import {
+    visualizeTile,
+    type LayingPattern,
+    type RoomType,
+    type Surface,
+} from '@/lib/tileVisualizer'
 
 interface AIVisualizerProps {
     productImageUrl: string | null
@@ -13,13 +18,12 @@ interface AIVisualizerProps {
     /** Foto gia' caricata altrove, per esempio dalla home. */
     initialImage?: string | null
     initialRoomType?: RoomType
+    /** Superficie da sostituire; se assente l'utente la sceglie qui. */
+    initialSurface?: Surface
     /** Notifica la foto scelta, cosi' chi ospita il componente puo' conservarla. */
     onImageChange?: (image: string | null) => void
     onResultGenerated?: (imageUrl: string) => void
 }
-
-type LayingPattern = 'dritta' | 'diagonale' | 'correre' | 'spina' | 'mosaico'
-type RoomType = 'bagno' | 'cucina' | 'soggiorno' | 'camera' | 'esterno'
 
 // Pattern with visual representations
 const LAYING_PATTERNS: { value: LayingPattern; label: string; pattern: string }[] = [
@@ -30,6 +34,11 @@ const LAYING_PATTERNS: { value: LayingPattern; label: string; pattern: string }[
     { value: 'mosaico', label: 'Mosaico', pattern: '▫▪▫\n▪▫▪' },
 ]
 
+const SURFACES: { value: Surface; label: string }[] = [
+    { value: 'floor', label: 'Pavimento' },
+    { value: 'wall', label: 'Parete' },
+]
+
 const ROOM_TYPES: { value: RoomType; label: string }[] = [
     { value: 'bagno', label: 'Bagno' },
     { value: 'cucina', label: 'Cucina' },
@@ -38,13 +47,14 @@ const ROOM_TYPES: { value: RoomType; label: string }[] = [
     { value: 'esterno', label: 'Esterno' },
 ]
 
-export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', initialImage = null, initialRoomType = 'soggiorno', onImageChange, onResultGenerated }: AIVisualizerProps) {
+export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', initialImage = null, initialRoomType = 'soggiorno', initialSurface = 'floor', onImageChange, onResultGenerated }: AIVisualizerProps) {
     const [image, setImage] = useState<string | null>(initialImage)
     const [resultImage, setResultImage] = useState<string | null>(null)
     const [processing, setProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [layingPattern, setLayingPattern] = useState<LayingPattern>(initialLayingPattern)
     const [roomType, setRoomType] = useState<RoomType>(initialRoomType)
+    const [surface, setSurface] = useState<Surface>(initialSurface)
 
     useEffect(() => {
         setLayingPattern(initialLayingPattern)
@@ -81,43 +91,26 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
         setProcessing(true)
         setError(null)
 
-        try {
-            const { data, error: fnError } = await supabase.functions.invoke('visualize-tile', {
-                body: {
-                    roomImage: image,
-                    tileImage: productImageUrl,
-                    tileName: productName,
-                    productId,
-                    layingPattern,
-                    roomType,
-                    tileWidth,
-                    tileHeight,
-                },
-            })
+        const { image: generated, error: genError } = await visualizeTile({
+            roomImage: image,
+            tileImage: productImageUrl,
+            tileName: productName,
+            productId,
+            layingPattern,
+            roomType,
+            surface,
+            tileWidth,
+            tileHeight,
+        })
 
-            if (fnError) {
-                throw fnError
-            }
+        setProcessing(false)
 
-            if (data?.success && data?.image) {
-                const imageResult = data.image.startsWith('data:')
-                    ? data.image
-                    : data.image.startsWith('http')
-                        ? data.image
-                        : `data:image/jpeg;base64,${data.image}`
-                setResultImage(imageResult)
-                if (onResultGenerated) onResultGenerated(imageResult)
-            } else {
-                throw new Error(data?.error || 'Errore nella generazione')
-            }
-        } catch (err: any) {
-            console.error('AI visualization error:', err)
-            // Se l'errore è un oggetto con un messaggio specifico dalla funzione
-            const msg = err.context?.message || err.message || 'Errore durante l\'elaborazione.'
-            setError(`Errore: ${msg}`)
-        } finally {
-            setProcessing(false)
+        if (genError || !generated) {
+            setError(genError ?? 'Generazione non riuscita.')
+            return
         }
+        setResultImage(generated)
+        onResultGenerated?.(generated)
     }
 
     const handleDownload = () => {
@@ -249,6 +242,28 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                                     </div>
                                 </div>
                             )}
+
+                            {/* Superficie: decide cosa viene sostituito e cosa resta */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Superficie da rivestire
+                                </label>
+                                <div className="flex gap-2">
+                                    {SURFACES.map((sf) => (
+                                        <button
+                                            key={sf.value}
+                                            type="button"
+                                            onClick={() => setSurface(sf.value)}
+                                            className={`px-4 py-2 rounded-full text-sm transition-all ${surface === sf.value
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            {sf.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
                             {/* Room Type Selection */}
                             <div>
