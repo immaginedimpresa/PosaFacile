@@ -3,9 +3,13 @@ export type NotificationTargetRole = 'admin' | 'professional' | 'customer' | 'al
 export type NotificationChannel = 'in_app' | 'email' | 'both'
 
 export type NotificationEventType =
+    | 'welcome'
     | 'order_created'
+    | 'payment_received'
     | 'job_assigned'
+    | 'pro_assigned'
     | 'status_changed'
+    | 'duration_confirmed'
     | 'message_received'
     | 'pro_registered'
     | 'pro_approved'
@@ -51,6 +55,20 @@ export interface NotificationEventDefinition {
 }
 
 export const NOTIFICATION_EVENT_DEFINITIONS: NotificationEventDefinition[] = [
+    {
+        key: 'welcome',
+        label: 'Benvenuto Nuovo Account',
+        description: 'Email di benvenuto inviata alla creazione dell\u2019account, con i primi passi da fare.',
+        roles: ['customer', 'professional'],
+        category: 'system',
+    },
+    {
+        key: 'quote_created',
+        label: 'Preventivo Salvato',
+        description: 'Copia del preventivo inviata al cliente quando salva una configurazione, con il link per riaprirla.',
+        roles: ['customer'],
+        category: 'orders',
+    },
     {
         key: 'order_created',
         label: 'Nuovo Ordine Confermato',
@@ -113,5 +131,26 @@ export const NOTIFICATION_EVENT_DEFINITIONS: NotificationEventDefinition[] = [
         description: 'Alert per lo staff admin quando un articolo a catalogo sta per esaurire le scorte.',
         roles: ['admin'],
         category: 'orders',
+    },
+    {
+        key: 'payment_received',
+        label: 'Pagamento Incassato',
+        description: 'Ricevuta al cliente e avviso allo staff quando il pagamento dell\u2019ordine risulta registrato.',
+        roles: ['admin', 'customer'],
+        category: 'orders',
+    },
+    {
+        key: 'pro_assigned',
+        label: 'Posatore Assegnato (avviso al cliente)',
+        description: 'Avviso al cliente con nome, recapito e data prevista del posatore abbinato al cantiere.',
+        roles: ['customer'],
+        category: 'jobs',
+    },
+    {
+        key: 'duration_confirmed',
+        label: 'Durata Cantiere Confermata dal Posatore',
+        description: 'Avviso allo staff quando il posatore conferma o corregge le giornate di lavoro stimate a preventivo.',
+        roles: ['admin'],
+        category: 'jobs',
     },
 ]
