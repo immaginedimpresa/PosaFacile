@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useConfiguratorStore } from '@/store/configuratorStore'
-import { fetchRates, layingRate, markupMultiplier, campoPosa } from '@/services/ratesService'
+import { fetchRates } from '@/services/ratesService'
 import { supabase } from '@/lib/supabase'
-import { Star, Briefcase, AlertCircle, MapPin } from 'lucide-react'
+import { Star, Briefcase, AlertCircle, MapPin, Check } from 'lucide-react'
 import { loadComuni, provincesInSameRegion } from '@/lib/comuni'
 import { motion } from 'framer-motion'
 
@@ -24,12 +24,13 @@ interface Professional {
 
 export function Step7ProfessionalSelect() {
     const {
-        location, selectedProfessional, setSelectedProfessional, setProfessionalRates,
-        layingType, dimensions, prevStep,
+        location,
+        selectedProfessional,
+        setSelectedProfessional,
+        setProfessionalRates,
+        prevStep,
     } = useConfiguratorStore()
-    // Tariffe dei posatori in elenco: servono a mostrare quanto costa questo
-    // progetto con ciascuno, invece di un listino al metro quadro.
-    const [ratesById, setRatesById] = useState<Record<string, number>>({})
+
     const [professionals, setProfessionals] = useState<Professional[]>([])
     const [loading, setLoading] = useState(true)
     const [widenedToRegion, setWidenedToRegion] = useState(false)
@@ -48,7 +49,6 @@ export function Step7ProfessionalSelect() {
 
             // professionals_for_location unisce le due modalità di copertura:
             // chi ha scelto le province e chi ha scelto un raggio attorno a un punto.
-            // Il filtro sta a DB, così non si scaricano tutti i profili per scartarli.
             const { data, error } = await supabase.rpc('professionals_for_location', {
                 p_province: provinceCode,
                 p_lat: location.lat ?? undefined,
@@ -61,8 +61,7 @@ export function Step7ProfessionalSelect() {
                 return
             }
 
-            // Provincia scoperta: si allarga alle altre province della stessa regione,
-            // meglio proporre un posatore un po' più lontano che una lista vuota.
+            // Provincia scoperta: si allarga alle altre province della stessa regione
             const comuni = await loadComuni()
             const regionCodes = provincesInSameRegion(comuni, provinceCode)
                 .filter(code => code !== provinceCode)
@@ -90,29 +89,12 @@ export function Step7ProfessionalSelect() {
             setWidenedToRegion(inRegion.length > 0)
             setProfessionals(inRegion)
         } catch (error) {
-            console.error('[Step7] Errore nel recupero dei professionisti:', error)
+            console.error('[Step7ProfessionalSelect] Errore nel recupero dei professionisti:', error)
             setProfessionals([])
         } finally {
             setLoading(false)
         }
     }
-
-    // Una sola query per tutto l'elenco: la tariffa serve per lo schema di
-    // posa gia' scelto, non per tutti gli schemi.
-    useEffect(() => {
-        if (professionals.length === 0) return
-        let attivo = true
-        void (async () => {
-            const coppie = await Promise.all(
-                professionals.map(async (pro) => [
-                    pro.id,
-                    layingRate(await fetchRates(pro.id), layingType),
-                ] as const),
-            )
-            if (attivo) setRatesById(Object.fromEntries(coppie))
-        })()
-        return () => { attivo = false }
-    }, [professionals, layingType])
 
     const handleSelect = async (pro: Professional) => {
         setSelectedProfessional({
@@ -125,7 +107,7 @@ export function Step7ProfessionalSelect() {
             markup_fixed: pro.markup_fixed ?? 0,
             markup_overrides: pro.markup_overrides ?? {},
         })
-        // Il preventivo si costruisce sulle tariffe di chi esegue il lavoro.
+        // In background carichiamo i listini del professionista per i passaggi successivi
         setProfessionalRates(await fetchRates(pro.id))
     }
 
@@ -167,7 +149,7 @@ export function Step7ProfessionalSelect() {
                     </button>
                 </motion.div>
             ) : (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
+                <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-1">
                     {professionals.map((pro, index) => {
                         const isSelected = selectedProfessional?.id === pro.id
                         return (
@@ -175,84 +157,65 @@ export function Step7ProfessionalSelect() {
                                 key={pro.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
+                                transition={{ delay: index * 0.06 }}
                                 onClick={() => handleSelect(pro)}
-                                className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${isSelected
-                                    ? 'border-orange-500 bg-orange-50'
-                                    : 'border-gray-200 hover:border-gray-300'
+                                className={`p-5 sm:p-6 rounded-2xl border-2 cursor-pointer transition-all ${isSelected
+                                    ? 'border-orange-500 bg-orange-50/50 ring-2 ring-orange-500/10 shadow-xs'
+                                    : 'border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50/50'
                                     }`}
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                                        {pro.full_name?.charAt(0) || 'P'}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-bold">{pro.full_name}</h3>
-                                        {pro.company_name && <p className="text-gray-600 text-sm">{pro.company_name}</p>}
-                                        <div className="flex items-center gap-4 mt-2">
-                                            <div className="flex items-center gap-1">
-                                                <Star className="text-yellow-500 fill-yellow-500" size={16} />
-                                                <span className="font-semibold">{pro.rating.toFixed(1)}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 text-gray-600">
-                                                <Briefcase size={16} />
-                                                <span className="text-sm">{pro.years_experience} anni</span>
-                                            </div>
-                                            {pro.distance_km !== null && (
-                                                <div className="flex items-center gap-1 text-gray-600">
-                                                    <MapPin size={16} />
-                                                    <span className="text-sm">
-                                                        a {Math.round(pro.distance_km)} km
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl font-bold flex-shrink-0 shadow-xs">
+                                            {pro.full_name?.charAt(0) || 'P'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="text-base sm:text-lg font-bold text-stone-900 truncate">{pro.full_name}</h3>
+                                                {isSelected && (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-orange-100 text-orange-800 px-2 py-0.5 rounded-md sm:hidden">
+                                                        Selezionato
                                                     </span>
+                                                )}
+                                            </div>
+                                            {pro.company_name && (
+                                                <p className="text-stone-500 text-xs sm:text-sm truncate">{pro.company_name}</p>
+                                            )}
+                                            <div className="flex items-center gap-3 sm:gap-4 mt-2 flex-wrap">
+                                                <div className="flex items-center gap-1">
+                                                    <Star className="text-yellow-500 fill-yellow-500" size={15} />
+                                                    <span className="font-bold text-xs sm:text-sm text-stone-800">{pro.rating.toFixed(1)}</span>
                                                 </div>
+                                                <div className="flex items-center gap-1 text-stone-600">
+                                                    <Briefcase size={15} className="text-stone-400" />
+                                                    <span className="text-xs sm:text-sm">{pro.years_experience} anni</span>
+                                                </div>
+                                                {pro.distance_km !== null && (
+                                                    <div className="flex items-center gap-1 text-stone-600">
+                                                        <MapPin size={15} className="text-stone-400" />
+                                                        <span className="text-xs sm:text-sm">
+                                                            a {Math.round(pro.distance_km)} km
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {pro.bio && (
+                                                <p className="text-stone-500 text-xs mt-2 line-clamp-2 leading-relaxed">{pro.bio}</p>
                                             )}
                                         </div>
-                                        {pro.bio && <p className="text-gray-600 text-sm mt-2 line-clamp-2">{pro.bio}</p>}
                                     </div>
-                                    <div className="text-right flex-shrink-0">
-                                        {ratesById[pro.id] !== undefined && (() => {
-                                            const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
-                                            const patternCampo = campoPosa(layingType || 'dritta')
-                                            const multiplier = markupMultiplier(
-                                                patternCampo,
-                                                pro.markup_percent,
-                                                pro.markup_overrides,
-                                            )
-                                            const rawRate = ratesById[pro.id] ?? 0
-                                            const unitRateWithMarkup = rawRate * multiplier
-                                            const totalLayingEstimate =
-                                                baseMq * unitRateWithMarkup + (pro.markup_fixed ?? 0)
 
-                                            return (
-                                                <>
-                                                    {baseMq > 0 ? (
-                                                        <>
-                                                            <div className="text-xl font-bold text-gray-900">
-                                                                € {totalLayingEstimate.toLocaleString('it-IT', {
-                                                                    minimumFractionDigits: 0,
-                                                                    maximumFractionDigits: 0,
-                                                                })}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                posa stimata ({baseMq} m²)
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="text-xl font-bold text-gray-900">
-                                                                da € {Math.round(unitRateWithMarkup)}{' '}
-                                                                <span className="text-xs font-normal text-gray-500">/ m²</span>
-                                                            </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                tariffa posa base
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )
-                                        })()}
-                                        {isSelected && (
-                                            <div className="text-orange-600 font-bold mt-2">✓ Selezionato</div>
+                                    {/* Action button: no price / estimate shown! */}
+                                    <div className="text-right flex-shrink-0">
+                                        {isSelected ? (
+                                            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-500 text-white text-xs sm:text-sm font-bold shadow-xs">
+                                                <Check size={16} />
+                                                <span>Selezionato</span>
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-4 py-2 rounded-xl border border-stone-200 text-stone-700 bg-white hover:bg-stone-100 text-xs sm:text-sm font-semibold transition-all">
+                                                Seleziona
+                                            </span>
                                         )}
                                     </div>
                                 </div>

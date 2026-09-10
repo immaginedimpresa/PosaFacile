@@ -9,9 +9,10 @@ import { Step3Dimensions } from '@/components/configurator/Step3Dimensions'
 import { Step4LayingType } from '@/components/configurator/Step4LayingType'
 import { Step5Services } from '@/components/configurator/Step5Services'
 import { Step6Location } from '@/components/configurator/Step6Location'
+import { StepDeliveryAccess } from '@/components/configurator/StepDeliveryAccess'
 import { Step7ProfessionalSelect } from '@/components/configurator/Step7ProfessionalSelect'
 import { Step8CalendarSelect } from '@/components/configurator/Step8CalendarSelect'
-import { Step7Summary as Step9Summary } from '@/components/configurator/Step7Summary'
+import { Step7Summary as Step10Summary } from '@/components/configurator/Step7Summary'
 import {
     ArrowLeft,
     ArrowRight,
@@ -28,19 +29,28 @@ import { fetchSavedQuotes } from '@/lib/quotesService'
 import { useSeo } from '@/hooks/useSeo'
 import { STATIC_PAGES } from '@/lib/seo'
 
-
-// Il luogo viene chiesto per primo: conoscendo la provincia si può scegliere
-// il professionista al passo 2 e calcolare posa e servizi sulle sue tariffe reali + markup.
+// Il flusso è strutturato in 10 passaggi logici:
+// 1. Luogo: Indirizzo e provincia
+// 2. Accesso e Scarico: Modalità di scarico (bordo strada, box, piano, montacarichi, sosta)
+// 3. Professionista: Selezione del posatore locale (senza stima visibile)
+// 4. Progetto: Ambiente e tipo di intervento
+// 5. Piastrella: Selezione materiale dal catalogo
+// 6. Dimensioni: Superfici e sfrido
+// 7. Posa: Schema di posa (tariffe posatore + markup)
+// 8. Servizi: Servizi accessori
+// 9. Data: Calendario e tempistiche
+// 10. Riepilogo: Preventivo dettagliato e invio
 const STEPS = [
     { num: 1, label: 'Luogo' },
-    { num: 2, label: 'Professionista' },
-    { num: 3, label: 'Progetto' },
-    { num: 4, label: 'Piastrella' },
-    { num: 5, label: 'Dimensioni' },
-    { num: 6, label: 'Posa' },
-    { num: 7, label: 'Servizi' },
-    { num: 8, label: 'Data' },
-    { num: 9, label: 'Riepilogo' },
+    { num: 2, label: 'Accesso e Scarico' },
+    { num: 3, label: 'Professionista' },
+    { num: 4, label: 'Progetto' },
+    { num: 5, label: 'Piastrella' },
+    { num: 6, label: 'Dimensioni' },
+    { num: 7, label: 'Posa' },
+    { num: 8, label: 'Servizi' },
+    { num: 9, label: 'Data' },
+    { num: 10, label: 'Riepilogo' },
 ]
 
 export function ConfiguratorPage() {
@@ -54,6 +64,7 @@ export function ConfiguratorPage() {
         prevStep,
         selectedProduct,
         location,
+        deliveryAccess,
         projectInfo,
         dimensions,
         layingType,
@@ -135,23 +146,25 @@ export function ConfiguratorPage() {
                     location.provincia &&
                     location.cap,
                 )
-            case 2: // Professionista
+            case 2: // Accesso e Scarico
+                return Boolean(deliveryAccess.destination)
+            case 3: // Professionista
                 return Boolean(selectedProfessional)
-            case 3: // Progetto
+            case 4: // Progetto
                 return Boolean(projectInfo.ambiente && projectInfo.intervento)
-            case 4: // Piastrella
+            case 5: // Piastrella
                 return Boolean(selectedProduct)
-            case 5: // Dimensioni
+            case 6: // Dimensioni
                 return Boolean(
                     dimensions.pavimentoMq > 0 || dimensions.paretiMq > 0,
                 )
-            case 6: // Posa
+            case 7: // Posa
                 return Boolean(layingType)
-            case 7: // Servizi
+            case 8: // Servizi
                 return true
-            case 8: // Data
+            case 9: // Data
                 return Boolean(selectedDate || location.dataPreferita)
-            case 9: // Riepilogo
+            case 10: // Riepilogo
                 return true
             default:
                 return true
@@ -160,7 +173,7 @@ export function ConfiguratorPage() {
 
     const handleNext = () => {
         if (!canProceed) return
-        if (currentStep < 9) {
+        if (currentStep < 10) {
             nextStep()
             window.scrollTo({
                 top: 0,
@@ -221,21 +234,23 @@ export function ConfiguratorPage() {
             case 1:
                 return <Step6Location />
             case 2:
-                return <Step7ProfessionalSelect />
+                return <StepDeliveryAccess />
             case 3:
-                return <Step1ProjectType />
+                return <Step7ProfessionalSelect />
             case 4:
-                return <Step2ProductSelect />
+                return <Step1ProjectType />
             case 5:
-                return <Step3Dimensions />
+                return <Step2ProductSelect />
             case 6:
-                return <Step4LayingType />
+                return <Step3Dimensions />
             case 7:
-                return <Step5Services />
+                return <Step4LayingType />
             case 8:
-                return <Step8CalendarSelect />
+                return <Step5Services />
             case 9:
-                return <Step9Summary />
+                return <Step8CalendarSelect />
+            case 10:
+                return <Step10Summary />
             default:
                 return <Step6Location />
         }
@@ -243,6 +258,7 @@ export function ConfiguratorPage() {
 
     const stepDescriptions = [
         'Partiamo da casa tua.',
+        'Accesso al cantiere e consegna dei materiali.',
         'Scegli il tuo professionista.',
         'Che cosa immagini?',
         'La materia del tuo progetto.',
@@ -290,7 +306,7 @@ export function ConfiguratorPage() {
                     <aside className="pf-config-sidebar">
                         <div className="pf-config-progress">
                             <span>IL TUO PREVENTIVO</span>
-                            <span>{currentStep} / 9</span>
+                            <span>{currentStep} / 10</span>
                         </div>
                         <nav aria-label="Passaggi del preventivo">
                             <ol>
@@ -382,7 +398,7 @@ export function ConfiguratorPage() {
                                 </>
                             )}
                         </div>
-                        {selectedProduct && currentStep > 4 && (
+                        {selectedProduct && currentStep > 5 && (
                             <div className="pf-config-selected">
                                 {selectedProduct.images[0] && (
                                     <img
@@ -434,18 +450,18 @@ export function ConfiguratorPage() {
                     )}
                     <div className="pf-config-bottom-progress">
                         <span>
-                            Passo {currentStep} di 9{' '}
+                            Passo {currentStep} di 10{' '}
                             <strong>{STEPS[currentStep - 1]?.label}</strong>
                         </span>
                         <div
                             role="progressbar"
                             aria-label="Avanzamento del preventivo"
                             aria-valuemin={1}
-                            aria-valuemax={9}
+                            aria-valuemax={10}
                             aria-valuenow={currentStep}
                         >
                             <span
-                                style={{ width: `${(currentStep / 9) * 100}%` }}
+                                style={{ width: `${(currentStep / 10) * 100}%` }}
                             />
                         </div>
                     </div>
@@ -460,7 +476,7 @@ export function ConfiguratorPage() {
                         onClick={handleNext}
                         disabled={!canProceed}
                     >
-                        {currentStep < 9 ? (
+                        {currentStep < 10 ? (
                             <>
                                 Continua <ArrowRight size={17} />
                             </>

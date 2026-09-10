@@ -230,7 +230,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
 
             setCurrentStep: (step) => set({ currentStep: step }),
             setActiveQuoteId: (id) => set({ activeQuoteId: id }),
-            nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 9) })),
+            nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 10) })),
             prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
 
             loadFromSavedQuote: (quote: any) => {
@@ -255,7 +255,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
 
                 set({
                     activeQuoteId: quote.id,
-                    currentStep: 9, // Go straight to summary
+                    currentStep: 10, // Go straight to summary
                     projectInfo: {
                         ambiente: quote.project_type || 'soggiorno',
                         intervento: 'ristrutturazione',
