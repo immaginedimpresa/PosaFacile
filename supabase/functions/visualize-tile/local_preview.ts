@@ -4,7 +4,7 @@
 // stesso modello — e scrive su disco i due file che servono a capire un
 // risultato brutto:
 //
-//   out_swatch.jpg     quello che il modello riceve come superficie da posare
+//   out_swatch.png     quello che il modello riceve come superficie da posare
 //   out_result.jpg     quello che restituisce
 //
 // Se il risultato non convince, il confronto fra i due dice subito di chi è la
@@ -50,10 +50,10 @@ const room = limit(await Image.decode(await Deno.readFile(roomPath)), 1280)
 const sample = limit(await Image.decode(await Deno.readFile(tilePath)), 1024)
 
 const swatch = buildPatternSwatch(sample, pattern, Math.max(corto, lungo), Math.min(corto, lungo))
-await Deno.writeFile('out_swatch.jpg', await swatch.image.encodeJPEG(92))
+await Deno.writeFile('out_swatch.png', await swatch.image.encode())
 
 const roomBase64 = bytesToBase64(await room.encodeJPEG(92))
-const swatchBase64 = bytesToBase64(await swatch.image.encodeJPEG(94))
+const swatchBase64 = bytesToBase64(await swatch.image.encode())
 const prompt = buildPrompt(surface, PATTERN_NAME[pattern], corto, lungo, swatch.extentCm)
 
 console.log(`stanza   ${room.width}x${room.height} (${nearestAspectRatio(room.width, room.height)})`)
@@ -62,14 +62,14 @@ console.log(`campione ${sample.width}x${sample.height} → ${swatch.cells} piast
     + `${swatch.discarded ? `, ${swatch.discarded} scartate` : ''}${swatch.detected ? '' : ' — nessuna griglia'}`)
 console.log(`posa     ${pattern} · ${corto}x${lungo} cm · ${surface}`)
 console.log(`modello  ${model}`)
-console.log('out_swatch.jpg scritto. Chiamo il modello…')
+console.log('out_swatch.png scritto. Chiamo il modello…')
 
 const body = {
     contents: [{
         role: 'user',
         parts: [
             { inlineData: { mimeType: 'image/jpeg', data: roomBase64 } },
-            { inlineData: { mimeType: 'image/jpeg', data: swatchBase64 } },
+            { inlineData: { mimeType: 'image/png', data: swatchBase64 } },
             { text: prompt },
         ],
     }],

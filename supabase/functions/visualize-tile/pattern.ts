@@ -240,6 +240,20 @@ export interface SwatchResult {
 const GROUT_CM = 0.2
 
 /**
+ * Larghezza minima della fuga sullo swatch, in pixel.
+ *
+ * Due millimetri su un listello da 120 cm fanno mezzo pixel: fisicamente
+ * corretto e visivamente inesistente. Misurato in produzione, con la fuga a un
+ * pixel il modello ha dipinto un pavimento grigio senza giunti, perché nello
+ * swatch non c'erano giunti da vedere. Lo swatch è un riferimento per un
+ * modello, non un render fedele: la fuga deve leggersi.
+ */
+const MIN_GROUT_PX = 2
+
+/** Scarto minimo di luminanza fra piastrella e fuga, su 255. */
+const MIN_GROUT_CONTRAST = 38
+
+/**
  * Quanti centimetri di superficie rappresenta il lato dello swatch.
  *
  * È il numero che porta la SCALA, e prima non esisteva: il disegno faceva
@@ -283,8 +297,13 @@ export function buildPatternSwatch(
     const px = src.bitmap, W = src.width, H = src.height
     const { cells, detected, discarded } = materialCells(px, W, H)
 
-    // Colore della fuga: la media del materiale, scurita. Un grigio scelto a
-    // tavolino stonerebbe su metà del catalogo.
+    // Colore della fuga: il materiale scurito, ma con uno stacco garantito.
+    //
+    // Prima era semplicemente `media × 0,72`, e su una pietra grigio scuro il
+    // 72% di grigio scuro resta grigio scuro: la fuga spariva e il modello non
+    // aveva niente da copiare. Un grigio fisso scelto a tavolino stonerebbe su
+    // metà del catalogo, quindi si parte dal materiale e si impone una
+    // distanza minima di luminanza.
     let r = 0, g = 0, b = 0, n = 0
     for (const c of cells) {
         for (let y = c.y; y < c.y + c.h; y += 3) {
@@ -294,7 +313,11 @@ export function buildPatternSwatch(
             }
         }
     }
-    const grout = [r / n * 0.72, g / n * 0.72, b / n * 0.72]
+    const mean = [r / n, g / n, b / n]
+    const lum = 0.299 * mean[0] + 0.587 * mean[1] + 0.114 * mean[2]
+    const target = Math.max(0, Math.min(lum * 0.6, lum - MIN_GROUT_CONTRAST))
+    const darken = lum > 1 ? target / lum : 0
+    const grout = [mean[0] * darken, mean[1] * darken, mean[2] * darken]
 
     // La diagonale si disegna dritta su una tela più grande e poi si ruota:
     // servono gli angoli, altrimenti dopo la rotazione restano vuoti.
@@ -309,11 +332,10 @@ export function buildPatternSwatch(
     const L = Math.max(4, Math.round(longCm * pxPerCm))
     const S = Math.max(3, Math.round(shortCm * pxPerCm))
     // La fuga vera è sottilissima — due millimetri su sessanta centimetri sono
-    // lo 0,3% — e sotto il pixel sparirebbe. Un pixel come minimo la tiene
-    // visibile; il tetto all'8% del lato corto evita che su un mosaico da 5 cm
-    // diventi una fascia.
-    const gw = Math.max(1, Math.min(
-        Math.round(GROUT_CM * pxPerCm), Math.max(1, Math.round(S * 0.08))))
+    // lo 0,3% — e sotto i due pixel sparisce nella compressione. Il tetto al
+    // 12% del lato corto evita che su un mosaico da 5 cm diventi una fascia.
+    const gw = Math.max(MIN_GROUT_PX, Math.min(
+        Math.round(GROUT_CM * pxPerCm), Math.max(MIN_GROUT_PX, Math.round(S * 0.12))))
 
     const canvas = new Uint8ClampedArray(CW * CH * 4)
     for (let i = 0; i < CW * CH; i++) {

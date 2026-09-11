@@ -168,6 +168,37 @@ Deno.test('l’estensione dello swatch è tre metri, e si allarga solo per i for
     assert.equal(swatchExtentCm(320), 960)
 })
 
+Deno.test('le fughe restano visibili anche sui listelli lunghi e su materiali scuri', () => {
+    // La regressione che questo test blocca è costata una generazione in
+    // produzione: con la fuga a un pixel su un gres grigio scuro il modello ha
+    // restituito un pavimento uniforme, perché nello swatch non c'erano giunti.
+    const scuro = new Image(200, 200)
+    for (let y = 0; y < 200; y++) {
+        for (let x = 0; x < 200; x++) {
+            const v = 62 + Math.round(10 * Math.sin(x / 5) * Math.cos(y / 7))
+            scuro.setPixelAt(x + 1, y + 1, (v << 24) | (v << 16) | (v << 8) | 0xff)
+        }
+    }
+    const { image } = buildPatternSwatch(scuro, 'spina', 120, 20, 512)
+
+    // Lungo una riga orizzontale devono comparire cadute di luminanza nette:
+    // sono i giunti fra un listello e l'altro.
+    let giunti = 0
+    const riga = 256
+    for (let x = 1; x < 512; x++) {
+        const a = image.bitmap[(riga * 512 + x) * 4], b = image.bitmap[(riga * 512 + x - 1) * 4]
+        if (b - a > 20) giunti++
+    }
+    assert(giunti >= 2, `nessun giunto leggibile sulla riga centrale (${giunti})`)
+
+    // e lo stacco fra il pixel più chiaro e il più scuro deve superare la soglia
+    let min = 255, max = 0
+    for (let i = 0; i < image.bitmap.length; i += 4) {
+        min = Math.min(min, image.bitmap[i]); max = Math.max(max, image.bitmap[i])
+    }
+    assert(max - min >= 38, `contrasto fuga/piastrella troppo basso (${max - min})`)
+})
+
 Deno.test('lo swatch è deterministico e segue il formato', () => {
     const sample = sampleImage()
     const a = buildPatternSwatch(sample, 'correre', 120, 20, 256).image

@@ -113,7 +113,12 @@ serve(async (req: Request) => {
         // cliente, fatta con i pixel di quel campione.
         const swatch = buildPatternSwatch(
             limitImage(decodedSample, 1024), body.layingPattern, Math.max(w, h), Math.min(w, h))
-        const swatchBase64 = bytesToBase64(await swatch.image.encodeJPEG(94))
+        // PNG, non JPEG: le fughe sono linee di due pixel su una pietra
+        // rumorosa, ed è esattamente ciò che la compressione con perdita
+        // impasta. Misurato: 1,5 MB invece di 0,5, e 52 ms per codificarlo.
+        // Vale il peso — con le fughe impastate il modello ha dipinto un
+        // pavimento grigio senza giunti.
+        const swatchBase64 = bytesToBase64(await swatch.image.encode())
 
         const secret = Deno.env.get('GOOGLE_SERVICE_ACCOUNT')
         if (!secret) throw new Error('Servizio anteprime non configurato.')
@@ -139,7 +144,7 @@ serve(async (req: Request) => {
                 role: 'user',
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: roomBase64 } },
-                    { inlineData: { mimeType: 'image/jpeg', data: swatchBase64 } },
+                    { inlineData: { mimeType: 'image/png', data: swatchBase64 } },
                     { text: buildPrompt(body.surface, PATTERN_NAME[body.layingPattern], w, h, swatch.extentCm) },
                 ],
             }],
@@ -158,7 +163,7 @@ serve(async (req: Request) => {
         }
         // In debug torna anche lo swatch: senza, davanti a un risultato brutto
         // si tira a indovinare se ha sbagliato il disegno o il modello.
-        if (body.debug) payload.swatch = `data:image/jpeg;base64,${swatchBase64}`
+        if (body.debug) payload.swatch = `data:image/png;base64,${swatchBase64}`
 
         return json(payload)
     } catch (error: unknown) {
