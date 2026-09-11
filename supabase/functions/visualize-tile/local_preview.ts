@@ -54,9 +54,10 @@ await Deno.writeFile('out_swatch.jpg', await swatch.image.encodeJPEG(92))
 
 const roomBase64 = bytesToBase64(await room.encodeJPEG(92))
 const swatchBase64 = bytesToBase64(await swatch.image.encodeJPEG(94))
-const prompt = buildPrompt(surface, PATTERN_NAME[pattern], corto, lungo)
+const prompt = buildPrompt(surface, PATTERN_NAME[pattern], corto, lungo, swatch.extentCm)
 
 console.log(`stanza   ${room.width}x${room.height} (${nearestAspectRatio(room.width, room.height)})`)
+console.log(`swatch   ${swatch.extentCm} cm di superficie reale su ${swatch.image.width} px`)
 console.log(`campione ${sample.width}x${sample.height} → ${swatch.cells} piastrelle riconosciute`
     + `${swatch.discarded ? `, ${swatch.discarded} scartate` : ''}${swatch.detected ? '' : ' — nessuna griglia'}`)
 console.log(`posa     ${pattern} · ${corto}x${lungo} cm · ${surface}`)

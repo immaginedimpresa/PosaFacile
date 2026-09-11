@@ -130,7 +130,8 @@ serve(async (req: Request) => {
 
         console.log(
             `${body.surface} · ${w}x${h} cm · posa ${body.layingPattern} · foto ${room.width}x${room.height} · `
-            + `swatch da ${swatch.cells} piastrelle${swatch.detected ? '' : ' (nessuna griglia: campione intero)'}`,
+            + `swatch ${swatch.extentCm} cm da ${swatch.cells} piastrelle`
+            + `${swatch.detected ? '' : ' (nessuna griglia: campione intero)'}`,
         )
 
         const generated = await generateImage(config, model, {
@@ -139,7 +140,7 @@ serve(async (req: Request) => {
                 parts: [
                     { inlineData: { mimeType: 'image/jpeg', data: roomBase64 } },
                     { inlineData: { mimeType: 'image/jpeg', data: swatchBase64 } },
-                    { text: buildPrompt(body.surface, PATTERN_NAME[body.layingPattern], w, h) },
+                    { text: buildPrompt(body.surface, PATTERN_NAME[body.layingPattern], w, h, swatch.extentCm) },
                 ],
             }],
             generationConfig: {

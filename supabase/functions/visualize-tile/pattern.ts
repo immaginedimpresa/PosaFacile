@@ -232,15 +232,40 @@ export interface SwatchResult {
     cells: number
     detected: boolean
     discarded: number
+    /** Quanti centimetri di superficie reale copre il lato dello swatch. */
+    extentCm: number
+}
+
+/** Fuga reale: due millimetri. */
+const GROUT_CM = 0.2
+
+/**
+ * Quanti centimetri di superficie rappresenta il lato dello swatch.
+ *
+ * È il numero che porta la SCALA, e prima non esisteva: il disegno faceva
+ * sempre cinque piastrelle sul lato lungo, così un mosaico 5x5 e una lastra
+ * 120x120 uscivano byte per byte identici. Il formato arrivava al modello solo
+ * come una frase nel prompt, ed era una frase contro un'immagine — la stessa
+ * gara che avevamo già perso con lo schema di posa.
+ *
+ * Tenendo fissa l'estensione, la densità delle piastrelle diventa il segnale:
+ * tre metri di mosaico si vedono fitti, tre metri di lastre si vedono radi, ed
+ * è esattamente la differenza che il cliente deve percepire. Il minimo di tre
+ * metri è una porzione di stanza credibile; per i formati grandi si allarga,
+ * altrimenti resterebbero due piastrelle e mezza e lo schema non si leggerebbe.
+ */
+export function swatchExtentCm(longCm: number): number {
+    return Math.max(300, Math.round(longCm * 3))
 }
 
 /**
  * La vista dall'alto della superficie finita.
  *
- * `longCm` e `shortCm` sono il formato reale: decidono le proporzioni della
- * piastrella disegnata, quindi un 20x120 esce come un listello e non come una
- * mattonella. È l'unico punto in cui le misure del catalogo diventano geometria
- * anziché una frase nel prompt.
+ * `longCm` e `shortCm` sono il formato reale, e qui diventano geometria in due
+ * modi: la PROPORZIONE, perché un 20x120 esce come un listello e non come una
+ * mattonella, e la SCALA, perché le piastrelle vengono disegnate alla loro
+ * grandezza vera dentro un'area di estensione nota (vedi `swatchExtentCm`).
+ * È l'unico punto in cui le misure del catalogo smettono di essere una frase.
  */
 export function buildPatternSwatch(
     sample: Image,
@@ -277,11 +302,18 @@ export function buildPatternSwatch(
     const CW = isDiag ? Math.round(size * 1.5) : size
     const CH = CW
 
-    // Circa cinque piastrelle sul lato lungo: abbastanza da leggere lo schema
-    // senza che il singolo pezzo diventi un francobollo.
-    const L = Math.round(CW / 5)
-    const S = Math.max(6, Math.round(L * (shortCm / longCm)))
-    const gw = Math.max(2, Math.round(L * 0.008))
+    // Le piastrelle alla loro grandezza vera dentro un'area di estensione nota.
+    // Quanti pezzi ci stanno non lo decide una costante: lo decide il formato.
+    const extentCm = swatchExtentCm(longCm)
+    const pxPerCm = size / extentCm
+    const L = Math.max(4, Math.round(longCm * pxPerCm))
+    const S = Math.max(3, Math.round(shortCm * pxPerCm))
+    // La fuga vera è sottilissima — due millimetri su sessanta centimetri sono
+    // lo 0,3% — e sotto il pixel sparirebbe. Un pixel come minimo la tiene
+    // visibile; il tetto all'8% del lato corto evita che su un mosaico da 5 cm
+    // diventi una fascia.
+    const gw = Math.max(1, Math.min(
+        Math.round(GROUT_CM * pxPerCm), Math.max(1, Math.round(S * 0.08))))
 
     const canvas = new Uint8ClampedArray(CW * CH * 4)
     for (let i = 0; i < CW * CH; i++) {
@@ -311,7 +343,7 @@ export function buildPatternSwatch(
     } else if (pattern === 'mosaico') {
         // Il modulo del mosaico è già nel campione: qui si posano i fogli, e il
         // foglio intero è il campione intero.
-        const sheet = Math.round(CW / 4)
+        const sheet = Math.max(8, Math.round(longCm * pxPerCm))
         const whole = [{ x: 0, y: 0, w: W, h: H }]
         for (let j = -1; j * sheet < CH + sheet; j++) {
             for (let i = -1; i * sheet < CW + sheet; i++) {
@@ -335,7 +367,7 @@ export function buildPatternSwatch(
 
     if (!isDiag) {
         image.bitmap.set(canvas)
-        return { image, cells: cells.length, detected, discarded }
+        return { image, cells: cells.length, detected, discarded, extentCm }
     }
 
     // Quarantacinque gradi: la posa diagonale è la griglia dritta girata.
@@ -354,5 +386,5 @@ export function buildPatternSwatch(
             out[q] = canvas[p]; out[q + 1] = canvas[p + 1]; out[q + 2] = canvas[p + 2]; out[q + 3] = 255
         }
     }
-    return { image, cells: cells.length, detected, discarded }
+    return { image, cells: cells.length, detected, discarded, extentCm }
 }

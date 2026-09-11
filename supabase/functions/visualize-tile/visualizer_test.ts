@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { Image } from 'https://deno.land/x/imagescript@1.2.17/mod.ts'
-import { buildPatternSwatch, materialCells, type Pattern } from './pattern.ts'
+import { buildPatternSwatch, materialCells, swatchExtentCm, type Pattern } from './pattern.ts'
 import { base64ToBytes, bytesToBase64, parseDataUrl, resizeBox } from './imageops.ts'
 import { tileFormatCm, validateInput } from './request.ts'
 import { generateImage, vertexEndpoint } from './vertex.ts'
@@ -51,16 +51,18 @@ Deno.test('la richiesta scarta titolo, descrizione, tipo di ambiente e ogni camp
 })
 
 Deno.test('il prompt dipende solo da superficie, schema e misure', () => {
-    const prompt = buildPrompt('floor', 'herringbone', 20, 120)
+    const prompt = buildPrompt('floor', 'herringbone', 20, 120, 360)
     assert(prompt.includes('herringbone') && prompt.includes('20x120 cm') && prompt.includes('floor surface'))
+    // l'estensione dello swatch deve comparire: è l'ancora della scala
+    assert(prompt.includes('360 cm by 360 cm') && prompt.includes('3.6 m'))
     // Nessun testo del catalogo può finirci: gli argomenti sono quattro e tipati.
     for (const veleno of ['Marquina', 'gres', 'lappato', 'bagno', 'soggiorno']) {
         assert(!prompt.includes(veleno))
     }
-    assert(buildPrompt('wall', 'straight grid', 60, 60).includes('wall surface'))
+    assert(buildPrompt('wall', 'straight grid', 60, 60, 300).includes('wall surface'))
     // Pavimento e parete proteggono cose diverse.
-    assert(buildPrompt('floor', 'straight grid', 60, 60).includes('Rugs and carpets'))
-    assert(buildPrompt('wall', 'straight grid', 60, 60).includes('Skirting boards'))
+    assert(buildPrompt('floor', 'straight grid', 60, 60, 300).includes('Rugs and carpets'))
+    assert(buildPrompt('wall', 'straight grid', 60, 60, 300).includes('Skirting boards'))
 })
 
 Deno.test('al modello vanno due immagini e un testo, e il testo non nomina il prodotto', async () => {
@@ -75,7 +77,7 @@ Deno.test('al modello vanno due immagini e un testo, e il testo non nomina il pr
             contents: [{ role: 'user', parts: [
                 { inlineData: { mimeType: 'image/jpeg', data: 'Uk9PTQ==' } },
                 { inlineData: { mimeType: 'image/jpeg', data: 'U1dBVENI' } },
-                { text: buildPrompt('floor', 'herringbone', 20, 120) },
+                { text: buildPrompt('floor', 'herringbone', 20, 120, 300) },
             ] }],
             generationConfig: { responseModalities: ['IMAGE'], temperature: .15 },
         }
@@ -128,6 +130,42 @@ Deno.test('ogni schema produce uno swatch pieno, quadrato e diverso dagli altri'
             assert.notDeepEqual(rendered[i].bitmap, rendered[j].bitmap, `${PATTERNS[i]} e ${PATTERNS[j]} sono identici`)
         }
     }
+})
+
+Deno.test('la grandezza della piastrella arriva nei pixel, non solo nel prompt', () => {
+    const sample = sampleImage()
+    // Stessa proporzione, grandezze molto diverse: se lo swatch portasse solo il
+    // rapporto fra i lati — com'era prima — questi tre sarebbero identici, e il
+    // modello non avrebbe modo di distinguere un mosaico da una lastra.
+    const formati = [5, 30, 60, 120]
+    const swatches = formati.map(lato => buildPatternSwatch(sample, 'dritta', lato, lato, 256).image.bitmap)
+    for (let i = 0; i < swatches.length; i++) {
+        for (let j = i + 1; j < swatches.length; j++) {
+            assert.notDeepEqual(swatches[i], swatches[j], `${formati[i]}x${formati[i]} e ${formati[j]}x${formati[j]} danno lo stesso disegno`)
+        }
+    }
+    // Più piccola è la piastrella, più fitto è il disegno: le fughe orizzontali
+    // contate lungo una colonna crescono al diminuire del formato.
+    const righe = (lato: number) => {
+        const image = buildPatternSwatch(sample, 'dritta', lato, lato, 256).image
+        let cambi = 0
+        for (let y = 1; y < 256; y++) {
+            const a = image.bitmap[(y * 256 + 128) * 4], b = image.bitmap[((y - 1) * 256 + 128) * 4]
+            if (Math.abs(a - b) > 24) cambi++
+        }
+        return cambi
+    }
+    assert(righe(5) > righe(30), 'un mosaico deve risultare più fitto di un 30x30')
+    assert(righe(30) > righe(120), 'un 30x30 deve risultare più fitto di una lastra 120x120')
+})
+
+Deno.test('l’estensione dello swatch è tre metri, e si allarga solo per i formati grandi', () => {
+    assert.equal(swatchExtentCm(5), 300)
+    assert.equal(swatchExtentCm(60), 300)
+    assert.equal(swatchExtentCm(100), 300)
+    // sotto i tre metri una lastra 120 darebbe due piastrelle e mezza: illeggibile
+    assert.equal(swatchExtentCm(120), 360)
+    assert.equal(swatchExtentCm(320), 960)
 })
 
 Deno.test('lo swatch è deterministico e segue il formato', () => {

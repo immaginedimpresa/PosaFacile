@@ -47,7 +47,13 @@ export const PATTERN_NAME: Record<string, string> = {
  * rispetto alla v1, che descriveva la posa a parole e chiedeva al modello di
  * ignorare quella visibile nel campione.
  */
-export function buildPrompt(surface: Surface, patternName: string, w: number, h: number): string {
+export function buildPrompt(
+    surface: Surface,
+    patternName: string,
+    w: number,
+    h: number,
+    extentCm: number,
+): string {
     const target = surface === 'wall' ? 'wall surface' : 'floor surface'
     const untouched = surface === 'wall'
         ? 'floor, ceiling, furniture, sanitary ware, mirrors, doors, windows and every object'
@@ -57,7 +63,9 @@ export function buildPrompt(surface: Surface, patternName: string, w: number, h:
 
 FIRST image: the real photograph to edit. Its framing, perspective and lighting are fixed.
 SECOND image: the finished surface seen from directly above, flat, with no perspective. This is
-the material and the layout to lay — both are already decided here.
+the material, the layout AND the scale to lay — all three are already decided here. It shows
+exactly ${extentCm} cm by ${extentCm} cm of real surface, tiled with ${w}x${h} cm tiles, so how
+big one tile is compared to a ${(extentCm / 100).toFixed(1)} m stretch of room is visible in it.
 
 TASK: re-lay the ${target} of the room in the FIRST image with the surface of the SECOND image.
 
@@ -67,11 +75,15 @@ same joints, same alignment. Do not substitute anything else and do not simplify
 straighten the layout.
 
 The FIRST image decides everything else. Lay the surface in the room's own perspective, converging
-on its vanishing points, with the tiles at true scale for a ${w}x${h} cm tile, so their number
-across the room is physically right. Relight the new surface with the room's own light: keep the
-patches of sunlight, the soft shadows and the darkening in the corners exactly where they fall
-now, and add the contact shadows where furniture meets the new surface. Match the reflections to
-how glossy the surface in the SECOND image looks.${surface === 'floor' ? `
+on its vanishing points. Keep the tile size of the SECOND image: estimate how wide the room is
+from its doors, furniture and skirting boards, and fit the tiles at ${w}x${h} cm accordingly, so
+their number across the room is physically right. A ${w}x${h} cm tile has to read as that size
+against the furniture standing on it — not smaller, not larger.
+
+Relight the new surface with the room's own light: keep the patches of sunlight, the soft shadows
+and the darkening in the corners exactly where they fall now, and add the contact shadows where
+furniture meets the new surface. Match the reflections to how glossy the surface in the SECOND
+image looks.${surface === 'floor' ? `
 
 Rugs and carpets are NOT the floor: they stay exactly as they are, lying on top of the new tiles.
 Do not retexture, restyle or remove them. Tile the bare floor around and beyond them.` : `
