@@ -16,7 +16,8 @@ import {
     CalendarClock,
     Package,
     ShieldCheck,
-    Sparkles
+    Sparkles,
+    Hammer,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -26,7 +27,42 @@ import {
     type LogisticsSettings,
 } from '@/services/settingsService'
 import { useAuth } from '@/hooks/useAuth'
-import { earliestStartDate, materialWaitDays } from '@/lib/layingDuration'
+import {
+    earliestStartDate,
+    estimateLayingDuration,
+    formatDays,
+    materialWaitDays,
+    type DurationInput,
+} from '@/lib/layingDuration'
+
+/** Cantieri tipo su cui l'admin vede subito l'effetto della resa di posa. */
+const LAYING_EXAMPLES: { label: string; input: DurationInput }[] = [
+    {
+        label: 'Soggiorno 25 mq · 60x60 · dritta',
+        input: { floorSqm: 25, wallSqm: 0, layingType: 'dritta', ambiente: 'soggiorno', intervento: 'nuova_costruzione', tileWidthMm: 600, tileHeightMm: 600 },
+    },
+    {
+        label: 'Soggiorno 50 mq · 60x60 · dritta',
+        input: { floorSqm: 50, wallSqm: 0, layingType: 'dritta', ambiente: 'soggiorno', intervento: 'nuova_costruzione', tileWidthMm: 600, tileHeightMm: 600 },
+    },
+    {
+        label: 'Open space 100 mq · 60x60 · dritta',
+        input: { floorSqm: 100, wallSqm: 0, layingType: 'dritta', ambiente: 'soggiorno', intervento: 'nuova_costruzione', tileWidthMm: 600, tileHeightMm: 600 },
+    },
+    {
+        label: 'Bagno 6 mq + 20 mq pareti · 30x60',
+        input: { floorSqm: 6, wallSqm: 20, layingType: 'dritta', ambiente: 'bagno', intervento: 'ristrutturazione', tileWidthMm: 300, tileHeightMm: 600 },
+    },
+]
+
+/** Giorni di sola posa e giorni di cantiere di un esempio, con la resa indicata. */
+function layingExample(input: DurationInput, layingSqmPerDay: number) {
+    const estimate = estimateLayingDuration({ ...input, layingSqmPerDay })
+    const layingDays = estimate.phases
+        .filter((phase) => phase.key.startsWith('posa'))
+        .reduce((sum, phase) => sum + phase.criticalDays, 0) / estimate.crewThroughput
+    return { layingDays, workDays: estimate.workDays }
+}
 
 interface PlatformSettings {
     // Tariffe Posa
@@ -516,7 +552,79 @@ export function AdminSettingsPage() {
                             </div>
                         </div>
 
-                        {/* 2. Tariffario Consegna, Piani e Facchinaggio Materiali */}
+                        {/* 2. Tempi di posa: base della stima dei giorni di cantiere */}
+                        <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
+                            <div className="p-6 border-b border-stone-100 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                    <Hammer size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-stone-900">Tempi di Posa</h2>
+                                    <p className="text-xs text-stone-500">
+                                        Base della stima dei giorni di cantiere mostrata al cliente e salvata sull&apos;ordine
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-stone-700 mb-1.5">
+                                            Mq posati al giorno dal cantiere
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={200}
+                                                step={1}
+                                                value={logistics.layingSqmPerDay}
+                                                onChange={e => setLogistics({
+                                                    ...logistics,
+                                                    layingSqmPerDay: Math.max(0, parseInt(e.target.value, 10) || 0),
+                                                })}
+                                                className="w-full pl-3.5 pr-16 py-2.5 rounded-xl border border-stone-200 bg-stone-50/50 focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-medium transition-all outline-none"
+                                            />
+                                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">mq/giorno</span>
+                                        </div>
+                                        <p className="text-[11px] text-stone-400 mt-1.5">
+                                            Riferimento: pavimento in 60x60, posa dritta, ambiente senza ostacoli. Con {logistics.layingSqmPerDay || DEFAULT_LOGISTICS.layingSqmPerDay} mq/giorno, 1 giorno di posa ogni {logistics.layingSqmPerDay || DEFAULT_LOGISTICS.layingSqmPerDay} mq.
+                                        </p>
+                                    </div>
+                                    <div className="text-xs text-stone-500 leading-relaxed sm:pt-6">
+                                        Formato della piastrella, schema di posa, ambiente, tipo di intervento e rivestimento a parete correggono questa resa in automatico. Demolizione, massetto, stuccatura e le altre lavorazioni si aggiungono ai giorni di posa.
+                                    </div>
+                                </div>
+
+                                {/* Effetto immediato del valore impostato */}
+                                <div className="p-5 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-3">
+                                    <div className="flex items-center gap-2 text-stone-900">
+                                        <Sparkles size={16} className="text-orange-500" />
+                                        <h3 className="text-xs font-bold uppercase tracking-wider">
+                                            Simulazione giorni stimati al cliente
+                                        </h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                                        {LAYING_EXAMPLES.map(({ label, input }) => {
+                                            const { layingDays, workDays } = layingExample(input, logistics.layingSqmPerDay)
+                                            return (
+                                                <div key={label} className="p-3 bg-white rounded-xl border border-stone-200/70 space-y-1">
+                                                    <p className="text-stone-500 font-medium">{label}</p>
+                                                    <p className="text-base font-bold text-stone-900">
+                                                        {layingDays.toFixed(1).replace('.', ',')} giorni di posa
+                                                    </p>
+                                                    <p className="text-[10px] text-stone-400">
+                                                        {formatDays(workDays)} di cantiere con allestimento, stuccatura e pulizia
+                                                    </p>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Tariffario Consegna, Piani e Facchinaggio Materiali */}
                         <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
                             <div className="p-6 border-b border-stone-100 flex items-center justify-between">
                                 <div className="flex items-center gap-3">

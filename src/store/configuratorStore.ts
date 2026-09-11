@@ -162,6 +162,9 @@ export interface ConfiguratorState {
     setDeliveryAccess: (access: Partial<DeliveryAccessInfo>) => void
     deliverySubStep: number
     setDeliverySubStep: (step: number) => void
+    /** Fase del passo Progetto: ambiente, intervento, lavori preliminari. */
+    projectSubStep: number
+    setProjectSubStep: (step: number) => void
     loadLogisticsSettings: (force?: boolean) => Promise<void>
     setSelectedProfessional: (pro: SelectedProfessional | null) => void
     setProfessionalRates: (rates: ProfessionalRates | null) => void
@@ -233,6 +236,7 @@ const initialState = {
         carryUpAcknowledged: false,
     },
     deliverySubStep: 1,
+    projectSubStep: 1,
     logisticsSettings: null as LogisticsSettings | null,
     activeQuoteId: null,
     selectedProfessional: null,
@@ -373,6 +377,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             }),
 
             setDeliverySubStep: (step) => set({ deliverySubStep: Math.max(1, Math.min(4, step)) }),
+            setProjectSubStep: (step) => set({ projectSubStep: Math.max(1, Math.min(3, step)) }),
 
             loadLogisticsSettings: async (force = false) => {
                 try {
@@ -477,7 +482,10 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
              * conferma o corregge quando accetta l'incarico.
              */
             getDurationEstimate: () => {
-                const { dimensions, layingType, projectInfo, selectedProduct, services } = get()
+                const { dimensions, layingType, projectInfo, selectedProduct, services, logisticsSettings } = get()
+                if (!logisticsSettings) {
+                    get().loadLogisticsSettings()
+                }
                 return estimateLayingDuration({
                     floorSqm: dimensions.pavimentoMq,
                     wallSqm: dimensions.paretiMq,
@@ -487,6 +495,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                     tileWidthMm: selectedProduct?.format_width,
                     tileHeightMm: selectedProduct?.format_height,
                     services,
+                    layingSqmPerDay: logisticsSettings?.layingSqmPerDay,
                 })
             },
 

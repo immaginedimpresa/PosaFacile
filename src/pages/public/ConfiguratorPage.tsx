@@ -60,6 +60,14 @@ const STEPS = [
 const DELIVERY_STEP = 9
 /** Il passo in cui si sceglie la piastrella: da lì in poi la si mostra in testata. */
 const PRODUCT_STEP = 4
+/** Il passo Progetto, diviso in tre sottopassi. */
+const PROJECT_STEP = 3
+
+/** Passi divisi in fasi: nomi brevi mostrati accanto ai pulsanti. */
+const SUB_STEP_LABELS: Record<number, string[]> = {
+    [PROJECT_STEP]: ['Ambiente', 'Intervento', 'Lavori preliminari'],
+    [DELIVERY_STEP]: ['Scarico', 'Piano', 'Movimentazione', 'Sosta e note'],
+}
 
 export function ConfiguratorPage() {
     useSeo(STATIC_PAGES.configurator)
@@ -75,6 +83,8 @@ export function ConfiguratorPage() {
         deliveryAccess,
         deliverySubStep,
         setDeliverySubStep,
+        projectSubStep,
+        setProjectSubStep,
         projectInfo,
         dimensions,
         layingType,
@@ -147,6 +157,18 @@ export function ConfiguratorPage() {
 
     const total = getTotal()
 
+    // Fasi del passo corrente, se è uno di quelli divisi in sottopassi.
+    const subStepLabels = SUB_STEP_LABELS[currentStep] ?? []
+    const subStep =
+        currentStep === PROJECT_STEP ? projectSubStep
+            : currentStep === DELIVERY_STEP ? deliverySubStep
+                : 1
+    const hasMorePhases = subStep < subStepLabels.length
+    const setSubStepFor = (step: number, value: number) => {
+        if (step === PROJECT_STEP) setProjectSubStep(value)
+        else if (step === DELIVERY_STEP) setDeliverySubStep(value)
+    }
+
     const canProceed = (() => {
         switch (currentStep) {
             case 1: // Luogo
@@ -176,7 +198,9 @@ export function ConfiguratorPage() {
                 }
                 return true
             }
-            case 3: // Progetto
+            case PROJECT_STEP: // Progetto
+                if (projectSubStep === 1) return Boolean(projectInfo.ambiente)
+                if (projectSubStep === 2) return Boolean(projectInfo.intervento)
                 return Boolean(projectInfo.ambiente && projectInfo.intervento)
             case PRODUCT_STEP: // Piastrella
                 return Boolean(selectedProduct)
@@ -201,8 +225,8 @@ export function ConfiguratorPage() {
 
     const handleNext = () => {
         if (!canProceed) return
-        if (currentStep === DELIVERY_STEP && deliverySubStep < 4) {
-            setDeliverySubStep(deliverySubStep + 1)
+        if (hasMorePhases) {
+            setSubStepFor(currentStep, subStep + 1)
             const stepEl = document.querySelector('.pf-config-step')
             if (stepEl) {
                 stepEl.scrollTo({ top: 0, behavior: 'smooth' })
@@ -217,6 +241,8 @@ export function ConfiguratorPage() {
             return
         }
         if (currentStep < STEPS.length) {
+            // In un passo a fasi si entra dalla prima.
+            setSubStepFor(currentStep + 1, 1)
             nextStep()
             const stepEl = document.querySelector('.pf-config-step')
             if (stepEl) {
@@ -235,8 +261,8 @@ export function ConfiguratorPage() {
     }
 
     const handlePrev = () => {
-        if (currentStep === DELIVERY_STEP && deliverySubStep > 1) {
-            setDeliverySubStep(deliverySubStep - 1)
+        if (subStep > 1) {
+            setSubStepFor(currentStep, subStep - 1)
             const stepEl = document.querySelector('.pf-config-step')
             if (stepEl) {
                 stepEl.scrollTo({ top: 0, behavior: 'smooth' })
@@ -251,6 +277,8 @@ export function ConfiguratorPage() {
             return
         }
         if (currentStep > 1) {
+            // Tornando indietro si rientra dall'ultima fase, dove si era usciti.
+            setSubStepFor(currentStep - 1, SUB_STEP_LABELS[currentStep - 1]?.length ?? 1)
             prevStep()
             const stepEl = document.querySelector('.pf-config-step')
             if (stepEl) {
@@ -268,6 +296,7 @@ export function ConfiguratorPage() {
 
     const handleJumpToStep = (targetStep: number) => {
         if (targetStep < currentStep) {
+            setSubStepFor(targetStep, 1)
             setCurrentStep(targetStep)
             window.scrollTo({
                 top: 0,
@@ -301,7 +330,7 @@ export function ConfiguratorPage() {
                 return <Step6Location />
             case 2:
                 return <Step7ProfessionalSelect />
-            case 3:
+            case PROJECT_STEP:
                 return <Step1ProjectType />
             case PRODUCT_STEP:
                 return <Step2ProductSelect />
@@ -478,15 +507,12 @@ export function ConfiguratorPage() {
                             )}
 
                             <div className="pf-config-workspace-footer-center">
-                                {currentStep === DELIVERY_STEP ? (
+                                {subStepLabels.length > 0 ? (
                                     <div className="pf-config-workspace-phase-badge">
-                                        <span>Fase <strong>{deliverySubStep}</strong> di 4</span>
+                                        <span>Fase <strong>{subStep}</strong> di {subStepLabels.length}</span>
                                         <span className="text-stone-300">·</span>
                                         <span className="font-semibold text-orange-600">
-                                            {deliverySubStep === 1 && 'Scarico'}
-                                            {deliverySubStep === 2 && 'Piano'}
-                                            {deliverySubStep === 3 && 'Movimentazione'}
-                                            {deliverySubStep === 4 && 'Sosta e note'}
+                                            {subStepLabels[subStep - 1]}
                                         </span>
                                     </div>
                                 ) : (
@@ -508,7 +534,7 @@ export function ConfiguratorPage() {
                                 onClick={handleNext}
                                 disabled={!canProceed}
                             >
-                                {currentStep === DELIVERY_STEP && deliverySubStep < 4 ? (
+                                {hasMorePhases ? (
                                     <>
                                         <span>Avanti</span>
                                         <ArrowRight size={16} />

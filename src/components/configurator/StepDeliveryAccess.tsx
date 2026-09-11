@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useConfiguratorStore, type MaterialHandling } from '@/store/configuratorStore'
+import { SubStepProgress } from '@/components/configurator/SubStepProgress'
 import {
     Truck,
     Building2,
@@ -13,6 +14,13 @@ import {
     UserCheck,
     HardHat,
 } from 'lucide-react'
+
+const DELIVERY_PHASES = [
+    'Punto di scarico merci',
+    'Piano dell\'immobile',
+    'Movimentazione al piano',
+    'Sosta furgone e note',
+]
 
 /** Spunta di presa visione: finché non è data, il configuratore non va avanti. */
 function AckCheckbox({
@@ -77,24 +85,7 @@ export function StepDeliveryAccess() {
 
     return (
         <div className="space-y-4">
-            {/* Barra di avanzamento guidata (senza tab cliccabili che creano confusione) */}
-            <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-stone-500 font-medium">
-                    <span className="font-semibold text-stone-700">Passaggio {deliverySubStep} di 4</span>
-                    <span className="text-orange-600 font-bold">
-                        {deliverySubStep === 1 && 'Punto di scarico merci'}
-                        {deliverySubStep === 2 && 'Piano dell\'immobile'}
-                        {deliverySubStep === 3 && 'Movimentazione al piano'}
-                        {deliverySubStep === 4 && 'Sosta furgone e note'}
-                    </span>
-                </div>
-                <div className="w-full h-1.5 bg-stone-200/70 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-orange-500 rounded-full transition-all duration-300"
-                        style={{ width: `${(deliverySubStep / 4) * 100}%` }}
-                    />
-                </div>
-            </div>
+            <SubStepProgress current={deliverySubStep} labels={DELIVERY_PHASES} />
 
             {/* Contenuto del passaggio attivo */}
             {deliverySubStep === 1 && (

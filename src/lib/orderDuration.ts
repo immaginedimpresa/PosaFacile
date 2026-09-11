@@ -9,6 +9,7 @@
 
 import { LAYING_TYPE_LABELS, type LayingType } from '@/store/configuratorStore'
 import { estimateLayingDuration, type DurationEstimate, type DurationInput } from '@/lib/layingDuration'
+import { cachedLogisticsSettings } from '@/services/settingsService'
 
 /** In `orders.laying_type` è finita l'etichetta, non la chiave: va ritradotta. */
 const LABEL_TO_LAYING_TYPE = Object.entries(LAYING_TYPE_LABELS).reduce<Record<string, LayingType>>(
@@ -71,6 +72,7 @@ export function durationForOrder(
         tileWidthMm: product?.format_width ?? null,
         tileHeightMm: product?.format_height ?? null,
         services: item?.services ?? null,
+        layingSqmPerDay: cachedLogisticsSettings().layingSqmPerDay,
         ...overrides,
     })
 }

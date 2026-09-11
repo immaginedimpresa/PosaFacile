@@ -39,7 +39,17 @@ export const TILE_FORMAT_LABELS: Record<TileFormatClass, string> = {
     lastra: 'Lastra (oltre 1 mq)',
 }
 
-/** Resa base di posa a pavimento, mq al giorno per un posatore, posa dritta. */
+/**
+ * Resa di posa di riferimento per cantiere, in mq al giorno: pavimento,
+ * posa dritta, formato 60x60, ambiente senza ostacoli. Il valore vero lo
+ * imposta l'admin nelle impostazioni di logistica; questo è quello di partenza.
+ */
+export const DEFAULT_LAYING_SQM_PER_DAY = 25
+
+/**
+ * Resa a pavimento per formato, posa dritta. Si usa come proporzione rispetto
+ * al 60x60 (medio): la resa assoluta la dà la resa di riferimento del cantiere.
+ */
 export const BASE_FLOOR_YIELD: Record<TileFormatClass, number> = {
     mosaico: 5,
     piccolo: 14,
@@ -128,11 +138,13 @@ export function aspectRatioFactor(widthMm?: number | null, heightMm?: number | n
  * dove la squadra posa a ritmo pieno.
  *
  * Superficie di riferimento 40 mq (fattore 1.00), con estremi limitati per non
- * estrapolare la curva oltre i dati che ha senso assumere.
+ * estrapolare la curva oltre i dati che ha senso assumere. Sotto l'1.00 non si
+ * scende: la resa impostata dall'admin è già il ritmo pieno di un cantiere
+ * reale, e le superfici grandi non vanno più veloci di così.
  */
 export const SIZE_REFERENCE_SQM = 40
 export const SIZE_EXPONENT = 0.12
-export const SIZE_FACTOR_RANGE = { min: 0.85, max: 1.20 } as const
+export const SIZE_FACTOR_RANGE = { min: 1.00, max: 1.20 } as const
 
 export function sizeFactor(totalSqm: number): number {
     if (!(totalSqm > 0)) return 1
@@ -260,6 +272,8 @@ export interface DurationInput {
     crewSize?: number
     /** Il massetto tradizionale ha una maturazione lunghissima: va dichiarato. */
     screedType?: 'rapido' | 'tradizionale'
+    /** Mq posati al giorno dal cantiere (impostazione admin). Se assente, DEFAULT_LAYING_SQM_PER_DAY. */
+    layingSqmPerDay?: number | null
 }
 
 export interface DurationPhase {
@@ -349,8 +363,10 @@ export function estimateLayingDuration(input: DurationInput): DurationEstimate {
     const scaleFactor = sizeFactor(totalSqm)
     const complexityFactor = patternFactor * roomFactor * interventionFactor * ratioFactor * scaleFactor
 
-    const floorYield = BASE_FLOOR_YIELD[formatClass]
-    const wallYield = floorYield * WALL_YIELD_RATIO
+    // Resa del cantiere: il riferimento dell'admin, scalato sul formato scelto.
+    const siteSqmPerDay = num(input.layingSqmPerDay, 0) || DEFAULT_LAYING_SQM_PER_DAY
+    const floorSiteYield = siteSqmPerDay * (BASE_FLOOR_YIELD[formatClass] / BASE_FLOOR_YIELD.medio)
+    const wallSiteYield = floorSiteYield * WALL_YIELD_RATIO
 
     const phases: DurationPhase[] = []
     const assumptions: string[] = []
@@ -452,8 +468,11 @@ export function estimateLayingDuration(input: DurationInput): DurationEstimate {
     }
 
     // --- Posa -------------------------------------------------------------
-    const floorLayingDays = floorSqm > 0 ? (floorSqm / floorYield) * complexityFactor : 0
-    const wallLayingDays = wallSqm > 0 ? (wallSqm / wallYield) * complexityFactor : 0
+    // La resa di riferimento è quella della squadra intera, non del singolo:
+    // le giornate-uomo si ottengono moltiplicando per la resa della squadra,
+    // così sul calendario la posa pesa esattamente mq ÷ resa × complessità.
+    const floorLayingDays = floorSqm > 0 ? (floorSqm / floorSiteYield) * complexityFactor * throughput : 0
+    const wallLayingDays = wallSqm > 0 ? (wallSqm / wallSiteYield) * complexityFactor * throughput : 0
     const layingLaborDays = floorLayingDays + wallLayingDays
 
     if (floorLayingDays > 0) {
@@ -529,12 +548,17 @@ export function estimateLayingDuration(input: DurationInput): DurationEstimate {
 
     // --- Assunzioni dichiarate -------------------------------------------
     assumptions.push(
-        `Formato ${TILE_FORMAT_LABELS[formatClass].toLowerCase()}: resa base ${floorYield} mq/giorno a pavimento, per posatore.`,
+        `Posa calcolata su ${siteSqmPerDay} mq al giorno per cantiere (riferimento: pavimento 60x60, posa dritta).`,
     )
+    if (formatClass !== 'medio') {
+        assumptions.push(
+            `Formato ${TILE_FORMAT_LABELS[formatClass].toLowerCase()}: ${floorSiteYield.toFixed(1).replace('.', ',')} mq al giorno a pavimento.`,
+        )
+    }
     assumptions.push(
         crewSize === 1
             ? 'Cantiere svolto da un solo posatore.'
-            : `Squadra di ${crewSize} operatori: resa ${throughput.toFixed(2)}× rispetto al singolo.`,
+            : `Squadra di ${crewSize} operatori: la posa segue la resa del cantiere, la squadra accelera le altre lavorazioni (resa ${throughput.toFixed(2)}×).`,
     )
     if (patternFactor > 1) {
         assumptions.push(`Schema di posa non standard: +${Math.round((patternFactor - 1) * 100)}% di tempo.`)
@@ -548,10 +572,6 @@ export function estimateLayingDuration(input: DurationInput): DurationEstimate {
     if (scaleFactor > 1) {
         assumptions.push(
             `Superficie ridotta: +${Math.round((scaleFactor - 1) * 100)}% perché i tagli sul perimetro incidono di più.`,
-        )
-    } else if (scaleFactor < 1) {
-        assumptions.push(
-            `Superficie ampia: −${Math.round((1 - scaleFactor) * 100)}% grazie alle campiture continue.`,
         )
     }
     if (criticalLabor < laborDays - 0.01) {

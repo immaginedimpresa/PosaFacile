@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { DEFAULT_LAYING_SQM_PER_DAY } from '@/lib/layingDuration'
 
 /**
  * Impostazioni di logistica.
@@ -19,6 +20,8 @@ export interface LogisticsSettings {
     costPerFloorNoLift: number
     /** Maggiorazione per sosta furgone distante (>50m) o assenza zona scarico (€). */
     noUnloadingZoneSurcharge: number
+    /** Mq posati al giorno da un cantiere: la base della stima dei giorni di posa. */
+    layingSqmPerDay: number
 }
 
 export const DEFAULT_LOGISTICS: LogisticsSettings = {
@@ -28,6 +31,7 @@ export const DEFAULT_LOGISTICS: LogisticsSettings = {
     costPerFloorWithLift: 10,
     costPerFloorNoLift: 25,
     noUnloadingZoneSurcharge: 35,
+    layingSqmPerDay: DEFAULT_LAYING_SQM_PER_DAY,
 }
 
 import {
@@ -174,8 +178,18 @@ export async function fetchLogisticsSettings(force = false): Promise<LogisticsSe
         costPerFloorWithLift: numOr(value.costPerFloorWithLift, DEFAULT_LOGISTICS.costPerFloorWithLift),
         costPerFloorNoLift: numOr(value.costPerFloorNoLift, DEFAULT_LOGISTICS.costPerFloorNoLift),
         noUnloadingZoneSurcharge: numOr(value.noUnloadingZoneSurcharge, DEFAULT_LOGISTICS.noUnloadingZoneSurcharge),
+        // Zero mq al giorno darebbe una durata infinita: si torna al riferimento.
+        layingSqmPerDay: numOr(value.layingSqmPerDay, DEFAULT_LOGISTICS.layingSqmPerDay) || DEFAULT_LOGISTICS.layingSqmPerDay,
     }
     return cached
+}
+
+/**
+ * Le impostazioni già caricate, o quelle di partenza. Serve a chi deve
+ * calcolare in modo sincrono, come la stima della durata di un ordine.
+ */
+export function cachedLogisticsSettings(): LogisticsSettings {
+    return cached ?? DEFAULT_LOGISTICS
 }
 
 export async function saveLogisticsSettings(
