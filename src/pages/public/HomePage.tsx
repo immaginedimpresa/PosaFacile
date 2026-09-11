@@ -155,104 +155,104 @@ export default function HomePage() {
                     </a>
                 </div>
                 <div className="pf-hero-visual">
-                    {/* Slider verticale piastrelle (1 piastrella per riga) */}
-                    {products.length > 0 && (
-                        <aside className="pf-tile-vslider" aria-label="Scegli la finitura">
-                            <div className="pf-tile-vslider-head">
-                                <div className="pf-tile-vslider-badge-wrap">
-                                    <span className="pf-step-badge">1. Scegli materiale</span>
-                                    <span className="pf-tile-vslider-pos">
-                                        <strong>{tileIndex + 1}</strong>/{products.length}
-                                    </span>
-                                </div>
-                                <div className="pf-tile-vslider-nav">
-                                    <button
-                                        type="button"
-                                        className="pf-vslider-nav-btn"
-                                        onClick={() => scorriVerticale(-1)}
-                                        title="Scorri su"
-                                        aria-label="Scorri su"
-                                    >
-                                        <ChevronUp size={15} />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="pf-vslider-nav-btn"
-                                        onClick={() => scorriVerticale(1)}
-                                        title="Scorri giù"
-                                        aria-label="Scorri giù"
-                                    >
-                                        <ChevronDown size={15} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Lista a scorrimento verticale (1 piastrella per riga) */}
-                            <div
-                                className="pf-tile-vslider-list"
-                                ref={sliderRef}
-                                role="listbox"
-                                aria-label="Seleziona piastrella"
-                            >
-                                {products.map((product, index) => {
-                                    const img = ((product.images as string[]) || [])[0]
-                                    const attiva = tileIndex === index
-                                    const formatText =
-                                        product.format_width && product.format_height
-                                            ? `${Math.round(product.format_width / 10)}×${Math.round(product.format_height / 10)} cm`
-                                            : product.material
-                                              ? `${product.material}`
-                                              : 'Gres porcellanato'
-
-                                    return (
-                                        <button
-                                            key={product.id}
-                                            type="button"
-                                            role="option"
-                                            aria-selected={attiva}
-                                            className={`pf-tile-vrow ${attiva ? 'is-active' : ''}`}
-                                            onClick={() => selezionaPiastrella(index)}
-                                            title={`${product.name} - € ${Number(product.price_per_sqm).toFixed(2)}/mq`}
-                                        >
-                                            <div className="pf-tile-vrow-thumb">
-                                                {img && <img src={img} alt="" loading="lazy" />}
-                                                {attiva && (
-                                                    <span className="pf-tile-vrow-badge">
-                                                        <Check size={13} />
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="pf-tile-vrow-body">
-                                                <strong className="pf-tile-vrow-name">
-                                                    {product.name}
-                                                </strong>
-                                                <span className="pf-tile-vrow-dim">
-                                                    {formatText}
-                                                </span>
-                                                <span className="pf-tile-vrow-price">
-                                                    € {Number(product.price_per_sqm).toFixed(2)}
-                                                    <small>/mq</small>
-                                                </span>
-                                            </div>
-                                            <div className="pf-tile-vrow-status" aria-hidden="true">
-                                                <span
-                                                    className={`pf-vrow-radio ${attiva ? 'is-checked' : ''}`}
-                                                />
-                                            </div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </aside>
-                    )}
-
-                    {/* Mockup smartphone a destra */}
+                    {/* Visual Hero: Slider Piastrelle + Mockup Smartphone e Barra Controlli Inferiore */}
                     <HeroTileStudio
                         tile={tile}
                         photo={photo}
                         onPhotoChange={setPhoto}
                         result={aiResult}
                         onResultChange={setAiResult}
+                        tileSlider={
+                            products.length > 0 ? (
+                                <aside className="pf-tile-vslider" aria-label="Scegli la finitura">
+                                    <div className="pf-tile-vslider-head">
+                                        <div className="pf-tile-vslider-badge-wrap">
+                                            <span className="pf-step-badge">1. Scegli materiale</span>
+                                            <span className="pf-tile-vslider-pos">
+                                                <strong>{tileIndex + 1}</strong>/{products.length}
+                                            </span>
+                                        </div>
+                                        <div className="pf-tile-vslider-nav">
+                                            <button
+                                                type="button"
+                                                className="pf-vslider-nav-btn"
+                                                onClick={() => scorriVerticale(-1)}
+                                                title="Scorri su"
+                                                aria-label="Scorri su"
+                                            >
+                                                <ChevronUp size={15} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="pf-vslider-nav-btn"
+                                                onClick={() => scorriVerticale(1)}
+                                                title="Scorri giù"
+                                                aria-label="Scorri giù"
+                                            >
+                                                <ChevronDown size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Lista a scorrimento verticale (1 piastrella per riga) */}
+                                    <div
+                                        className="pf-tile-vslider-list"
+                                        ref={sliderRef}
+                                        role="listbox"
+                                        aria-label="Seleziona piastrella"
+                                    >
+                                        {products.map((product, index) => {
+                                            const img = ((product.images as string[]) || [])[0]
+                                            const attiva = tileIndex === index
+                                            const formatText =
+                                                product.format_width && product.format_height
+                                                    ? `${Math.round(product.format_width / 10)}×${Math.round(product.format_height / 10)} cm`
+                                                    : product.material
+                                                      ? `${product.material}`
+                                                      : 'Gres porcellanato'
+
+                                            return (
+                                                <button
+                                                    key={product.id}
+                                                    type="button"
+                                                    role="option"
+                                                    aria-selected={attiva}
+                                                    className={`pf-tile-vrow ${attiva ? 'is-active' : ''}`}
+                                                    onClick={() => selezionaPiastrella(index)}
+                                                    title={`${product.name} - € ${Number(product.price_per_sqm).toFixed(2)}/mq`}
+                                                >
+                                                    <div className="pf-tile-vrow-thumb">
+                                                        {img && <img src={img} alt="" loading="lazy" />}
+                                                        {attiva && (
+                                                            <span className="pf-tile-vrow-badge">
+                                                                <Check size={13} />
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="pf-tile-vrow-body">
+                                                        <strong className="pf-tile-vrow-name">
+                                                            {product.name}
+                                                        </strong>
+                                                        <span className="pf-tile-vrow-dim">
+                                                            {formatText}
+                                                        </span>
+                                                        <span className="pf-tile-vrow-price">
+                                                            € {Number(product.price_per_sqm).toFixed(2)}
+                                                            <small>/mq</small>
+                                                        </span>
+                                                    </div>
+                                                    <div className="pf-tile-vrow-status" aria-hidden="true">
+                                                        <span
+                                                            className={`pf-vrow-radio ${attiva ? 'is-checked' : ''}`}
+                                                        />
+                                                    </div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </aside>
+                            ) : null
+                        }
                     />
                 </div>
             </section>

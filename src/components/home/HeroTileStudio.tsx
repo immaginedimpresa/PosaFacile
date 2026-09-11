@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import {
@@ -48,6 +48,8 @@ interface HeroTileStudioProps {
     onPhotoChange: (photo: string | null) => void
     result: string | null
     onResultChange: (result: string | null) => void
+    /** Slider verticale delle piastrelle a sinistra dello smartphone */
+    tileSlider?: ReactNode
 }
 
 /**
@@ -63,6 +65,7 @@ export function HeroTileStudio({
     onPhotoChange,
     result,
     onResultChange,
+    tileSlider,
 }: HeroTileStudioProps) {
     const requestId = useRef(0)
     const fileRef = useRef<HTMLInputElement>(null)
@@ -141,228 +144,251 @@ export function HeroTileStudio({
                 }}
             />
 
-            {/* Showcase dello smartphone pulito e minimale */}
-            <div className="pf-phone-showcase">
-                {/* Scocca dello Smartphone */}
-                <div className="pf-phone-frame">
-                    {/* Dynamic Island / fotocamera frontale */}
-                    <div className="pf-phone-island" aria-hidden="true">
-                        <span className="pf-phone-sensor" />
-                        <span className="pf-phone-lens" />
-                    </div>
+            {/* Sezione Superiore: Slider Piastrelle + Mockup Smartphone */}
+            <div className="pf-studio-duo">
+                {tileSlider}
 
-                    {/* Status bar smartphone */}
-                    <div className="pf-phone-statusbar" aria-hidden="true">
-                        <span className="pf-phone-time">09:41</span>
-                        <div className="pf-phone-icons">
-                            <Wifi size={11} />
-                            <Battery size={13} />
+                {/* Showcase dello smartphone pulito e minimale */}
+                <div className="pf-phone-showcase">
+                    {/* Scocca dello Smartphone */}
+                    <div className="pf-phone-frame">
+                        {/* Dynamic Island / fotocamera frontale */}
+                        <div className="pf-phone-island" aria-hidden="true">
+                            <span className="pf-phone-sensor" />
+                            <span className="pf-phone-lens" />
                         </div>
-                    </div>
 
-                    {/* Schermo interno dello smartphone */}
-                    <div
-                        className={`pf-studio-stage ${dragging ? 'is-dragging' : ''} ${photo ? 'has-photo' : ''}`}
-                        onDragOver={(e) => {
-                            e.preventDefault()
-                            setDragging(true)
-                        }}
-                        onDragLeave={() => setDragging(false)}
-                        onDrop={(e) => {
-                            e.preventDefault()
-                            setDragging(false)
-                            accettaFile(e.dataTransfer.files?.[0])
-                        }}
-                    >
-                        {visibile ? (
-                            <img
-                                src={visibile}
-                                alt={result ? 'Anteprima con la piastrella scelta' : 'La tua stanza'}
-                                className="pf-studio-img"
-                            />
-                        ) : (
-                            /* Stato iniziale: interfaccia fotocamera smartphone */
-                            <div className="pf-studio-empty">
-                                <button
-                                    type="button"
-                                    className="pf-studio-camera-trigger"
-                                    onClick={() => fileRef.current?.click()}
-                                    title="Apri fotocamera o rullino dello smartphone"
-                                >
-                                    {/* Mirino fotocamera */}
-                                    <div className="pf-phone-viewfinder">
-                                        <span className="pf-vf-corner pf-vf-tl" />
-                                        <span className="pf-vf-corner pf-vf-tr" />
-                                        <span className="pf-vf-corner pf-vf-bl" />
-                                        <span className="pf-vf-corner pf-vf-br" />
-                                        <div className="pf-phone-icon-center">
-                                            <Smartphone size={32} className="pf-phone-glyph" />
-                                            <span className="pf-camera-badge">
-                                                <Camera size={14} />
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="pf-phone-text-block">
-                                        <span className="pf-phone-pill-tag">
-                                            <Camera size={11} /> FOTO DA SMARTPHONE
-                                        </span>
-                                        <strong>Fotografa la tua stanza</strong>
-                                        <p>
-                                            Inquadra il pavimento o la parete con il tuo smartphone
-                                        </p>
-                                    </div>
-
-                                    <div className="pf-phone-action-btn">
-                                        <Camera size={15} />
-                                        <span>Scatta o scegli foto</span>
-                                    </div>
-                                    <small className="pf-phone-subtext">
-                                        Trascina qui o apri il rullino
-                                    </small>
-                                </button>
-
-                                {/* Trigger QR code per utenti da PC desktop */}
-                                <button
-                                    type="button"
-                                    className="pf-studio-qr-trigger"
-                                    onClick={() => setShowQrModal(true)}
-                                >
-                                    <QrCode size={13} />
-                                    <span>Sei al PC? Scatta da smartphone</span>
-                                </button>
+                        {/* Status bar smartphone */}
+                        <div className="pf-phone-statusbar" aria-hidden="true">
+                            <span className="pf-phone-time">09:41</span>
+                            <div className="pf-phone-icons">
+                                <Wifi size={11} />
+                                <Battery size={13} />
                             </div>
-                        )}
+                        </div>
 
-                        {/* Top bar interna allo schermo quando c'è una foto */}
-                        {photo && (
-                            <div className="pf-studio-top">
-                                <span>
-                                    <Sparkles size={13} />{' '}
-                                    {result ? 'ANTEPRIMA GENERATA' : 'FOTO CARICATA'}
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={() => fileRef.current?.click()}
-                                    className="pf-studio-btn-change"
-                                >
-                                    <RotateCcw size={11} /> Cambia
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Stato di caricamento AI */}
-                        {generating && (
-                            <div className="pf-studio-loading">
-                                <Loader2 size={32} className="pf-spin" />
-                                <p>Sto posando {tile?.name ?? 'la piastrella'}…</p>
-                                <small>Elaborazione AI della tua stanza</small>
-                            </div>
-                        )}
-
-                        {/* Pulsante di confronto prima/dopo */}
-                        {result && !generating && (
-                            <button
-                                type="button"
-                                className="pf-studio-compare"
-                                onMouseDown={() => setMostraOriginale(true)}
-                                onMouseUp={() => setMostraOriginale(false)}
-                                onMouseLeave={() => setMostraOriginale(false)}
-                                onTouchStart={() => setMostraOriginale(true)}
-                                onTouchEnd={() => setMostraOriginale(false)}
-                            >
-                                {mostraOriginale ? 'Originale' : 'Tieni premuto: prima'}
-                            </button>
-                        )}
-
-                        {/* Pannello controlli prima di generare (adattato alla larghezza dello smartphone) */}
-                        {photo && !result && !generating && (
-                            <div className="pf-studio-controls">
-                                <div className="pf-studio-selects-grid">
-                                    <label>
-                                        <span>Ambiente</span>
-                                        <select
-                                            value={ambiente}
-                                            onChange={(e) => setAmbiente(e.target.value as RoomType)}
-                                        >
-                                            {AMBIENTI.map((a) => (
-                                                <option key={a.value} value={a.value}>
-                                                    {a.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                    <label>
-                                        <span>Superficie</span>
-                                        <select
-                                            value={superficie}
-                                            onChange={(e) => setSuperficie(e.target.value as Surface)}
-                                        >
-                                            <option value="floor">Pavimento</option>
-                                            <option value="wall">Parete</option>
-                                        </select>
-                                    </label>
-                                    <label className="pf-select-full">
-                                        <span>Posa</span>
-                                        <select
-                                            value={posa}
-                                            onChange={(e) => setPosa(e.target.value as LayingPattern)}
-                                        >
-                                            {POSE.map((p) => (
-                                                <option key={p.value} value={p.value}>
-                                                    {p.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="pf-studio-generate"
-                                    onClick={genera}
-                                    disabled={!tile}
-                                >
-                                    <Sparkles size={15} />
-                                    {tile ? `Posa ${tile.name}` : 'Scegli un materiale'}
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Scheda risultato generato */}
-                        {result && !generating && (
-                            <div className="pf-studio-done">
-                                <div className="pf-studio-done-info">
-                                    <strong>{tile?.name}</strong>
-                                    <small>
-                                        {tile ? `€ ${Number(tile.price_per_sqm).toFixed(2)}/mq` : ''} · posa inclusa
-                                    </small>
-                                </div>
-                                <div className="pf-studio-done-actions">
+                        {/* Schermo interno dello smartphone */}
+                        <div
+                            className={`pf-studio-stage ${dragging ? 'is-dragging' : ''} ${photo ? 'has-photo' : ''}`}
+                            onDragOver={(e) => {
+                                e.preventDefault()
+                                setDragging(true)
+                            }}
+                            onDragLeave={() => setDragging(false)}
+                            onDrop={(e) => {
+                                e.preventDefault()
+                                setDragging(false)
+                                accettaFile(e.dataTransfer.files?.[0])
+                            }}
+                        >
+                            {visibile ? (
+                                <img
+                                    src={visibile}
+                                    alt={result ? 'Anteprima con la piastrella scelta' : 'La tua stanza'}
+                                    className="pf-studio-img"
+                                />
+                            ) : (
+                                /* Stato iniziale: interfaccia fotocamera smartphone */
+                                <div className="pf-studio-empty">
                                     <button
                                         type="button"
-                                        onClick={genera}
-                                        title="Rigenera l’anteprima"
-                                        aria-label="Rigenera l’anteprima"
+                                        className="pf-studio-camera-trigger"
+                                        onClick={() => fileRef.current?.click()}
+                                        title="Apri fotocamera o rullino dello smartphone"
                                     >
-                                        <RotateCcw size={14} />
+                                        {/* Mirino fotocamera */}
+                                        <div className="pf-phone-viewfinder">
+                                            <span className="pf-vf-corner pf-vf-tl" />
+                                            <span className="pf-vf-corner pf-vf-tr" />
+                                            <span className="pf-vf-corner pf-vf-bl" />
+                                            <span className="pf-vf-corner pf-vf-br" />
+                                            <div className="pf-phone-icon-center">
+                                                <Smartphone size={32} className="pf-phone-glyph" />
+                                                <span className="pf-camera-badge">
+                                                    <Camera size={14} />
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="pf-phone-text-block">
+                                            <span className="pf-phone-pill-tag">
+                                                <Camera size={11} /> FOTO DA SMARTPHONE
+                                            </span>
+                                        </div>
+
+                                        <div className="pf-phone-action-btn">
+                                            <Camera size={15} />
+                                            <span>Scatta o scegli foto</span>
+                                        </div>
+
                                     </button>
-                                    <Link to="/configuratore" className="pf-studio-cta">
-                                        Preventivo <ArrowUpRight size={14} />
-                                    </Link>
+
+                                    {/* Trigger QR code per utenti da PC desktop */}
+                                    <button
+                                        type="button"
+                                        className="pf-studio-qr-trigger"
+                                        onClick={() => setShowQrModal(true)}
+                                    >
+                                        <QrCode size={13} />
+                                        <span>Sei al PC? Scatta da smartphone</span>
+                                    </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {/* Top bar interna allo schermo quando c'è una foto */}
+                            {photo && (
+                                <div className="pf-studio-top">
+                                    <span>
+                                        <Sparkles size={13} />{' '}
+                                        {result ? 'ANTEPRIMA GENERATA' : 'FOTO CARICATA'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => fileRef.current?.click()}
+                                        className="pf-studio-btn-change"
+                                    >
+                                        <RotateCcw size={11} /> Cambia
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Stato di caricamento AI */}
+                            {generating && (
+                                <div className="pf-studio-loading">
+                                    <Loader2 size={32} className="pf-spin" />
+                                    <p>Sto posando {tile?.name ?? 'la piastrella'}…</p>
+                                    <small>Elaborazione AI della tua stanza</small>
+                                </div>
+                            )}
+
+                            {/* Pulsante di confronto prima/dopo */}
+                            {result && !generating && (
+                                <button
+                                    type="button"
+                                    className="pf-studio-compare"
+                                    onMouseDown={() => setMostraOriginale(true)}
+                                    onMouseUp={() => setMostraOriginale(false)}
+                                    onMouseLeave={() => setMostraOriginale(false)}
+                                    onTouchStart={() => setMostraOriginale(true)}
+                                    onTouchEnd={() => setMostraOriginale(false)}
+                                >
+                                    {mostraOriginale ? 'Originale' : 'Tieni premuto: prima'}
+                                </button>
+                            )}
+
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {result && <p className="pf-studio-hint">Scala della stanza stimata dalla foto. Per regolarla, apri <Link to="/prova-ai" state={{ photo, productId: tile?.id }}>Prova con AI</Link>.</p>}
+            {/* SEZIONE INFERIORE: SEMPRE VISIBILE, SOTTO SIA ALLO SLIDER CHE ALLO SMARTPHONE */}
+            <div className="pf-studio-bottom-bar">
+                {/* Quando c'è un risultato generato, mostra la scheda di completamento */}
+                {result && !generating && (
+                    <div className="pf-studio-done-banner">
+                        <div className="pf-studio-done-info">
+                            <span className="pf-done-badge">
+                                <Sparkles size={11} /> Anteprima completata
+                            </span>
+                            <strong>{tile?.name}</strong>
+                            <small>
+                                {tile ? `€ ${Number(tile.price_per_sqm).toFixed(2)}/mq` : ''} · posa inclusa nel preventivo
+                            </small>
+                        </div>
+                    </div>
+                )}
 
-            {error && (
-                <p className="pf-studio-error" role="alert">
-                    {error}
-                </p>
-            )}
+                {/* Riga unica con tutti i campi e il pulsante Genera sulla stessa riga */}
+                <div className="pf-studio-inline-bar">
+                    <select
+                        aria-label="Ambiente"
+                        className="pf-studio-select"
+                        value={ambiente}
+                        onChange={(e) => setAmbiente(e.target.value as RoomType)}
+                    >
+                        {AMBIENTI.map((a) => (
+                            <option key={a.value} value={a.value}>
+                                {a.label}
+                            </option>
+                        ))}
+                    </select>
+
+                    <select
+                        aria-label="Superficie"
+                        className="pf-studio-select"
+                        value={superficie}
+                        onChange={(e) => setSuperficie(e.target.value as Surface)}
+                    >
+                        <option value="floor">Pavimento</option>
+                        <option value="wall">Parete</option>
+                    </select>
+
+                    <select
+                        aria-label="Tipo di posa"
+                        className="pf-studio-select"
+                        value={posa}
+                        onChange={(e) => setPosa(e.target.value as LayingPattern)}
+                    >
+                        {POSE.map((p) => (
+                            <option key={p.value} value={p.value}>
+                                {p.label}
+                            </option>
+                        ))}
+                    </select>
+
+                    {!result ? (
+                        <button
+                            type="button"
+                            className="pf-studio-generate"
+                            onClick={genera}
+                            disabled={!photo || !tile || generating}
+                            title={!photo ? 'Carica prima una foto della stanza dallo smartphone' : undefined}
+                        >
+                            {generating ? (
+                                <>
+                                    <Loader2 size={14} className="pf-spin" />
+                                    <span>Genero…</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles size={14} />
+                                    <span>Genera</span>
+                                </>
+                            )}
+                        </button>
+                    ) : (
+                        <div className="pf-studio-done-inline">
+                            <button
+                                type="button"
+                                onClick={genera}
+                                className="pf-studio-btn-retry"
+                                title="Rigenera l'anteprima"
+                                aria-label="Rigenera"
+                            >
+                                <RotateCcw size={14} />
+                            </button>
+                            <Link to="/configuratore" className="pf-studio-cta">
+                                <span>Preventivo</span> <ArrowUpRight size={14} />
+                            </Link>
+                        </div>
+                    )}
+                </div>
+
+                {result && (
+                    <p className="pf-studio-hint">
+                        Scala della stanza stimata dalla foto. Per regolarla, apri{' '}
+                        <Link to="/prova-ai" state={{ photo, productId: tile?.id }}>
+                            Prova con AI
+                        </Link>.
+                    </p>
+                )}
+
+                {error && (
+                    <p className="pf-studio-error" role="alert">
+                        {error}
+                    </p>
+                )}
+            </div>
 
             {/* Modal QR Code per aprire la pagina da smartphone e scattare la foto */}
             {showQrModal &&

@@ -177,11 +177,11 @@
 .pf-hero-visual {
     min-width: 0;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
     position: relative;
+    width: 100%;
 }
 .pf-hero-visual::before {
     content: '';
@@ -1151,7 +1151,7 @@
 /* --- Slider Piastrelle Verticale (1 piastrella per riga) --- */
 .pf-tile-vslider {
     width: 284px;
-    height: 590px;
+    height: 560px;
     flex-shrink: 0;
     background: #ffffff;
     border: 1px solid #e7e5e4;
@@ -1524,9 +1524,20 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     width: 100%;
+    max-width: 630px;
     z-index: 1;
+}
+
+/* Riga superiore: Slider piastrelle + Mockup Smartphone */
+.pf-studio-duo {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
 }
 
 /* Showcase dello smartphone */
@@ -1545,7 +1556,7 @@
 .pf-phone-frame {
     position: relative;
     width: 320px;
-    height: 590px;
+    height: 560px;
     background: #1c1917;
     border-radius: 46px;
     padding: 10px;
@@ -1917,168 +1928,227 @@
     }
 }
 
-/* Pulsante confronto prima/dopo */
+/* Animazione morbida di comparsa */
+@keyframes pfFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pulsante confronto prima/dopo (floating pill elegante sopra l'immagine) */
 .pf-studio-compare {
     position: absolute;
-    top: 75px;
-    right: 12px;
-    background: rgba(255, 255, 255, 0.92);
-    color: #1c1917;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 6px 10px;
-    border-radius: 20px;
-    z-index: 20;
-    border: none;
-    cursor: pointer;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Controlli foto (adattati alla larghezza dello smartphone) */
-.pf-studio-controls {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(14px);
-    border-radius: 20px;
-    padding: 11px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 20;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-}
-.pf-studio-selects-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-}
-.pf-studio-selects-grid label {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.pf-select-full {
-    grid-column: 1 / -1;
-}
-.pf-studio-selects-grid span {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #78716c;
-    text-transform: uppercase;
-}
-.pf-studio-selects-grid select {
-    border: 1px solid #d6d3d1;
-    border-radius: 8px;
-    padding: 5px 6px;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(28, 25, 23, 0.85);
+    color: #ffffff;
     font-size: 11px;
-    font-weight: 500;
-    background: #fff;
-    color: #1c1917;
-    width: 100%;
-}
-.pf-studio-generate {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    background: #f97316;
-    color: #1c1917;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: none;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    padding: 7px 16px;
+    border-radius: 999px;
+    z-index: 20;
+    border: 1px solid rgba(255, 255, 255, 0.22);
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-    transition: background 0.2s;
-    width: 100%;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
 }
-.pf-studio-generate:hover:not(:disabled) {
+.pf-studio-compare:hover {
+    background: rgba(28, 25, 23, 0.95);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+.pf-studio-compare:active {
     background: #ea580c;
-    color: #fff;
-}
-.pf-studio-generate:disabled {
-    background: #e7e5e4;
-    color: #a8a29e;
-    box-shadow: none;
-    cursor: not-allowed;
+    border-color: #ea580c;
+    transform: translateX(-50%) scale(0.97);
 }
 
-/* Scheda anteprima completata */
-.pf-studio-done {
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(14px);
+/* Barra Controlli & Azioni: posizionata SOTTO sia allo slider che allo smartphone, SEMPRE VISIBILE */
+.pf-studio-bottom-bar {
+    width: 100%;
+    max-width: 624px;
+    background: #ffffff;
+    border: 1px solid #e7e5e4;
     border-radius: 20px;
-    padding: 10px 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow:
+        0 10px 30px -6px rgba(28, 25, 23, 0.07),
+        0 2px 6px rgba(0, 0, 0, 0.03);
+    box-sizing: border-box;
+    position: relative;
+    z-index: 5;
+    animation: pfFadeInUp 0.25s ease-out;
+}
+
+/* Banner risultato generato */
+.pf-studio-done-banner {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    z-index: 20;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+    gap: 10px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    padding: 10px 14px;
 }
-.pf-studio-done-info {
-    min-width: 0;
-    flex: 1;
-}
-.pf-studio-done-info strong {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: #1c1917;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.pf-studio-done-info small {
-    display: block;
-    font-size: 10px;
-    color: #716a65;
-}
-.pf-studio-done-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.pf-studio-done-actions > button {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    border: 1px solid #d6d3d1;
-    background: #fff;
-    color: #57534e;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.pf-studio-done-actions > button:hover {
-    background: #f5f2ec;
-}
-.pf-studio-cta {
+.pf-done-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #ea580c;
+    background: #ffffff;
+    border: 1px solid #fed7aa;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+.pf-studio-done-info strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1c1917;
+}
+.pf-studio-done-info small {
+    display: block;
+    font-size: 11px;
+    color: #78716c;
+}
+
+/* Barra con i 3 campi e il pulsante Genera tutti in linea sulla stessa riga */
+.pf-studio-inline-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+.pf-studio-select {
+    height: 40px;
+    border: 1px solid #d6d3d1;
+    border-radius: 10px;
+    padding: 0 22px 0 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    background-color: #fafaf9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    appearance: none;
+    -webkit-appearance: none;
+    color: #1c1917;
+    width: 100%;
+    min-width: 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.pf-studio-select:focus {
+    border-color: #f97316;
+    outline: none;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+.pf-studio-select:hover {
+    border-color: #a8a29e;
+    background-color: #f5f5f4;
+}
+.pf-studio-generate {
+    height: 40px;
+    min-width: 100px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(249, 115, 22, 0.28);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+.pf-studio-generate:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(249, 115, 22, 0.38);
+}
+.pf-studio-generate:disabled {
+    background: #f5f5f4;
+    color: #a8a29e;
+    border: 1px solid #e7e5e4;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+.pf-studio-done-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+}
+.pf-studio-btn-retry {
+    height: 40px;
+    width: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f4;
+    color: #44403c;
+    border: 1px solid #d6d3d1;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+.pf-studio-btn-retry:hover {
+    background: #e7e5e4;
+    color: #1c1917;
+}
+.pf-studio-cta {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: #1c1917;
     color: #fff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    padding: 8px 11px;
-    border-radius: 9px;
+    padding: 0 14px;
+    border-radius: 10px;
     text-decoration: none;
-    transition: background 0.2s;
+    box-shadow: 0 3px 10px rgba(28, 25, 23, 0.2);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    box-sizing: border-box;
 }
 .pf-studio-cta:hover {
-    background: #292524;
+    background: #ea580c;
 }
 
 .pf-studio-error {
@@ -2410,14 +2480,18 @@
         border-radius: 15px;
     }
     .pf-hero-visual {
+        width: 100%;
+    }
+    .pf-studio-duo {
         flex-direction: column-reverse;
-        gap: 20px;
+        align-items: center;
+        gap: 16px;
         width: 100%;
     }
     .pf-tile-vslider {
         width: 100%;
         max-width: 300px;
-        height: 400px;
+        height: 380px;
     }
     .pf-phone-showcase {
         width: 100%;
@@ -2425,7 +2499,7 @@
     .pf-phone-frame {
         width: 100%;
         max-width: 300px;
-        height: 550px;
+        height: 520px;
     }
     .pf-studio-qr-trigger {
         display: none;
@@ -2433,15 +2507,26 @@
     .pf-studio-empty strong {
         font-size: 16px;
     }
-    .pf-studio-controls,
-    .pf-studio-done {
-        padding: 12px;
+    .pf-studio-bottom-bar {
+        width: 100%;
+        max-width: 300px;
+        padding: 14px;
         gap: 10px;
     }
-    .pf-studio-cta,
-    .pf-studio-generate {
+    .pf-studio-inline-bar {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .pf-studio-select:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+    .pf-studio-generate,
+    .pf-studio-done-inline {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+    .pf-studio-cta {
         flex: 1;
-        justify-content: center;
     }
     .pf-photo-top {
         font-size: 8px;
