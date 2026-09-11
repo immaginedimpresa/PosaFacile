@@ -4,7 +4,7 @@ import { OrderTimelineCompact } from '@/components/orders/OrderTimeline'
 import { customerTimeline, type ResolvedStep } from '@/lib/orderTimeline'
 import { fetchMilestonesForOrders } from '@/services/orderTimelineService'
 import { useNotificationStore } from '@/store/notificationStore'
-import { Package, Clock, Settings, ChevronRight, Calendar, Trash2, ArrowRight, CheckCircle2, MapPin, Sparkles, Bell } from 'lucide-react'
+import { Package, Clock, Settings, ChevronRight, Calendar, Trash2, ArrowRight, CheckCircle2, MapPin, Sparkles, Bell, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,6 +16,8 @@ import { it } from 'date-fns/locale'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { fetchSavedQuotes, deleteSavedQuote, convertSavedQuoteToOrder, type SavedQuoteItem } from '@/lib/quotesService'
 import { CustomerNotificationsTab } from '@/components/dashboard/CustomerNotificationsTab'
+import { CustomerChatTab } from '@/components/dashboard/CustomerChatTab'
+import { CustomerProfileTab } from '@/components/dashboard/CustomerProfileTab'
 
 interface Order {
     id: string
@@ -41,9 +43,11 @@ export function CustomerDashboard() {
     const { user } = useAuth()
     const { profile } = useUserStore()
 
-    // Tabs: 'orders' | 'quotes' | 'notifications' | 'settings'
-    const initialTab = (searchParams.get('tab') as 'orders' | 'quotes' | 'notifications' | 'settings') || 'quotes'
-    const [activeTab, setActiveTab] = useState<'orders' | 'quotes' | 'notifications' | 'settings'>(initialTab)
+    // Tabs: 'orders' | 'quotes' | 'messages' | 'notifications' | 'settings'
+    const rawTab = searchParams.get('tab')
+    const normalizedTab = (rawTab === 'chat' ? 'messages' : rawTab) as 'orders' | 'quotes' | 'messages' | 'notifications' | 'settings' | null
+    const initialTab = (normalizedTab && ['orders', 'quotes', 'messages', 'notifications', 'settings'].includes(normalizedTab)) ? normalizedTab : 'quotes'
+    const [activeTab, setActiveTab] = useState<'orders' | 'quotes' | 'messages' | 'notifications' | 'settings'>(initialTab)
 
     // Orders state
     const [orders, setOrders] = useState<Order[]>([])
@@ -62,13 +66,16 @@ export function CustomerDashboard() {
 
     // Sync tab with URL
     useEffect(() => {
-        const tab = searchParams.get('tab') as 'orders' | 'quotes' | 'notifications' | 'settings'
-        if (tab && (tab === 'orders' || tab === 'quotes' || tab === 'notifications' || tab === 'settings')) {
-            setActiveTab(tab)
+        const tab = searchParams.get('tab') as 'orders' | 'quotes' | 'messages' | 'notifications' | 'settings' | 'chat'
+        if (tab) {
+            const mapped = tab === 'chat' ? 'messages' : tab
+            if (['orders', 'quotes', 'messages', 'notifications', 'settings'].includes(mapped)) {
+                setActiveTab(mapped as any)
+            }
         }
     }, [searchParams])
 
-    const handleTabChange = (tab: 'orders' | 'quotes' | 'notifications' | 'settings') => {
+    const handleTabChange = (tab: 'orders' | 'quotes' | 'messages' | 'notifications' | 'settings') => {
         setActiveTab(tab)
         setSearchParams({ tab })
     }
@@ -260,6 +267,27 @@ export function CustomerDashboard() {
                                 activeTab === 'orders' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
                             }`}>
                                 {orders.length}
+                            </span>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleTabChange('messages')}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                            activeTab === 'messages'
+                                ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
+                                : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+                        }`}
+                    >
+                        <span className="flex items-center gap-2.5">
+                            <MessageSquare size={18} /> Chat di Cantiere
+                        </span>
+                        {orders.filter(o => o.status !== 'draft').length > 0 && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                                activeTab === 'messages' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
+                            }`}>
+                                {orders.filter(o => o.status !== 'draft').length}
                             </span>
                         )}
                     </button>
@@ -620,6 +648,17 @@ export function CustomerDashboard() {
                                                         Dettagli Ordine
                                                     </Button>
 
+                                                    {!isDraft && (
+                                                        <Button
+                                                            variant="outline"
+                                                            className="flex items-center gap-1.5 text-sm rounded-xl text-stone-700 hover:text-orange-600 hover:border-orange-200"
+                                                            onClick={() => navigate(`/dashboard/orders/${order.id}#chat-cantiere`)}
+                                                        >
+                                                            <MessageSquare size={15} className="text-orange-500" />
+                                                            Chat Cantiere
+                                                        </Button>
+                                                    )}
+
                                                     {isDraft && (
                                                         <Button
                                                             className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 rounded-xl"
@@ -637,59 +676,14 @@ export function CustomerDashboard() {
                         </div>
                     )}
 
+                    {/* TAB: CHAT DI CANTIERE */}
+                    {activeTab === 'messages' && (
+                        <CustomerChatTab orders={orders} initialOrderId={searchParams.get('orderId')} />
+                    )}
+
                     {/* TAB: IMPOSTAZIONI PROFILO */}
                     {activeTab === 'settings' && (
-                        <div className="bg-white border border-stone-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-                            <h2 className="text-xl font-bold text-stone-900 mb-6">Impostazioni Profilo</h2>
-
-                            <div className="space-y-4 max-w-lg">
-                                <div>
-                                    <label className="block text-xs font-semibold text-stone-500 uppercase mb-1">Email</label>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={user?.email || ''}
-                                        className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-700 cursor-not-allowed"
-                                    />
-                                    <p className="text-xs text-stone-400 mt-1">L'email dell'account è gestita tramite autenticazione Supabase.</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-stone-500 uppercase mb-1">Nome</label>
-                                        <input
-                                            type="text"
-                                            readOnly
-                                            value={profile?.first_name || ''}
-                                            className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-700"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-stone-500 uppercase mb-1">Cognome</label>
-                                        <input
-                                            type="text"
-                                            readOnly
-                                            value={profile?.last_name || ''}
-                                            className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-700"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
-                                    <span className="text-xs text-stone-500">Ruolo account: <strong>{profile?.role || 'Cliente'}</strong></span>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                            useUserStore.getState().signOut()
-                                            navigate('/')
-                                        }}
-                                        className="rounded-xl text-red-600 hover:bg-red-50 hover:border-red-200"
-                                    >
-                                        Disconnetti
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
+                        <CustomerProfileTab />
                     )}
 
                     {/* TAB: NOTIFICHE */}

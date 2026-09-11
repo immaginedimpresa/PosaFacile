@@ -11,12 +11,33 @@ export interface Job {
     order_id: string
     status: JobStatus
     scheduled_date: string | null
-    customer_name?: string // Joined from order -> shipping_address (or user profile)
+    customer_name?: string
+    customer_phone?: string | null
+    customer_email?: string | null
     address?: string
     city?: string
+    province?: string
+    cap?: string
+    order_number?: string
+    payout?: number
+    laying_total?: number
+    services_total?: number
+    customer_fiscal_code?: string | null
+    customer_vat_number?: string | null
+    customer_company_name?: string | null
+    wants_invoice?: boolean
+    invoice_details?: {
+        fiscal_code?: string | null
+        vat_number?: string | null
+        company_name?: string | null
+        sdi_code?: string | null
+        pec?: string | null
+        billing_address?: string | null
+        customer_type?: 'private' | 'company' | string
+    } | null
     notes?: string
     created_at: string
-    /** Dati dell'ordine necessari a stimare e confermare la durata del cantiere. */
+    /** Dati completi dell'ordine necessari per stima durata, scheda tecnica, materiali, metrature */
     order?: any
 }
 
@@ -216,15 +237,26 @@ export const useProStore = create<ProState>((set, get) => ({
                     *,
                     orders (
                         id,
+                        order_number,
+                        status,
+                        total,
+                        subtotal,
+                        material_total,
+                        laying_total,
+                        services_total,
+                        professional_payout,
                         installation_address,
                         installation_date,
                         work_start_date,
                         work_end_date,
+                        scheduled_time_slot,
                         floor_sqm,
                         wall_sqm,
                         laying_type,
                         project_type,
                         items,
+                        notes,
+                        admin_notes,
                         estimated_work_days,
                         estimated_calendar_days,
                         duration_breakdown,
@@ -234,7 +266,8 @@ export const useProStore = create<ProState>((set, get) => ({
                         customer:users!orders_customer_id_fkey (
                             first_name,
                             last_name,
-                            email
+                            email,
+                            phone
                         )
                     )
                 `)
@@ -250,14 +283,29 @@ export const useProStore = create<ProState>((set, get) => ({
                 .from('orders')
                 .select(`
                     id,
+                    order_number,
+                    status,
+                    total,
+                    subtotal,
+                    material_total,
+                    laying_total,
+                    services_total,
+                    professional_payout,
                     created_at,
                     installation_date,
                     scheduled_time_slot,
                     installation_address,
+                    floor_sqm,
+                    wall_sqm,
+                    laying_type,
+                    project_type,
+                    items,
+                    notes,
                     customer:users!orders_customer_id_fkey (
                         first_name,
                         last_name,
-                        email
+                        email,
+                        phone
                     )
                 `)
                 .or(`professional_id.eq.${user.id},installation_professional_id.eq.${user.id}`) // Check both legacy and new field
@@ -268,32 +316,130 @@ export const useProStore = create<ProState>((set, get) => ({
             if (draftsError) console.error('Error fetching drafts:', draftsError)
             console.log('👷‍♂️ [Professional] Draft/Pending Orders found:', draftOrders?.length || 0, draftOrders)
 
+            // Collect customer IDs for fiscal & invoice profile lookup
+            const custIds = Array.from(new Set([
+                ...(assignedJobs || []).map((j: any) => j.orders?.customer_id || j.orders?.user_id).filter(Boolean),
+                ...(draftOrders || []).map((o: any) => o.customer_id || o.user_id).filter(Boolean),
+            ]))
+
+            let customersMap: Record<string, any> = {}
+            if (custIds.length > 0) {
+                try {
+                    const { data: custRows } = await supabase
+                        .from('customers')
+                        .select('id, company_name, customer_type, fiscal_code, vat_number')
+                        .in('id', custIds)
+                    if (custRows) {
+                        customersMap = Object.fromEntries(custRows.map((c: any) => [c.id, c]))
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch customers metadata:', e)
+                }
+            }
+
+            const extractCustomerInfo = (order: any) => {
+                const customer = order?.customer
+                const addr = typeof order?.installation_address === 'object' ? order?.installation_address : {}
+                const custProfile = customersMap[order?.customer_id || order?.user_id] || {}
+
+                const fullName = customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : ''
+                const customer_name = fullName 
+                    || addr?.recipient_name 
+                    || addr?.name 
+                    || addr?.fullName 
+                    || addr?.contact_name
+                    || (addr?.first_name ? `${addr.first_name} ${addr.last_name || ''}`.trim() : '')
+                    || custProfile?.company_name 
+                    || custProfile?.full_name
+                    || customer?.email 
+                    || addr?.email
+                    || (addr?.city ? `Cliente (${addr.city})` : 'Cliente Privato')
+                const customer_phone = customer?.phone || addr?.phone || addr?.contact_phone || addr?.telephone || null
+                const customer_email = customer?.email || addr?.email || null
+                const address = addr?.street || addr?.address || (typeof order?.installation_address === 'string' ? order.installation_address : '')
+                const city = addr?.city || ''
+                const province = addr?.province || ''
+                const cap = addr?.cap || addr?.postal_code || ''
+
+                const proPayout = Number(order?.professional_payout) || ((Number(order?.laying_total) || 0) + (Number(order?.services_total) || 0))
+
+                // Dati fiscali e fatturazione
+                const fiscal_code = custProfile?.fiscal_code || addr?.fiscal_code || addr?.cf || (order as any)?.fiscal_code || null
+                const vat_number = custProfile?.vat_number || addr?.vat_number || addr?.piva || addr?.partita_iva || (order as any)?.vat_number || null
+                const company_name = custProfile?.company_name || addr?.company_name || addr?.ragione_sociale || null
+                const customer_type = custProfile?.customer_type || (vat_number || company_name ? 'company' : 'private')
+
+                // Se si vuole la fattura o meno
+                const wants_invoice = Boolean(
+                    addr?.wants_invoice === true ||
+                    addr?.invoice_requested === true ||
+                    addr?.richiede_fattura === true ||
+                    (order as any)?.wants_invoice === true ||
+                    (order as any)?.requires_invoice === true ||
+                    (order as any)?.invoice_requested === true ||
+                    vat_number ||
+                    company_name
+                )
+
+                const invoice_details = {
+                    fiscal_code,
+                    vat_number,
+                    company_name,
+                    customer_type,
+                    sdi_code: addr?.sdi_code || addr?.codice_destinatario || custProfile?.sdi_code || null,
+                    pec: addr?.pec || custProfile?.pec || null,
+                    billing_address: addr?.billing_address || (addr?.billing_city ? `${addr.billing_address || ''}, ${addr.billing_city} (${addr.billing_province || ''})` : null),
+                }
+
+                return {
+                    customer_name,
+                    customer_phone,
+                    customer_email,
+                    address,
+                    city,
+                    province,
+                    cap,
+                    payout: proPayout,
+                    laying_total: Number(order?.laying_total) || 0,
+                    services_total: Number(order?.services_total) || 0,
+                    order_number: order?.order_number || (order?.id ? order.id.slice(0, 8) : undefined),
+                    customer_fiscal_code: fiscal_code,
+                    customer_vat_number: vat_number,
+                    customer_company_name: company_name,
+                    wants_invoice,
+                    invoice_details,
+                }
+            }
+
             // Map jobs
-            const mappedJobs: Job[] = assignedJobs.map((j: any) => ({
-                id: j.id,
-                order_id: j.order_id,
-                status: j.status as JobStatus,
-                scheduled_date: j.scheduled_date,
-                notes: j.notes,
-                created_at: j.created_at,
-                order: j.orders || null,
-                customer_name: j.orders?.customer ? `${j.orders.customer.first_name || ''} ${j.orders.customer.last_name || ''}`.trim() : (j.orders?.customer?.email || 'Cliente'),
-                address: j.orders?.installation_address?.street || j.orders?.installation_address?.address || '',
-                city: j.orders?.installation_address?.city || ''
-            }))
+            const mappedJobs: Job[] = assignedJobs.map((j: any) => {
+                const info = extractCustomerInfo(j.orders)
+                return {
+                    id: j.id,
+                    order_id: j.order_id,
+                    status: j.status as JobStatus,
+                    scheduled_date: j.scheduled_date || j.orders?.installation_date || j.orders?.work_start_date || null,
+                    notes: j.notes || j.orders?.notes || '',
+                    created_at: j.created_at,
+                    order: j.orders || null,
+                    ...info,
+                }
+            })
 
             // Map drafts to jobs structure
-            const mappedDrafts: Job[] = (draftOrders || []).map((o: any) => ({
-                id: o.id, // Using order ID as job ID for drafts
-                order_id: o.id,
-                status: 'draft' as any, // Pseudo-status
-                scheduled_date: o.installation_date,
-                notes: 'In attesa di pagamento',
-                created_at: o.created_at,
-                customer_name: o.customer ? `${o.customer.first_name || ''} ${o.customer.last_name || ''}`.trim() : (o.customer?.email || 'Nuovo Cliente'),
-                address: o.installation_address?.street || o.installation_address?.address || '',
-                city: o.installation_address?.city || ''
-            }))
+            const mappedDrafts: Job[] = (draftOrders || []).map((o: any) => {
+                const info = extractCustomerInfo(o)
+                return {
+                    id: o.id, // Using order ID as job ID for drafts
+                    order_id: o.id,
+                    status: 'draft' as any, // Pseudo-status
+                    scheduled_date: o.installation_date,
+                    notes: o.notes || 'In attesa di pagamento',
+                    created_at: o.created_at,
+                    order: o,
+                    ...info,
+                }
+            })
 
             set({ jobs: [...mappedDrafts, ...mappedJobs] })
         } catch (err: any) {

@@ -10,19 +10,122 @@ import {
     RefreshCw,
     CheckCircle2,
     Clock,
-    TrendingUp
+    TrendingUp,
+    AlertCircle,
+    Coins,
+    Layers,
+    Sparkles,
+    CalendarCheck
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
 
-const STATUS_CONFIG: Record<JobStatus, { label: string; color: string; border: string }> = {
-    assigned: { label: 'Nuovo Assegnato', color: 'bg-blue-50 text-blue-700', border: 'border-blue-200' },
-    accepted: { label: 'Accettato', color: 'bg-purple-50 text-purple-700', border: 'border-purple-200' },
-    in_progress: { label: 'In Corso', color: 'bg-orange-50 text-orange-700', border: 'border-orange-200' },
-    completed: { label: 'Completato', color: 'bg-emerald-50 text-emerald-700', border: 'border-emerald-200' },
-    cancelled: { label: 'Annullato', color: 'bg-rose-50 text-rose-700', border: 'border-rose-200' },
-    draft: { label: 'In Attesa Pagamento', color: 'bg-amber-50 text-amber-700', border: 'border-amber-200' },
-    pending: { label: 'In Valutazione', color: 'bg-amber-50 text-amber-700', border: 'border-amber-200' },
+interface StatusConfigItem {
+    label: string
+    badge: string
+    hint: string
+    color: string
+    border: string
+    stripeBorder: string
+    cardGlow: string
+    icon: any
+    hasPulse: boolean
+    pulseColor: string
+    actionText: string
+}
+
+const STATUS_CONFIG: Record<JobStatus, StatusConfigItem> = {
+    assigned: {
+        label: 'Nuovo Incarico Assegnato',
+        badge: 'Azione Richiesta',
+        hint: 'Nuovo cantiere assegnato: conferma la presa in carico entro 24h per bloccare le date e attivare la chat.',
+        color: 'bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-400/40',
+        border: 'border-amber-300',
+        stripeBorder: 'border-l-amber-500',
+        cardGlow: 'hover:border-amber-400 hover:shadow-amber-500/5',
+        icon: AlertCircle,
+        hasPulse: true,
+        pulseColor: 'bg-amber-500',
+        actionText: 'Esamina e Accetta Incarico'
+    },
+    accepted: {
+        label: 'Incarico Confermato',
+        badge: 'Programmato',
+        hint: 'Data di inizio fissata. All\'arrivo in cantiere clicca per notificare l\'avvio effettivo dei lavori.',
+        color: 'bg-blue-50 text-blue-900 border-blue-300',
+        border: 'border-blue-300',
+        stripeBorder: 'border-l-blue-500',
+        cardGlow: 'hover:border-blue-400 hover:shadow-blue-500/5',
+        icon: CalendarCheck,
+        hasPulse: false,
+        pulseColor: 'bg-blue-500',
+        actionText: 'Apri Scheda Cantiere'
+    },
+    in_progress: {
+        label: 'Cantiere in Corso',
+        badge: 'Lavori Attivi',
+        hint: 'Posa attualmente in esecuzione. Ultimati i lavori, chiudi il cantiere con collaudo per avviare la liquidazione.',
+        color: 'bg-orange-50 text-orange-900 border-orange-300 ring-1 ring-orange-400/30',
+        border: 'border-orange-300',
+        stripeBorder: 'border-l-orange-500',
+        cardGlow: 'hover:border-orange-400 hover:shadow-orange-500/5',
+        icon: Hammer,
+        hasPulse: true,
+        pulseColor: 'bg-orange-500',
+        actionText: 'Gestisci Cantiere'
+    },
+    completed: {
+        label: 'Cantiere Chiuso',
+        badge: 'Completato',
+        hint: 'Lavori conclusi con successo e collaudo confermato.',
+        color: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+        border: 'border-emerald-300',
+        stripeBorder: 'border-l-emerald-500',
+        cardGlow: 'hover:border-emerald-400 hover:shadow-emerald-500/5',
+        icon: CheckCircle2,
+        hasPulse: false,
+        pulseColor: 'bg-emerald-500',
+        actionText: 'Vedi Riepilogo'
+    },
+    cancelled: {
+        label: 'Incarico Annullato',
+        badge: 'Annullato',
+        hint: 'Questo cantiere è stato annullato.',
+        color: 'bg-rose-50 text-rose-800 border-rose-200',
+        border: 'border-rose-200',
+        stripeBorder: 'border-l-rose-400',
+        cardGlow: 'hover:border-rose-300',
+        icon: AlertCircle,
+        hasPulse: false,
+        pulseColor: 'bg-rose-400',
+        actionText: 'Dettagli Annullamento'
+    },
+    draft: {
+        label: 'In Attesa Pagamento Cliente',
+        badge: 'Preventivo Bozza',
+        hint: 'Il cliente sta completando il pagamento dell\'acconto per confermare la prenotazione.',
+        color: 'bg-stone-100 text-stone-800 border-stone-300',
+        border: 'border-stone-300',
+        stripeBorder: 'border-l-stone-400',
+        cardGlow: 'hover:border-stone-400',
+        icon: Clock,
+        hasPulse: false,
+        pulseColor: 'bg-stone-400',
+        actionText: 'Vedi Scheda Bozza'
+    },
+    pending: {
+        label: 'In Valutazione',
+        badge: 'In Verifica',
+        hint: 'Cantiere in fase di validazione tecnica.',
+        color: 'bg-amber-50 text-amber-800 border-amber-300',
+        border: 'border-amber-300',
+        stripeBorder: 'border-l-amber-400',
+        cardGlow: 'hover:border-amber-300',
+        icon: Clock,
+        hasPulse: false,
+        pulseColor: 'bg-amber-400',
+        actionText: 'Vedi Dettagli'
+    }
 }
 
 export function JobsPage() {
@@ -79,7 +182,7 @@ export function JobsPage() {
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 flex items-center gap-3">
                         <Hammer className="w-8 h-8 text-orange-500" />
-                        <span>I miei Cantieri e Lavori</span>
+                        <span>Commesse</span>
                     </h1>
                     <p className="text-sm text-stone-500 mt-1">
                         Monitora tutti i lavori di posa assegnati, aggiorna lo stato dei cantieri e apri la chat con i clienti.
@@ -195,44 +298,40 @@ export function JobsPage() {
                         <button
                             type="button"
                             onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'all'
-                                    ? 'bg-orange-500 text-white shadow-xs'
-                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                            }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === 'all'
+                                ? 'bg-orange-500 text-white shadow-xs'
+                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                }`}
                         >
                             Tutti ({jobs.length})
                         </button>
                         <button
                             type="button"
                             onClick={() => setStatusFilter('new')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'new'
-                                    ? 'bg-orange-500 text-white shadow-xs'
-                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                            }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === 'new'
+                                ? 'bg-orange-500 text-white shadow-xs'
+                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                }`}
                         >
                             Da Iniziare ({kpiMetrics.newCount})
                         </button>
                         <button
                             type="button"
                             onClick={() => setStatusFilter('in_progress')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'in_progress'
-                                    ? 'bg-orange-500 text-white shadow-xs'
-                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                            }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === 'in_progress'
+                                ? 'bg-orange-500 text-white shadow-xs'
+                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                }`}
                         >
                             In Corso ({kpiMetrics.inProgressCount})
                         </button>
                         <button
                             type="button"
                             onClick={() => setStatusFilter('completed')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                statusFilter === 'completed'
-                                    ? 'bg-orange-500 text-white shadow-xs'
-                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                            }`}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${statusFilter === 'completed'
+                                ? 'bg-orange-500 text-white shadow-xs'
+                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                }`}
                         >
                             Completati ({kpiMetrics.completedCount})
                         </button>
@@ -261,63 +360,178 @@ export function JobsPage() {
             ) : (
                 <div className="grid gap-4">
                     {filteredJobs.map((job) => {
-                        const isDraft = job.status === 'draft' || job.status === 'pending'
-                        const config = STATUS_CONFIG[job.status] || {
-                            label: job.status,
-                            color: 'bg-stone-100 text-stone-700',
-                            border: 'border-stone-200'
-                        }
+                        const config = STATUS_CONFIG[job.status] || STATUS_CONFIG.assigned
+                        const StatusIcon = config.icon
+
+                        // Economic metrics for the professional
+                        const layingTotal = Number(job.laying_total ?? job.order?.laying_total ?? 0)
+                        const servicesTotal = Number(job.services_total ?? job.order?.services_total ?? 0)
+                        const proPayout = Number(job.payout ?? job.order?.professional_payout ?? (layingTotal + servicesTotal))
+
+                        // Technical specs
+                        const floorSqm = Number(job.order?.floor_sqm || 0)
+                        const wallSqm = Number(job.order?.wall_sqm || 0)
+                        const totalSqm = floorSqm + wallSqm
+                        const layingType = job.order?.laying_type || null
+                        const projectType = job.order?.project_type || null
+
+                        // Customer info & fallbacks
+                        const customerDisplay = job.customer_name && job.customer_name !== 'Cliente'
+                            ? job.customer_name
+                            : (job.city ? `Committente (${job.city})` : 'Cliente Privato')
+                        const customerPhone = job.customer_phone || (typeof job.order?.installation_address === 'object' ? (job.order.installation_address?.phone || job.order.installation_address?.contact_phone || job.order.installation_address?.telephone) : null)
+                        const initial = customerDisplay.charAt(0).toUpperCase() || 'C'
+                        const orderNum = job.order_number || (job.order_id ? `#${job.order_id.slice(0, 8)}` : '')
 
                         return (
                             <div
                                 key={job.id}
-                                className="bg-white rounded-2xl border border-stone-200/90 p-5 shadow-xs hover:border-orange-300 hover:shadow-md transition-all relative overflow-hidden group"
+                                className={`bg-white rounded-2xl border border-stone-200/90 shadow-xs hover:shadow-md transition-all relative overflow-hidden group border-l-4 ${config.stripeBorder} ${config.cardGlow}`}
                             >
-                                {isDraft && (
-                                    <div className="absolute top-0 right-0 bg-amber-100 text-amber-900 text-[10px] uppercase tracking-wider px-3 py-1 font-bold rounded-bl-xl z-10 border-b border-l border-amber-200">
-                                        In attesa pagamento cliente
-                                    </div>
-                                )}
-
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2.5">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${config.color} ${config.border}`}>
-                                                {config.label}
+                                <div className="p-5 sm:p-6 space-y-4">
+                                    {/* Top Status Bar: Status Pill + Pulsing beacon + Operational Badges + Scheduled Date */}
+                                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {/* Visual Status Signal Pill */}
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide border shadow-2xs ${config.color}`}>
+                                                {config.hasPulse && (
+                                                    <span className="relative flex h-2 w-2">
+                                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${config.pulseColor}`}></span>
+                                                        <span className={`relative inline-flex rounded-full h-2 w-2 ${config.pulseColor}`}></span>
+                                                    </span>
+                                                )}
+                                                <StatusIcon size={13} className="shrink-0" />
+                                                <span>{config.label}</span>
                                             </span>
-                                            <span className="text-xs text-stone-400 font-mono">
-                                                Ordine #{job.order_id.slice(0, 8)}
-                                            </span>
-                                        </div>
 
-                                        <h3 className="text-base font-bold text-stone-900 group-hover:text-orange-600 transition-colors">
-                                            {job.customer_name}
-                                        </h3>
-
-                                        <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-stone-500">
-                                            <div className="flex items-center gap-1.5">
-                                                <MapPin size={14} className="text-stone-400" />
-                                                <span>{job.city || 'Milano'}, {job.address || 'Via Roma 1'}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Calendar size={14} className="text-stone-400" />
-                                                <span>
-                                                    {job.scheduled_date
-                                                        ? format(new Date(job.scheduled_date), 'd MMMM yyyy', { locale: it })
-                                                        : 'Data da concordare'}
+                                            {/* Action Required Badge if assigned */}
+                                            {job.status === 'assigned' && (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500 text-white shadow-2xs animate-pulse">
+                                                    <Sparkles size={11} />
+                                                    <span>Azione Richiesta</span>
                                                 </span>
-                                            </div>
+                                            )}
+                                            {job.status === 'in_progress' && (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-500 text-white shadow-2xs">
+                                                    <span>Lavori in Corso</span>
+                                                </span>
+                                            )}
+
+                                            {/* Order Code */}
+                                            <span className="text-xs text-stone-400 font-mono bg-stone-50 px-2 py-0.5 rounded-md border border-stone-200/70">
+                                                {orderNum}
+                                            </span>
+                                        </div>
+
+                                        {/* Scheduled Date */}
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-700 bg-stone-50 border border-stone-200 px-3 py-1 rounded-full">
+                                            <Calendar size={13} className="text-orange-500 shrink-0" />
+                                            <span>
+                                                {job.scheduled_date
+                                                    ? `Inizio: ${format(new Date(job.scheduled_date), 'd MMMM yyyy', { locale: it })}`
+                                                    : 'Data da concordare'}
+                                            </span>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center shrink-0">
-                                        <Link
-                                            to={`/pro/jobs/${job.id}`}
-                                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 transition-all active:scale-95 w-full md:w-auto cursor-pointer"
-                                        >
-                                            <span>Apri Scheda Cantiere</span>
-                                            <ArrowRight size={15} />
-                                        </Link>
+                                    {/* Middle Section: Customer Details + Specs + Financial Net Payout Box */}
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-1">
+                                        {/* Customer and Work Specs */}
+                                        <div className="space-y-2.5 flex-1">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-stone-100 to-stone-200 text-stone-700 font-bold flex items-center justify-center text-sm shrink-0 border border-stone-200 shadow-2xs">
+                                                    {initial}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-base sm:text-lg font-bold text-stone-900 group-hover:text-orange-600 transition-colors">
+                                                            {customerDisplay}
+                                                        </h3>
+                                                        {customerPhone && (
+                                                            <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
+                                                                {customerPhone}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-xs text-stone-500 mt-0.5">
+                                                        <MapPin size={13} className="text-stone-400 shrink-0" />
+                                                        <span>{job.city || 'Milano'}, {job.address || 'Via Roma 1'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Badges for Metratura, Tipo Posa, Ambiente */}
+                                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                                {totalSqm > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                                                        <Layers size={12} className="text-stone-500" />
+                                                        <span>{totalSqm} m² Totali</span>
+                                                        {floorSqm > 0 && wallSqm > 0 && (
+                                                            <span className="text-stone-400 text-[10px]">({floorSqm} pav + {wallSqm} par)</span>
+                                                        )}
+                                                    </span>
+                                                )}
+                                                {layingType && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                                                        <Hammer size={12} className="text-orange-500" />
+                                                        <span>{layingType}</span>
+                                                    </span>
+                                                )}
+                                                {projectType && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
+                                                        <span>Ambiente: {projectType}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Right Section: Payout Box and CTA */}
+                                        <div className="flex items-center justify-between lg:justify-end gap-3.5 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-stone-100">
+                                            {/* Compenso Netto Box */}
+                                            {proPayout > 0 && (
+                                                <div className="bg-stone-50 border border-stone-200/90 rounded-xl px-4 py-2 text-right">
+                                                    <div className="text-[10px] uppercase font-bold tracking-wider text-stone-500 flex items-center justify-end gap-1">
+                                                        <Coins size={12} className="text-emerald-600" />
+                                                        <span>Compenso Netto</span>
+                                                    </div>
+                                                    <div className="text-lg sm:text-xl font-black text-stone-900 leading-tight">
+                                                        €{proPayout.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </div>
+                                                    <div className="text-[10px] text-emerald-700 font-semibold">
+                                                        Garantito da PosaFacile
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Primary Action Button */}
+                                            <Link
+                                                to={`/pro/jobs/${job.id}`}
+                                                className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer shadow-md ${
+                                                    job.status === 'assigned'
+                                                        ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/25 ring-2 ring-orange-500/20'
+                                                        : 'bg-stone-900 hover:bg-black text-white shadow-stone-900/10'
+                                                }`}
+                                            >
+                                                <span>{config.actionText}</span>
+                                                <ArrowRight size={16} />
+                                            </Link>
+                                        </div>
+                                    </div>
+
+                                    {/* Bottom Operational Status Cue Banner */}
+                                    <div className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs ${
+                                        job.status === 'assigned'
+                                            ? 'bg-amber-500/10 border border-amber-300 text-amber-900'
+                                            : job.status === 'in_progress'
+                                            ? 'bg-orange-500/10 border border-orange-300 text-orange-900'
+                                            : job.status === 'accepted'
+                                            ? 'bg-blue-500/10 border border-blue-200 text-blue-900'
+                                            : 'bg-stone-50 border border-stone-200/80 text-stone-600'
+                                    }`}>
+                                        <StatusIcon size={14} className="shrink-0" />
+                                        <span className="font-medium">
+                                            {config.hint}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

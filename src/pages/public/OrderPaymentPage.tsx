@@ -48,18 +48,28 @@ export function OrderPaymentPage() {
         await new Promise(resolve => setTimeout(resolve, 2000))
 
         try {
-            // Update order status to confirmed
-            const { error } = await supabase
-                .from('orders')
-                .update({
-                    status: 'confirmed',
-                    payment_status: 'paid',
-                    payment_method: 'credit_card',
-                    payment_intent_id: `pi_simulated_${Date.now()}`
-                })
-                .eq('id', id)
+            // First attempt: Call atomic SECURITY DEFINER RPC
+            const { error: rpcError } = await (supabase.rpc as any)('confirm_order_payment', {
+                p_order_id: id,
+                p_payment_method: 'credit_card',
+                p_payment_intent_id: `pi_simulated_${Date.now()}`
+            })
 
-            if (error) throw error
+            if (rpcError) {
+                console.warn('confirm_order_payment RPC not available or failed, fallback to direct update:', rpcError)
+                // Fallback direct update
+                const { error: updateError } = await supabase
+                    .from('orders')
+                    .update({
+                        status: 'confirmed',
+                        payment_status: 'paid',
+                        payment_method: 'credit_card',
+                        payment_intent_id: `pi_simulated_${Date.now()}`
+                    })
+                    .eq('id', id)
+
+                if (updateError) throw updateError
+            }
 
             // Reset configurator store since order is complete
             reset()

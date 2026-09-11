@@ -44,7 +44,12 @@ export type StepStatus = 'pending' | 'active' | 'blocked' | 'done' | 'skipped'
 
 export interface TimelineStepDefinition {
     key: TimelineStepKey
+    /** Nome sintetico della tappa */
     label: string
+    /** Nome specifico quando la tappa è in corso/in attesa */
+    activeLabel?: string
+    /** Nome specifico quando la tappa è completata */
+    doneLabel?: string
     /** Testo mostrato al cliente quando la tappa non è ancora chiusa. */
     description: string
     /** Testo mostrato al cliente a tappa conclusa. */
@@ -59,7 +64,9 @@ export interface TimelineStepDefinition {
 export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefinition> = {
     order_placed: {
         key: 'order_placed',
-        label: 'Ordine ricevuto',
+        label: 'Ricezione ordine',
+        activeLabel: 'Registrazione ordine',
+        doneLabel: 'Ordine ricevuto',
         description: 'Stiamo registrando il tuo ordine.',
         doneDescription: 'Ordine registrato e preso in carico.',
         owner: 'sistema',
@@ -68,8 +75,10 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     payment_confirmed: {
         key: 'payment_confirmed',
-        label: 'Pagamento confermato',
-        description: 'In attesa dell’esito del pagamento.',
+        label: 'Pagamento acconto',
+        activeLabel: 'In attesa di pagamento',
+        doneLabel: 'Pagamento confermato',
+        description: 'In attesa del pagamento dell’acconto per confermare la prenotazione.',
         doneDescription: 'Pagamento ricevuto correttamente.',
         owner: 'cliente',
         customerVisible: true,
@@ -77,7 +86,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     material_check: {
         key: 'material_check',
-        label: 'Materiale confermato in magazzino',
+        label: 'Verifica materiale',
+        activeLabel: 'Verifica disponibilità in magazzino',
+        doneLabel: 'Materiale confermato in magazzino',
         description: 'Stiamo verificando la disponibilità delle piastrelle e dei materiali di posa.',
         doneDescription: 'Materiale disponibile e riservato per il tuo cantiere.',
         owner: 'admin',
@@ -86,7 +97,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     professional_confirmed: {
         key: 'professional_confirmed',
-        label: 'Professionista confermato',
+        label: 'Assegnazione posatore',
+        activeLabel: 'Conferma posatore in corso',
+        doneLabel: 'Professionista confermato',
         description: 'Il posatore selezionato deve confermare l’incarico.',
         doneDescription: 'Il posatore ha accettato l’incarico.',
         owner: 'professionista',
@@ -96,6 +109,8 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     info_pending: {
         key: 'info_pending',
         label: 'Informazioni aggiuntive',
+        activeLabel: 'Informazioni richieste',
+        doneLabel: 'Informazioni ricevute',
         description: 'Ci servono alcune informazioni o documenti per procedere.',
         doneDescription: 'Abbiamo ricevuto tutte le informazioni necessarie.',
         owner: 'cliente',
@@ -104,7 +119,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     green_light: {
         key: 'green_light',
-        label: 'OK, si parte',
+        label: 'Approvazione cantiere',
+        activeLabel: 'Verifica pre-cantiere in corso',
+        doneLabel: 'OK, si parte',
         description: 'Ultima verifica prima di fissare il cantiere.',
         doneDescription: 'Tutte le verifiche sono chiuse: il cantiere è approvato.',
         owner: 'admin',
@@ -113,7 +130,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     date_confirmed: {
         key: 'date_confirmed',
-        label: 'Data confermata',
+        label: 'Data di inizio',
+        activeLabel: 'Definizione data inizio',
+        doneLabel: 'Data confermata',
         description: 'Stiamo concordando la data di inizio con il posatore.',
         doneDescription: 'Data di inizio lavori confermata.',
         owner: 'admin',
@@ -122,7 +141,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     material_shipped: {
         key: 'material_shipped',
-        label: 'Materiale spedito',
+        label: 'Spedizione materiale',
+        activeLabel: 'Preparazione spedizione',
+        doneLabel: 'Materiale spedito',
         description: 'Stiamo preparando la spedizione delle piastrelle e dei materiali di posa.',
         doneDescription: 'Materiale partito dal magazzino verso l’indirizzo di posa.',
         owner: 'admin',
@@ -131,7 +152,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     material_delivered: {
         key: 'material_delivered',
-        label: 'Materiale ricevuto in cantiere',
+        label: 'Consegna materiale',
+        activeLabel: 'Materiale in consegna',
+        doneLabel: 'Materiale ricevuto in cantiere',
         description: 'Il materiale è in viaggio verso l’indirizzo di posa.',
         doneDescription: 'Materiale consegnato e verificato all’indirizzo di posa.',
         owner: 'cliente',
@@ -140,7 +163,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     room_prep_notice: {
         key: 'room_prep_notice',
-        label: 'Prepara la stanza',
+        label: 'Preparazione stanza',
+        activeLabel: 'Prepara la stanza',
+        doneLabel: 'Stanza predisposta',
         description: 'Ti avviseremo qualche giorno prima con le istruzioni per liberare l’ambiente.',
         doneDescription: 'Avviso inviato: la stanza va liberata prima dell’arrivo della squadra.',
         owner: 'cliente',
@@ -149,7 +174,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     work_started: {
         key: 'work_started',
-        label: 'Attività iniziata',
+        label: 'Apertura cantiere',
+        activeLabel: 'Avvio cantiere in corso',
+        doneLabel: 'Attività iniziata',
         description: 'La squadra inizierà nella data confermata.',
         doneDescription: 'Il cantiere è aperto e i lavori sono in corso.',
         owner: 'professionista',
@@ -158,7 +185,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     work_completed: {
         key: 'work_completed',
-        label: 'Lavori completati',
+        label: 'Esecuzione posa',
+        activeLabel: 'Lavori in corso',
+        doneLabel: 'Lavori completati',
         description: 'Posa, stuccatura e finiture in corso.',
         doneDescription: 'Lavori completati e cantiere consegnato.',
         owner: 'professionista',
@@ -167,7 +196,9 @@ export const TIMELINE_STEP_DEFINITIONS: Record<TimelineStepKey, TimelineStepDefi
     },
     closed: {
         key: 'closed',
-        label: 'Ordine chiuso',
+        label: 'Chiusura ordine',
+        activeLabel: 'Chiusura amministrativa',
+        doneLabel: 'Ordine chiuso',
         description: 'Ultimi controlli e chiusura amministrativa.',
         doneDescription: 'Ordine chiuso. Grazie!',
         owner: 'admin',
@@ -296,6 +327,22 @@ export function buildTimeline(
     if (!annullato && !resolved.some((s) => s.status === 'active' || s.status === 'blocked')) {
         const next = resolved.find((s) => s.status === 'pending')
         if (next) next.status = 'active'
+    }
+
+    // Risolvi label e descrizioni contestuali (es. "In attesa di pagamento" vs "Pagamento confermato")
+    const isDraft = orderStatus === 'draft'
+
+    for (const step of resolved) {
+        if (isDraft && step.key === 'order_placed') {
+            step.label = step.status === 'done' ? 'Preventivo registrato' : 'Registrazione preventivo'
+            if (step.status === 'done') {
+                step.doneDescription = 'Preventivo registrato e configurazione salvata.'
+            }
+        } else if (step.status === 'done' && step.doneLabel) {
+            step.label = step.doneLabel
+        } else if ((step.status === 'active' || step.status === 'blocked') && step.activeLabel) {
+            step.label = step.activeLabel
+        }
     }
 
     return options.customerView ? resolved.filter((s) => s.customerVisible) : resolved

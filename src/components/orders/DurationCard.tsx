@@ -15,6 +15,8 @@ interface DurationCardProps {
     proNote?: string | null
     /** Il dettaglio delle fasi interessa admin e posatore più del cliente. */
     showPhases?: boolean
+    /** Nasconde il blocco "Come è calcolata" se non necessario */
+    hideAssumptions?: boolean
     className?: string
 }
 
@@ -30,6 +32,7 @@ export function DurationCard({
     confirmedCalendarDays,
     proNote,
     showPhases = false,
+    hideAssumptions = false,
     className = '',
 }: DurationCardProps) {
     const confermato = typeof confirmedWorkDays === 'number' && confirmedWorkDays > 0
@@ -50,16 +53,15 @@ export function DurationCard({
                         <CalendarClock className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-base sm:text-lg font-bold text-stone-900">Durata dei lavori</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-stone-900">Stima dei lavori</h3>
                         <p className="text-stone-500 text-sm mt-0.5">
-                            {confermato ? 'Confermata dal professionista' : 'Stima calcolata sul tuo progetto'}
+                            {confermato ? 'Confermata dal professionista' : 'Calcolata sul progetto'}
                         </p>
                     </div>
                 </div>
                 <span
-                    className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs ${
-                        confermato ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' : confidence.badge
-                    }`}
+                    className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-2xs ${confermato ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' : confidence.badge
+                        }`}
                 >
                     {confermato ? <ShieldCheck className="w-3.5 h-3.5" /> : null}
                     {confermato ? 'Confermata' : confidence.label}
@@ -189,18 +191,20 @@ export function DurationCard({
                 </div>
             )}
 
-            <div className="p-6 bg-stone-50/70">
-                <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                    <Info className="w-3.5 h-3.5" /> Come è calcolata
-                </p>
-                <ul className="space-y-1">
-                    {estimate.assumptions.map((assunzione, i) => (
-                        <li key={i} className="text-xs text-stone-500 font-medium leading-relaxed">
-                            • {assunzione}
-                        </li>
-                    ))}
-                </ul>
-            </div>
+            {!hideAssumptions && estimate.assumptions.length > 0 && (
+                <div className="p-6 bg-stone-50/70">
+                    <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                        <Info className="w-3.5 h-3.5" /> Come è calcolata
+                    </p>
+                    <ul className="space-y-1">
+                        {estimate.assumptions.map((assunzione, i) => (
+                            <li key={i} className="text-xs text-stone-500 font-medium leading-relaxed">
+                                • {assunzione}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     )
 }

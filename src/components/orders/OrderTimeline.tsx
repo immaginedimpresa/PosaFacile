@@ -38,51 +38,186 @@ interface OrderTimelineProps {
     steps: ResolvedStep[]
     /** Mostra chi deve muoversi per ogni tappa: utile ad admin e posatore. */
     showOwner?: boolean
+    variant?: 'full' | 'progress-only' | 'steps-only'
     className?: string
 }
 
 /**
- * Barra di stato dell'ordine.
- * Verticale su ogni breakpoint: le tappe sono dodici e hanno note e date,
- * una fila orizzontale le renderebbe illeggibili appena c'è del testo.
+ * Barra di avanzamento dell'ordine: smart, compatta e altamente leggibile.
  */
-export function OrderTimeline({ steps, showOwner = false, className = '' }: OrderTimelineProps) {
+export function OrderProgressBar({
+    steps,
+    className = '',
+    embedded = false,
+}: {
+    steps: ResolvedStep[]
+    className?: string
+    embedded?: boolean
+}) {
     if (steps.length === 0) return null
 
     const progress = timelineProgress(steps)
     const attuale = pickCurrentStep(steps)
+    const rilevanti = steps.filter((s) => s.status !== 'skipped')
+
+    // Modalità Integrata (Embedded all'interno della card principale ordine/preventivo)
+    if (embedded) {
+        return (
+            <div className={`space-y-2.5 ${className}`}>
+                {/* Riquadro Intelligente Compatto: Stato & Percentuale */}
+                <div className="bg-stone-50/80 rounded-xl p-3 sm:px-4 sm:py-3 border border-stone-200/70 shadow-2xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-400 shrink-0">
+                                    Stato Cantiere:
+                                </span>
+                                <span className="text-xs sm:text-sm font-extrabold text-stone-900 tracking-tight">
+                                    {attuale ? (attuale.status === 'done' ? (attuale.doneLabel || attuale.label) : (attuale.activeLabel || attuale.label)) : 'In lavorazione'}
+                                </span>
+                                {attuale && (
+                                    <span className="hidden md:inline text-xs text-stone-500 font-medium truncate max-w-sm">
+                                        — {attuale.status === 'done' ? attuale.doneDescription : attuale.description}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
+                            <div className="flex items-center gap-1.5 bg-white border border-stone-200/80 shadow-2xs px-2.5 py-0.5 rounded-full">
+                                <span className="text-xs sm:text-sm font-black text-orange-600 font-mono tabular-nums">
+                                    {progress}%
+                                </span>
+                                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                                    Avanzamento
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Descrizione visibile su mobile */}
+                    {attuale && (
+                        <p className="text-xs text-stone-500 font-medium mt-1 md:hidden leading-relaxed">
+                            {attuale.status === 'done' ? attuale.doneDescription : attuale.description}
+                        </p>
+                    )}
+
+                    {/* Barra di Avanzamento Snella */}
+                    <div className="mt-2.5">
+                        <div className="h-2 rounded-full bg-stone-200/70 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 transition-all duration-500 shadow-2xs"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Micro-indicatori tappe (da tablet/desktop sm+) */}
+                    {rilevanti.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-stone-200/50 hidden sm:flex items-center justify-between gap-1 text-[10px]">
+                            {rilevanti.map((step, idx) => {
+                                const isDone = step.status === 'done'
+                                const isActive = step.status === 'active' || step.status === 'blocked'
+                                return (
+                                    <div
+                                        key={step.key || idx}
+                                        title={`${step.label}: ${step.status === 'done' ? 'Completato' : step.status === 'active' ? 'In corso' : 'In attesa'}`}
+                                        className="flex items-center gap-1.5 shrink-0"
+                                    >
+                                        <span
+                                            className={`w-1.5 h-1.5 rounded-full ${
+                                                isDone
+                                                    ? 'bg-emerald-500'
+                                                    : isActive
+                                                    ? 'bg-orange-500 ring-2 ring-orange-200'
+                                                    : 'bg-stone-300'
+                                            }`}
+                                        />
+                                        <span
+                                            className={`truncate max-w-[85px] ${
+                                                isActive
+                                                    ? 'font-bold text-stone-900'
+                                                    : isDone
+                                                    ? 'font-medium text-stone-600'
+                                                    : 'text-stone-400'
+                                            }`}
+                                        >
+                                            {step.label}
+                                        </span>
+                                        {idx < rilevanti.length - 1 && (
+                                            <span className="text-stone-300 ml-0.5">›</span>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
+    // Modalità Standalone: Snella, moderna, senza margini gonfi
+    return (
+        <div className={`bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden p-4 sm:p-5 ${className}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                        <p className="text-[10px] sm:text-[11px] font-bold text-stone-400 uppercase tracking-wider">
+                            Stato di avanzamento del cantiere
+                        </p>
+                    </div>
+                    <p className="text-base sm:text-lg font-black text-stone-900 mt-0.5 tracking-tight">
+                        {attuale ? (attuale.status === 'done' ? (attuale.doneLabel || attuale.label) : (attuale.activeLabel || attuale.label)) : 'In lavorazione'}
+                    </p>
+                    {attuale && (
+                        <p className="text-xs text-stone-500 font-medium mt-0.5">
+                            {attuale.status === 'done' ? attuale.doneDescription : attuale.description}
+                        </p>
+                    )}
+                </div>
+                <div className="sm:text-right flex items-center sm:flex-col justify-between gap-1 flex-shrink-0">
+                    <span className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight tabular-nums">
+                        {progress}%
+                    </span>
+                    <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Completamento</p>
+                </div>
+            </div>
+            <div className="h-2 rounded-full bg-stone-100 overflow-hidden border border-stone-200/60">
+                <div
+                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 shadow-2xs"
+                    style={{ width: `${progress}%` }}
+                />
+            </div>
+        </div>
+    )
+}
+
+/**
+ * Elenco verticale di tutti gli stati del cantiere con indicatori e date.
+ */
+export function OrderTimelineSteps({ steps, showOwner = false, className = '' }: OrderTimelineProps) {
+    if (steps.length === 0) return null
 
     return (
         <div className={`bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden ${className}`}>
-            {/* Riepilogo: percentuale e tappa in corso */}
-            <div className="p-6 border-b border-stone-100">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                        <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">
-                            Stato di avanzamento
-                        </p>
-                        <p className="text-lg font-bold text-stone-900 mt-0.5">
-                            {attuale ? attuale.label : 'In lavorazione'}
-                        </p>
-                        {attuale && (
-                            <p className="text-sm text-stone-500 font-medium mt-0.5">
-                                {attuale.status === 'done' ? attuale.doneDescription : attuale.description}
-                            </p>
-                        )}
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100/80">
+                        <Clock size={20} />
                     </div>
-                    <span className="text-2xl font-black text-stone-900 tracking-tight tabular-nums">
-                        {progress}%
-                    </span>
-                </div>
-                <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
-                    <div
-                        className="h-full rounded-full bg-orange-500 transition-all duration-500"
-                        style={{ width: `${progress}%` }}
-                    />
+                    <div>
+                        <h3 className="text-lg font-bold text-stone-900">Stati e fasi del cantiere</h3>
+                        <p className="text-xs text-stone-500">Cronologia operativa dall'ordine alla chiusura</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Elenco delle tappe */}
             <ol className="p-6 space-y-0">
                 {steps.map((step, index) => {
                     const style = STEP_STATUS_STYLES[step.status]
@@ -148,6 +283,21 @@ export function OrderTimeline({ steps, showOwner = false, className = '' }: Orde
     )
 }
 
+/**
+ * Componente unificato o selettivo per la barra di stato dell'ordine.
+ */
+export function OrderTimeline({ steps, showOwner = false, variant = 'full', className = '' }: OrderTimelineProps) {
+    if (variant === 'progress-only') return <OrderProgressBar steps={steps} className={className} />
+    if (variant === 'steps-only') return <OrderTimelineSteps steps={steps} showOwner={showOwner} className={className} />
+
+    return (
+        <div className={`space-y-6 ${className}`}>
+            <OrderProgressBar steps={steps} />
+            <OrderTimelineSteps steps={steps} showOwner={showOwner} />
+        </div>
+    )
+}
+
 /** Versione compatta per elenchi ordini: solo pallini e tappa corrente. */
 export function OrderTimelineCompact({ steps }: { steps: ResolvedStep[] }) {
     if (steps.length === 0) return null
@@ -162,15 +312,14 @@ export function OrderTimelineCompact({ steps }: { steps: ResolvedStep[] }) {
                     <span
                         key={step.key}
                         title={`${step.label} — ${STEP_STATUS_STYLES[step.status].label}`}
-                        className={`h-1.5 w-4 rounded-full ${
-                            step.status === 'done'
+                        className={`h-1.5 w-4 rounded-full ${step.status === 'done'
                                 ? 'bg-emerald-500'
                                 : step.status === 'blocked'
                                     ? 'bg-amber-500'
                                     : step.status === 'active'
                                         ? 'bg-orange-500'
                                         : 'bg-stone-200'
-                        }`}
+                            }`}
                     />
                 ))}
             </div>

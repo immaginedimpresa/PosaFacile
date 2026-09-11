@@ -1,9 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ShoppingCart, User, Menu, X, ArrowUpRight, Clock } from 'lucide-react'
+import { User, Menu, X, ArrowUpRight, LogOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Logo } from '@/components/ui/Logo'
 import { useUserStore } from '@/store/userStore'
-import { useCartStore } from '@/store/cartStore'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 const navigation = [
@@ -16,7 +15,6 @@ const navigation = [
 
 export function Header() {
     const { user, profile, signOut } = useUserStore()
-    const { items } = useCartStore()
     const location = useLocation()
     const [menuLocation, setMenuLocation] = useState<string | null>(null)
     const menuKey = location.key
@@ -51,111 +49,111 @@ export function Header() {
     }
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-stone-200/70 bg-white/95 backdrop-blur-xl">
+        <header
+            role="banner"
+            className="sticky top-0 z-50 w-full border-b border-stone-200/80 bg-white/95 backdrop-blur-md transition-colors"
+        >
             <a
                 href="#main-content"
                 className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-stone-900 focus:px-5 focus:py-3 focus:text-white"
             >
                 Vai al contenuto
             </a>
-            <div className="pf-header-container flex h-[76px] items-center justify-between gap-5">
-                <Link
-                    to="/"
-                    aria-label="PosaFacile, pagina iniziale"
-                    className="group shrink-0"
-                    onClick={closeMenu}
-                >
-                    <Logo size="md" />
-                </Link>
-                <nav
-                    aria-label="Navigazione principale"
-                    className={`hidden items-center gap-6 text-xs font-medium text-stone-600 ${user ? '2xl:flex' : 'lg:flex'}`}
-                >
-                    {navigation.map((item) => (
-                        <Link
-                            key={item.to}
-                            to={item.to}
-                            className="transition-colors hover:text-orange-600"
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </nav>
-                <div className="flex items-center gap-2 sm:gap-4">
-                    {user && <NotificationBell variant="light" />}
+            <div className="container mx-auto max-w-7xl px-4">
+                <div className="flex h-19 items-center justify-between">
                     <Link
-                        to="/cart"
-                        aria-label={`Carrello${items.length ? `, ${items.length} articoli` : ''}`}
-                        className="relative rounded-full p-2 text-stone-600 transition-colors hover:bg-stone-100"
+                        to="/"
+                        aria-label="PosaFacile, pagina iniziale"
+                        className="group shrink-0"
+                        onClick={closeMenu}
                     >
-                        <ShoppingCart size={18} />
-                        {items.length > 0 && (
-                            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-bold text-stone-900">
-                                {items.length}
-                            </span>
-                        )}
+                        <Logo size="md" />
                     </Link>
-                    {user ? (
-                        <div className="hidden items-center gap-4 md:flex">
-                            {userRole === 'customer' && (
-                                <Link
-                                    to="/dashboard?tab=quotes"
-                                    className="hidden items-center gap-1.5 text-xs text-stone-600 xl:flex"
-                                >
-                                    <Clock size={15} /> I miei preventivi
-                                </Link>
-                            )}
-                            <Link
-                                to={accountPath}
-                                className="flex items-center gap-2 text-xs font-medium"
-                            >
-                                <User size={16} /> Area personale
-                            </Link>
-                            <button
-                                onClick={handleSignOut}
-                                className="cursor-pointer rounded-lg border border-stone-200 px-3 py-2 text-xs"
-                            >
-                                Esci
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="hidden items-center gap-5 md:flex">
-                            <Link
-                                to={
-                                    location.pathname === '/configuratore'
-                                        ? '/login?redirect=%2Fconfiguratore'
-                                        : '/login'
-                                }
-                                className="text-xs font-medium text-stone-600 hover:text-orange-600"
-                            >
-                                Accedi
-                            </Link>
-                            <Link
-                                to="/configuratore"
-                                className="flex items-center gap-4 rounded-xl bg-orange-500 px-5 py-3 text-xs font-bold text-stone-900 transition-colors hover:bg-orange-400"
-                            >
-                                Calcola il preventivo <ArrowUpRight size={16} />
-                            </Link>
-                        </div>
-                    )}
-                    <button
-                        ref={menuToggle}
-                        aria-label={isMenuOpen ? 'Chiudi menu' : 'Apri menu'}
-                        aria-expanded={isMenuOpen}
-                        aria-controls="mobile-navigation"
-                        className={`cursor-pointer rounded-lg p-2 hover:bg-stone-100 ${user ? '2xl:hidden' : 'lg:hidden'}`}
-                        onClick={() =>
-                            setMenuLocation(isMenuOpen ? null : menuKey)
-                        }
+
+                    {/* Navigazione centrale desktop */}
+                    <nav
+                        aria-label="Navigazione principale"
+                        className="hidden items-center gap-6 text-xs font-medium text-stone-600 lg:flex"
                     >
-                        {isMenuOpen ? <X size={23} /> : <Menu size={23} />}
-                    </button>
+                        {navigation.map((item) => (
+                            <Link
+                                key={item.to}
+                                to={item.to}
+                                className="transition-colors hover:text-orange-600"
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+                    </nav>
+
+                    {/* Azioni utente a destra (SOLO ICONE: Notifiche, Profilo, Esci) */}
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        {/* Campanella Notifiche */}
+                        {user && <NotificationBell variant="light" />}
+
+                        {/* Se utente loggato: SOLO ICONA PROFILO & ESCI */}
+                        {user ? (
+                            <div className="flex items-center gap-1 sm:gap-1.5">
+                                <Link
+                                    to={accountPath}
+                                    aria-label="Area personale"
+                                    title="Area personale"
+                                    className="rounded-full p-2 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
+                                >
+                                    <User size={19} />
+                                </Link>
+                                <button
+                                    onClick={handleSignOut}
+                                    aria-label="Esci dall'account"
+                                    title="Esci"
+                                    className="cursor-pointer rounded-full p-2 text-stone-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                                >
+                                    <LogOut size={19} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="hidden items-center gap-5 md:flex">
+                                <Link
+                                    to={
+                                        location.pathname === '/configuratore'
+                                            ? '/login?redirect=%2Fconfiguratore'
+                                            : '/login'
+                                    }
+                                    className="text-xs font-medium text-stone-600 hover:text-orange-600"
+                                >
+                                    Accedi
+                                </Link>
+                                <Link
+                                    to="/configuratore"
+                                    className="flex items-center gap-4 rounded-xl bg-orange-500 px-5 py-3 text-xs font-bold text-stone-900 transition-colors hover:bg-orange-400"
+                                >
+                                    Calcola il preventivo <ArrowUpRight size={16} />
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Pulsante Menu Mobile */}
+                        <button
+                            ref={menuToggle}
+                            aria-label={isMenuOpen ? 'Chiudi menu' : 'Apri menu'}
+                            aria-expanded={isMenuOpen}
+                            aria-controls="mobile-navigation"
+                            className="cursor-pointer rounded-lg p-2 hover:bg-stone-100 lg:hidden"
+                            onClick={() =>
+                                setMenuLocation(isMenuOpen ? null : menuKey)
+                            }
+                        >
+                            {isMenuOpen ? <X size={23} /> : <Menu size={23} />}
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {/* Menu Mobile a tendina */}
             {isMenuOpen && (
                 <div
                     id="mobile-navigation"
-                    className={`max-h-[calc(100dvh-76px)] overflow-y-auto border-t border-stone-200 bg-white p-5 ${user ? '2xl:hidden' : 'lg:hidden'}`}
+                    className="max-h-[calc(100dvh-76px)] overflow-y-auto border-t border-stone-200 bg-white p-5 lg:hidden"
                 >
                     <nav
                         aria-label="Navigazione mobile"
@@ -197,15 +195,6 @@ export function Header() {
                                 >
                                     Area personale
                                 </Link>
-                                {userRole === 'customer' && (
-                                    <Link
-                                        to="/dashboard?tab=quotes"
-                                        onClick={closeMenu}
-                                        className="py-2"
-                                    >
-                                        I miei preventivi
-                                    </Link>
-                                )}
                                 <button
                                     onClick={handleSignOut}
                                     className="cursor-pointer py-2 text-stone-500"

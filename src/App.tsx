@@ -1,9 +1,8 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom'
 import { RootLayout } from '@/components/layout/RootLayout'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { CatalogPage } from '@/pages/public/CatalogPage'
 import { ProductDetailPage } from '@/pages/public/ProductDetailPage'
-import { CheckoutPage } from '@/pages/public/CheckoutPage'
 import { OrderPaymentPage } from '@/pages/public/OrderPaymentPage'
 import { ConfiguratorPage } from '@/pages/public/ConfiguratorPage'
 import { AdminDashboard } from '@/pages/private/AdminDashboard'
@@ -122,7 +121,7 @@ function App() {
           <Route path="/professionisti" element={<ProfessionalsPage />} />
           <Route path="/prova-ai" element={<AITryPage />} />
           <Route path="/products/:slug" element={<ProductDetailPage />} />
-          <Route path="/cart" element={<CheckoutPage />} />
+          <Route path="/cart" element={<Navigate to="/dashboard?tab=orders" replace />} />
           <Route
             path="/checkout/pay/:id"
             element={
