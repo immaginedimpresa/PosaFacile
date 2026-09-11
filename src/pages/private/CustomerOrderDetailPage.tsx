@@ -221,56 +221,95 @@ export function CustomerOrderDetailPage() {
 
             // Risoluzione Job ID per la chat del cantiere
             try {
-                const { data: jobData } = await supabase
-                    .from('jobs')
-                    .select('id, status')
-                    .eq('order_id', id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle()
+                let resolvedJobId: string | null = null
+                let resolvedJobStatus: string | null = null
 
-                let resolvedJobId = jobData?.id || null
-                let resolvedJobStatus = jobData?.status || null
+                // 1. Verifica se ci sono milestone di cantiere già raggiunte (es. posatore confermato o lavoro avviato)
+                const isStarted = milestones.some(m => m.step === 'work_started' && m.status === 'done')
+                const isConfirmed = milestones.some(m => 
+                    (m.step === 'professional_confirmed' || m.step === 'green_light' || m.step === 'date_confirmed') && 
+                    (m.status === 'done' || m.status === 'active')
+                )
 
+                if (isStarted) {
+                    resolvedJobStatus = 'in_progress'
+                } else if (isConfirmed) {
+                    resolvedJobStatus = 'accepted'
+                }
+
+                // 2. Cerca nella tabella jobs
+                try {
+                    const { data: jobData } = await supabase
+                        .from('jobs')
+                        .select('id, status')
+                        .eq('order_id', id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (jobData?.id) {
+                        resolvedJobId = jobData.id
+                        if (jobData.status) resolvedJobStatus = jobData.status
+                    }
+                } catch {
+                    // ignore jobs RLS
+                }
+
+                // 3. Cerca nelle notifiche metadata.job_id
                 if (!resolvedJobId) {
-                    const proId = (formattedOrder as any).installation_professional_id || (formattedOrder as any).professional_id
-                    if (proId) {
-                        const { data: newJob } = await supabase
-                            .from('jobs')
-                            .insert({
-                                order_id: id,
-                                professional_id: proId,
-                                status: 'assigned',
-                                scheduled_date: (formattedOrder as any).installation_date || null,
-                                notes: 'Creato per chat di cantiere'
-                            })
-                            .select('id, status')
-                            .maybeSingle()
-                        if (newJob?.id) {
-                            resolvedJobId = newJob.id
-                            resolvedJobStatus = newJob.status
-                        }
-                    }
+                    try {
+                        const { data: notifData } = await supabase
+                            .from('notifications' as any)
+                            .select('metadata')
+                            .not('metadata', 'is', null)
+                            .order('created_at', { ascending: false })
+                            .limit(30)
 
-                    if (!resolvedJobId) {
-                        try {
-                            const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', { p_order_id: id })
-                            if (typeof rpcJobId === 'string' && rpcJobId) {
-                                resolvedJobId = rpcJobId
-                                resolvedJobStatus = 'assigned'
+                        if (notifData && notifData.length > 0) {
+                            for (const row of notifData) {
+                                const meta = (row as any).metadata
+                                if (meta?.job_id && (meta?.order_id === id || !meta?.order_id)) {
+                                    resolvedJobId = meta.job_id
+                                    resolvedJobStatus = resolvedJobStatus || 'accepted'
+                                    break
+                                }
                             }
-                        } catch {
-                            // ignore rpc
                         }
+                    } catch {
+                        // ignore notif search
                     }
+                }
+
+                // 4. Prova RPC get_or_create_order_job come fallback
+                if (!resolvedJobId) {
+                    try {
+                        const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', { p_order_id: id })
+                        if (typeof rpcJobId === 'string' && rpcJobId) {
+                            resolvedJobId = rpcJobId
+                            resolvedJobStatus = resolvedJobStatus || 'accepted'
+                        }
+                    } catch {
+                        // ignore rpc
+                    }
+                }
+
+                // 5. Se il posatore è designato o l'ordine è confermato/attivo, garantisci canale cantiere
+                const proId = (formattedOrder as any).installation_professional_id || (formattedOrder as any).professional_id
+                if (!resolvedJobId && (formattedOrder.professional || proId || formattedOrder.status !== 'draft')) {
+                    resolvedJobId = id
+                    resolvedJobStatus = resolvedJobStatus || 'accepted'
                 }
 
                 if (resolvedJobId) {
                     setJobId(resolvedJobId)
-                    setJobStatus(resolvedJobStatus || 'assigned')
+                    setJobStatus(resolvedJobStatus || 'accepted')
                 }
             } catch (jobErr) {
                 console.warn('Job chat ID fetch warning:', jobErr)
+                if (id) {
+                    setJobId(id)
+                    setJobStatus('accepted')
+                }
             }
         } catch (error) {
             console.error('Error fetching order:', error)
@@ -327,7 +366,15 @@ export function CustomerOrderDetailPage() {
     }
 
     const isDraft = order.status === 'draft' || order.payment_status !== 'paid'
-    const isJobAccepted = jobStatus === 'accepted' || jobStatus === 'in_progress' || jobStatus === 'completed' || (!jobStatus && (order.status === 'confirmed' || order.status === 'in_progress' || order.status === 'completed'))
+    const isJobAccepted = Boolean(
+        jobStatus === 'accepted' || 
+        jobStatus === 'in_progress' || 
+        jobStatus === 'completed' || 
+        order.professional || 
+        (order as any).installation_professional_id || 
+        (order as any).professional_id || 
+        order.status !== 'draft'
+    )
     const durata = durationForOrder(order as any)
     const durataValida = effectiveDuration(order as any)
     const inizioLavori = (order as any).work_start_date || order.installation_date
@@ -529,11 +576,10 @@ export function CustomerOrderDetailPage() {
                 <button
                     type="button"
                     onClick={() => setActiveTab('status')}
-                    className={`flex-1 flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                        activeTab === 'status'
-                            ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
-                            : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
-                    }`}
+                    className={`flex-1 flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === 'status'
+                        ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+                        }`}
                 >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeTab === 'status' ? 'bg-orange-50 text-orange-600' : 'bg-stone-200/60 text-stone-500'}`}>
                         <CheckCircle2 size={17} />
@@ -548,11 +594,10 @@ export function CustomerOrderDetailPage() {
                 <button
                     type="button"
                     onClick={() => setActiveTab('surfaces')}
-                    className={`flex-1 flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                        activeTab === 'surfaces'
-                            ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
-                            : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
-                    }`}
+                    className={`flex-1 flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === 'surfaces'
+                        ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+                        }`}
                 >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeTab === 'surfaces' ? 'bg-orange-50 text-orange-600' : 'bg-stone-200/60 text-stone-500'}`}>
                         <Layers size={17} />
@@ -567,11 +612,10 @@ export function CustomerOrderDetailPage() {
                 <button
                     type="button"
                     onClick={() => setActiveTab('professional')}
-                    className={`flex-1 flex items-center justify-between sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                        activeTab === 'professional'
-                            ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
-                            : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
-                    }`}
+                    className={`flex-1 flex items-center justify-between sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${activeTab === 'professional'
+                        ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
+                        }`}
                 >
                     <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center relative ${activeTab === 'professional' ? 'bg-orange-50 text-orange-600' : 'bg-stone-200/60 text-stone-500'}`}>
@@ -630,24 +674,22 @@ export function CustomerOrderDetailPage() {
                                             <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                                                 Professionista
                                             </p>
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveTab('professional')}
-                                                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-lg border border-orange-200/60 cursor-pointer transition-all"
-                                            >
-                                                <span className="relative flex h-2 w-2">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                                                </span>
-                                                <span>Chat & Scheda →</span>
-                                            </button>
+
                                         </div>
                                         <p className="font-extrabold text-stone-900 text-sm sm:text-base truncate mt-0.5">
                                             {proName}
                                         </p>
-                                        <p className="text-xs text-stone-500 truncate font-medium mt-0.5">
-                                            {proSub}
-                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('professional')}
+                                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-lg border border-orange-200/60 cursor-pointer transition-all"
+                                        >
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                            </span>
+                                            <span>Chatta →</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -804,87 +846,7 @@ export function CustomerOrderDetailPage() {
                             startDate={inizioLavori}
                         />
 
-                        {/* 3. INDIRIZZO DI POSA & LOGISTICA DI SCARICO */}
-                        <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
-                            <div className="p-5 border-b border-stone-100 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/80 flex-shrink-0">
-                                    <MapPin size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="text-base font-bold text-stone-900">Indirizzo di Posa & Scarico</h3>
-                                    <p className="text-xs text-stone-500">Destinazione e condizioni di consegna</p>
-                                </div>
-                            </div>
-
-                            <div className="p-5 space-y-4">
-                                <div className="bg-stone-50/70 p-3.5 rounded-xl border border-stone-200/70">
-                                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Indirizzo Cantiere</p>
-                                    <p className="text-sm font-extrabold text-stone-900 mt-0.5">
-                                        {addressText}
-                                    </p>
-                                    <p className="text-xs text-stone-600 mt-0.5">
-                                        {cityText}
-                                    </p>
-                                </div>
-
-                                {deliveryAccess && (
-                                    <div className="space-y-2 text-xs">
-                                        <div className="p-3 bg-stone-50/80 rounded-xl border border-stone-200/60">
-                                            <span className="text-stone-400 block text-[10px] font-bold uppercase">Punto di Scarico Corriere</span>
-                                            <span className="font-bold text-stone-900 mt-0.5 block">
-                                                {deliveryAccess.destination === 'street'
-                                                    ? 'Bordo Strada (Sponda Idraulica)'
-                                                    : deliveryAccess.destination === 'box'
-                                                        ? 'Box / Garage al Piano Terra'
-                                                        : 'Al Piano (Facchini corriere)'}
-                                            </span>
-                                        </div>
-
-                                        <div className="p-3 bg-stone-50/80 rounded-xl border border-stone-200/60">
-                                            <span className="text-stone-400 block text-[10px] font-bold uppercase">Piano dei Lavori</span>
-                                            <span className="font-bold text-stone-900 mt-0.5 block">
-                                                {deliveryAccess.floorType === 'ground'
-                                                    ? 'Piano Terra'
-                                                    : `${deliveryAccess.floorNumber}° Piano ${deliveryAccess.hasFreightElevator ? '(Con ascensore)' : '(Senza ascensore)'}`}
-                                            </span>
-                                        </div>
-
-                                        {deliveryAccess.destination !== 'floor' && (
-                                            <div className="p-3 bg-stone-50/80 rounded-xl border border-stone-200/60">
-                                                <span className="text-stone-400 block text-[10px] font-bold uppercase">Movimentazione al Piano</span>
-                                                <span className="font-bold text-stone-900 mt-0.5 block">
-                                                    {deliveryAccess.handlingBy === 'pro'
-                                                        ? 'Inclusa: materiale portato al piano dal posatore'
-                                                        : 'A cura del cliente prima dell\'avvio cantiere'}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {deliveryAccess.logisticsNotes && (
-                                            <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/60">
-                                                <span className="text-amber-800 block text-[10px] font-bold uppercase">Note Autista & Scarico</span>
-                                                <span className="italic text-stone-800 font-medium mt-0.5 block">
-                                                    &ldquo;{deliveryAccess.logisticsNotes}&rdquo;
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {order.notes && (
-                                    <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/60 text-xs">
-                                        <span className="text-stone-400 font-bold uppercase tracking-wider block text-[10px] mb-1">
-                                            Note Aggiuntive Cliente
-                                        </span>
-                                        <p className="text-stone-700 italic font-medium leading-relaxed">
-                                            &ldquo;{order.notes}&rdquo;
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* 4. BOX ASSISTENZA OPERATIVA */}
+                        {/* 3. BOX ASSISTENZA OPERATIVA */}
                         <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-5 space-y-2.5">
                             <div className="flex items-center gap-2 text-stone-900">
                                 <HelpCircle size={16} className="text-orange-600" />
@@ -1329,9 +1291,9 @@ export function CustomerOrderDetailPage() {
                     {/* Colonna Destra (lg:col-span-7): Chat di Cantiere Integrata */}
                     <div className="lg:col-span-7 space-y-6">
                         <div id="chat-cantiere" className="scroll-mt-6">
-                            {jobId && user?.id ? (
+                            {user?.id ? (
                                 <div className="space-y-3">
-                                    {jobStatus === 'assigned' && (
+                                    {jobStatus === 'assigned' && !order.professional && (
                                         <div className="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
                                             <div className="p-1.5 rounded-xl bg-amber-200/60 text-amber-800 shrink-0 mt-0.5">
                                                 <Clock size={16} />
@@ -1345,7 +1307,7 @@ export function CustomerOrderDetailPage() {
                                         </div>
                                     )}
                                     <JobChat
-                                        jobId={jobId}
+                                        jobId={jobId || order.id}
                                         currentUserId={user.id}
                                         proUserId={(order as any).installation_professional_id || (order as any).professional_id || undefined}
                                         customerUserId={user.id}

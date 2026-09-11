@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useProStore, type JobStatus, type Job } from '@/store/proStore'
+import { useProStore, jobInfoFromOrder, type JobStatus, type Job } from '@/store/proStore'
 import { supabase } from '@/lib/supabase'
 import {
     ArrowLeft,
@@ -13,7 +13,6 @@ import {
     User,
     Clock,
     Phone,
-    Mail,
     ExternalLink,
     MessageCircle,
     Layers,
@@ -22,9 +21,7 @@ import {
     Coins,
     Truck,
     ArrowUpRight,
-    Receipt,
     AlertCircle,
-    Building2,
     Lock,
 } from 'lucide-react'
 import { PhotoUpload } from '@/components/pro/jobs/PhotoUpload'
@@ -97,101 +94,21 @@ export function JobDetailPage() {
                 try {
                     const { data, error } = await supabase
                         .from('jobs')
-                        .select(`
-                            *,
-                            orders (
-                                id,
-                                order_number,
-                                status,
-                                total,
-                                subtotal,
-                                material_total,
-                                laying_total,
-                                services_total,
-                                professional_payout,
-                                installation_address,
-                                installation_date,
-                                work_start_date,
-                                work_end_date,
-                                scheduled_time_slot,
-                                floor_sqm,
-                                wall_sqm,
-                                laying_type,
-                                project_type,
-                                items,
-                                notes,
-                                admin_notes,
-                                estimated_work_days,
-                                estimated_calendar_days,
-                                duration_breakdown,
-                                confirmed_work_days,
-                                confirmed_calendar_days,
-                                duration_pro_note,
-                                customer:users!orders_customer_id_fkey (
-                                    first_name,
-                                    last_name,
-                                    email,
-                                    phone
-                                )
-                            )
-                        `)
+                        .select('*')
                         .or(`id.eq.${id},order_id.eq.${id}`)
                         .maybeSingle()
 
                     if (!isMounted) return
 
                     if (data && !error) {
-                        const order = data.orders as any
-                        const customer = order?.customer
-                        const addr = typeof order?.installation_address === 'object' ? order?.installation_address : {}
-                        const custId = order?.customer_id || order?.user_id
-                        let custProfile: any = null
-                        if (custId) {
-                            try {
-                                const { data: cRow } = await supabase
-                                    .from('customers')
-                                    .select('company_name, customer_type, fiscal_code, vat_number')
-                                    .eq('id', custId)
-                                    .maybeSingle()
-                                custProfile = cRow
-                            } catch (e) {
-                                console.warn('Could not fetch customer profile in direct load:', e)
-                            }
-                        }
-
-                        const fullName = customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : ''
-                        const customer_name = fullName || addr?.recipient_name || custProfile?.company_name || customer?.email || 'Cliente'
-                        const customer_phone = customer?.phone || addr?.phone || addr?.contact_phone || addr?.telephone || null
-                        const customer_email = customer?.email || addr?.email || null
-                        const address = addr?.street || addr?.address || (typeof order?.installation_address === 'string' ? order.installation_address : '')
-                        const city = addr?.city || ''
-                        const province = addr?.province || ''
-                        const cap = addr?.cap || addr?.postal_code || ''
-                        const proPayout = Number(order?.professional_payout) || ((Number(order?.laying_total) || 0) + (Number(order?.services_total) || 0))
-
-                        const fiscal_code = custProfile?.fiscal_code || addr?.fiscal_code || addr?.cf || (order as any)?.fiscal_code || null
-                        const vat_number = custProfile?.vat_number || addr?.vat_number || addr?.piva || addr?.partita_iva || (order as any)?.vat_number || null
-                        const company_name = custProfile?.company_name || addr?.company_name || addr?.ragione_sociale || null
-                        const customer_type = custProfile?.customer_type || (vat_number || company_name ? 'company' : 'private')
-                        const wants_invoice = Boolean(
-                            addr?.wants_invoice === true ||
-                            addr?.invoice_requested === true ||
-                            addr?.richiede_fattura === true ||
-                            (order as any)?.wants_invoice === true ||
-                            (order as any)?.requires_invoice === true ||
-                            (order as any)?.invoice_requested === true ||
-                            vat_number ||
-                            company_name
-                        )
-                        const invoice_details = {
-                            fiscal_code,
-                            vat_number,
-                            company_name,
-                            customer_type,
-                            sdi_code: addr?.sdi_code || addr?.codice_destinatario || custProfile?.sdi_code || null,
-                            pec: addr?.pec || custProfile?.pec || null,
-                            billing_address: addr?.billing_address || (addr?.billing_city ? `${addr.billing_address || ''}, ${addr.billing_city} (${addr.billing_province || ''})` : null),
-                        }
+                        // Dati del lavoro dalla vista pro_orders: niente anagrafica né dati fiscali del cliente.
+                        const { data: orderRow } = await supabase
+                            .from('pro_orders' as any)
+                            .select('*')
+                            .eq('id', data.order_id)
+                            .maybeSingle()
+                        if (!isMounted) return
+                        const order = (orderRow as any) || null
 
                         setDirectJob({
                             id: data.id,
@@ -200,23 +117,8 @@ export function JobDetailPage() {
                             scheduled_date: data.scheduled_date || order?.installation_date || order?.work_start_date || null,
                             notes: data.notes || order?.notes || '',
                             created_at: data.created_at || new Date().toISOString(),
-                            order: order || null,
-                            customer_name,
-                            customer_phone,
-                            customer_email,
-                            address,
-                            city,
-                            province,
-                            cap,
-                            payout: proPayout,
-                            laying_total: Number(order?.laying_total) || 0,
-                            services_total: Number(order?.services_total) || 0,
-                            order_number: order?.order_number || (order?.id ? order.id.slice(0, 8) : undefined),
-                            customer_fiscal_code: fiscal_code,
-                            customer_vat_number: vat_number,
-                            customer_company_name: company_name,
-                            wants_invoice,
-                            invoice_details,
+                            order,
+                            ...jobInfoFromOrder(order),
                         })
                     }
                 } finally {
@@ -263,31 +165,10 @@ export function JobDetailPage() {
     const servicesTotal = Number(job.services_total ?? order?.services_total ?? 0)
     const proPayout = Number(job.payout ?? order?.professional_payout ?? (layingTotal + servicesTotal))
 
-    // Dati cliente e contatti
+    // Del cliente il posatore riceve solo nome e telefono, dopo l'accettazione:
+    // email, anagrafica e dati fiscali non arrivano nemmeno al browser.
     const customerName = job.customer_name || 'Cliente'
-    const customerPhone = job.customer_phone || (typeof order?.installation_address === 'object' ? (order.installation_address?.phone || order.installation_address?.contact_phone || order.installation_address?.telephone) : null)
-    const customerEmail = job.customer_email || order?.customer?.email || null
-
-    // Dati fiscali e fatturazione committente
-    const fiscalCode = job.customer_fiscal_code || job.invoice_details?.fiscal_code || (typeof order?.installation_address === 'object' ? (order.installation_address?.fiscal_code || order.installation_address?.cf) : null) || order?.fiscal_code || null
-    const vatNumber = job.customer_vat_number || job.invoice_details?.vat_number || (typeof order?.installation_address === 'object' ? (order.installation_address?.vat_number || order.installation_address?.partita_iva || order.installation_address?.piva) : null) || order?.vat_number || null
-    const companyName = job.customer_company_name || job.invoice_details?.company_name || (typeof order?.installation_address === 'object' ? (order.installation_address?.company_name || order.installation_address?.ragione_sociale) : null) || null
-    const isCompany = Boolean(vatNumber || companyName || job.invoice_details?.customer_type === 'company')
-    const wantsInvoice = job.wants_invoice ?? Boolean(
-        (typeof order?.installation_address === 'object' && (
-            order.installation_address?.wants_invoice === true ||
-            order.installation_address?.invoice_requested === true ||
-            order.installation_address?.richiede_fattura === true
-        )) ||
-        order?.wants_invoice === true ||
-        order?.requires_invoice === true ||
-        order?.invoice_requested === true ||
-        vatNumber ||
-        companyName
-    )
-    const sdiCode = job.invoice_details?.sdi_code || (typeof order?.installation_address === 'object' ? (order.installation_address?.sdi_code || order.installation_address?.codice_destinatario) : null)
-    const pecEmail = job.invoice_details?.pec || (typeof order?.installation_address === 'object' ? order.installation_address?.pec : null)
-    const billingAddress = job.invoice_details?.billing_address || (typeof order?.installation_address === 'object' ? order.installation_address?.billing_address : null)
+    const customerPhone = job.customer_phone || null
 
     // Dati indirizzo e logistica
     const fullStreet = job.address || (typeof order?.installation_address === 'object' ? (order.installation_address?.street || order.installation_address?.address) : order?.installation_address) || 'Indirizzo da confermare'
@@ -393,7 +274,6 @@ export function JobDetailPage() {
                                     €{proPayout.toFixed(2)}
                                 </p>
                             </div>
-                            <p className="text-[11px] text-stone-500 font-medium">Erogato a fine cantiere da PosaFacile</p>
                         </div>
                     </div>
                 </div>
@@ -535,7 +415,7 @@ export function JobDetailPage() {
                 {/* COLONNA SINISTRA: DETTAGLI OPERATIVI E CONTATTI          */}
                 {/* ========================================================= */}
                 <div className="lg:col-span-2 space-y-6">
-                    {/* 1. SCHEDA ANAGRAFICA COMMITTENTE, RECAPITI & DATI FISCALI */}
+                    {/* 1. CONTATTI DEL CLIENTE: SOLO NOME E TELEFONO */}
                     <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden">
                         <div className="p-5 sm:p-6 border-b border-stone-100 flex items-center justify-between gap-3 bg-stone-50/40">
                             <div className="flex items-center gap-2.5">
@@ -543,8 +423,8 @@ export function JobDetailPage() {
                                     <User size={16} />
                                 </div>
                                 <div>
-                                    <h3 className="font-extrabold text-base text-stone-900">Anagrafica Committente & Dati Fiscali</h3>
-                                    <p className="text-xs text-stone-500">Recapiti per contatto rapido, coordinate fiscali e fatturazione</p>
+                                    <h3 className="font-extrabold text-base text-stone-900">Contatti del Cliente</h3>
+                                    <p className="text-xs text-stone-500">Nome e telefono per coordinare il cantiere</p>
                                 </div>
                             </div>
                             {isJobAccepted ? (
@@ -568,9 +448,6 @@ export function JobDetailPage() {
                                     <div className="p-3.5 bg-stone-50/70 rounded-xl border border-stone-200/70">
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">Referente Cantiere</span>
                                         <span className="text-sm font-black text-stone-900 block mt-0.5">{customerName}</span>
-                                        {companyName && (
-                                            <span className="text-xs text-stone-500 font-medium block mt-0.5">{companyName}</span>
-                                        )}
                                     </div>
 
                                     {/* Numero di Telefono per essere contattati */}
@@ -598,25 +475,6 @@ export function JobDetailPage() {
                                     </div>
                                 </div>
 
-                                {/* Email e Tipologia Committente */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                                    <div className="p-3 bg-stone-50/70 rounded-xl border border-stone-200/60">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
-                                            <Mail size={12} className="text-stone-400" />
-                                            Email Cliente
-                                        </span>
-                                        <span className="font-bold text-stone-800 mt-0.5 block truncate">
-                                            {customerEmail || 'Non disponibile'}
-                                        </span>
-                                    </div>
-                                    <div className="p-3 bg-stone-50/70 rounded-xl border border-stone-200/60">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">Tipologia Committente</span>
-                                        <span className="font-bold text-stone-800 mt-0.5 block">
-                                            {isCompany ? 'Azienda / Libero Professionista (B2B)' : 'Cliente Privato (Persona Fisica)'}
-                                        </span>
-                                    </div>
-                                </div>
-
                                 {/* PULSANTE WHATSAPP DIRETTO CON MESSAGGIO PRECOMPILATO */}
                                 {whatsappUrl ? (
                                     <a
@@ -634,73 +492,6 @@ export function JobDetailPage() {
                                         Numero WhatsApp del cliente non disponibile. Puoi utilizzare la chat integrata a destra per comunicare direttamente.
                                     </div>
                                 )}
-
-                                {/* SEZIONE FATTURAZIONE & DATI FISCALI */}
-                                <div className="pt-3 border-t border-stone-100 space-y-3">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <h4 className="text-xs font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
-                                            <Receipt size={14} className="text-orange-600" />
-                                            Regime Fiscale & Richiesta Fattura
-                                        </h4>
-
-                                        {wantsInvoice ? (
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                <CheckCircle2 size={13} className="text-emerald-600" />
-                                                Fattura Richiesta: SÌ
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 border border-stone-200">
-                                                Fattura Richiesta: NO (Ricevuta Corrispettivi)
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Codice Fiscale & Partita IVA */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {/* Codice Fiscale */}
-                                        <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200/70">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
-                                                Codice Fiscale (C.F.)
-                                            </span>
-                                            <span className={`text-sm font-mono font-bold block mt-0.5 ${fiscalCode ? 'text-stone-900' : 'text-stone-400 font-sans text-xs'}`}>
-                                                {fiscalCode || 'Non inserito dal cliente'}
-                                            </span>
-                                        </div>
-
-                                        {/* Partita IVA */}
-                                        <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200/70">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">
-                                                Partita IVA (P.IVA)
-                                            </span>
-                                            <span className={`text-sm font-mono font-bold block mt-0.5 ${vatNumber ? 'text-stone-900' : 'text-stone-400 font-sans text-xs'}`}>
-                                                {vatNumber || (isCompany ? 'Non indicata' : 'Non applicabile (Cliente privato)')}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Dettagli Fatturazione Elettronica se presenti */}
-                                    {(sdiCode || pecEmail || billingAddress) && (
-                                        <div className="p-3.5 bg-amber-50/50 rounded-xl border border-amber-200/60 text-xs space-y-1.5 text-stone-700">
-                                            <p className="font-bold text-amber-900 uppercase text-[10px] tracking-wider flex items-center gap-1.5">
-                                                <Building2 size={12} className="text-amber-700" />
-                                                Coordinate Fatturazione Elettronica
-                                            </p>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
-                                                {sdiCode && (
-                                                    <p><span className="text-stone-400">Codice SDI:</span> <strong className="font-mono">{sdiCode}</strong></p>
-                                                )}
-                                                {pecEmail && (
-                                                    <p><span className="text-stone-400">PEC:</span> <strong>{pecEmail}</strong></p>
-                                                )}
-                                            </div>
-                                            {billingAddress && (
-                                                <p className="text-[11px] text-stone-500 pt-1.5 border-t border-amber-200/50">
-                                                    Sede Legale / Fatturazione: {billingAddress}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
                             </div>
                         ) : (
                             <div className="p-5 sm:p-6 space-y-5">
@@ -714,7 +505,7 @@ export function JobDetailPage() {
                                             Recapiti e dati committente protetti
                                         </h4>
                                         <p className="text-amber-800/90 leading-relaxed font-medium">
-                                            Per la tutela della privacy, il numero di telefono per contatto diretto, il canale WhatsApp, l'indirizzo civico esatto e i dati fiscali del cliente saranno visibili solo dopo che avrai confermato e accettato l'incarico.
+                                            Per la tutela della privacy, nome e telefono del cliente, il canale WhatsApp e l'indirizzo civico esatto saranno visibili solo dopo che avrai confermato e accettato l'incarico.
                                         </p>
                                     </div>
                                 </div>
@@ -724,7 +515,7 @@ export function JobDetailPage() {
                                     <div className="p-3.5 bg-stone-50/70 rounded-xl border border-stone-200/70">
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">Referente Cantiere</span>
                                         <span className="text-sm font-black text-stone-700 block mt-0.5">
-                                            {isCompany ? 'Committente Aziendale (B2B)' : 'Committente Privato'}
+                                            Committente
                                         </span>
                                         <span className="text-xs text-amber-700 font-bold block mt-0.5">
                                             {fullCity}
@@ -743,24 +534,6 @@ export function JobDetailPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                                    <div className="p-3 bg-stone-50/70 rounded-xl border border-stone-200/60">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
-                                            <Mail size={12} className="text-stone-400" />
-                                            Email Cliente
-                                        </span>
-                                        <span className="font-mono font-bold text-stone-400 mt-1 block">
-                                            ••••••••@•••••.••
-                                        </span>
-                                    </div>
-                                    <div className="p-3 bg-stone-50/70 rounded-xl border border-stone-200/60">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block">Tipologia Committente</span>
-                                        <span className="font-bold text-stone-800 mt-0.5 block">
-                                            {isCompany ? 'Azienda / Libero Professionista (B2B)' : 'Cliente Privato (Persona Fisica)'}
-                                        </span>
-                                    </div>
-                                </div>
-
                                 {/* PULSANTE WHATSAPP BLOCCATO */}
                                 <div className="p-3.5 bg-stone-50 rounded-xl border border-dashed border-stone-300 text-center space-y-1">
                                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-500">
@@ -770,31 +543,6 @@ export function JobDetailPage() {
                                     <p className="text-[11px] text-stone-400">
                                         All'accettazione potrai avviare istantaneamente la chat WhatsApp con messaggio preimpostato.
                                     </p>
-                                </div>
-
-                                {/* SEZIONE FATTURAZIONE PROTETTA */}
-                                <div className="pt-3 border-t border-stone-100 space-y-3">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <h4 className="text-xs font-black uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
-                                            <Receipt size={14} className="text-orange-600" />
-                                            Regime Fiscale & Richiesta Fattura
-                                        </h4>
-                                        {wantsInvoice ? (
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                <CheckCircle2 size={13} className="text-emerald-600" />
-                                                Fattura Richiesta: SÌ
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-lg bg-stone-100 text-stone-700 border border-stone-200">
-                                                Fattura Richiesta: NO (Ricevuta Corrispettivi)
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 text-xs text-stone-500 flex items-center gap-2">
-                                        <Lock size={13} className="text-amber-500 flex-shrink-0" />
-                                        <span>I dati fiscali completi (C.F., eventuale P.IVA, SDI e PEC) saranno accessibili non appena accetti l'incarico.</span>
-                                    </div>
                                 </div>
 
                                 {/* CTA Rapida Accetta Incarico dentro la card contatti */}
@@ -999,7 +747,7 @@ export function JobDetailPage() {
                                 <div className="space-y-1">
                                     <p className="font-bold text-amber-950">Note fornite per il lavoro</p>
                                     <p className="leading-relaxed text-amber-800">
-                                        {job.notes || order?.notes || order?.admin_notes || 'Nessuna nota particolare specificata dal cliente o dall\'ufficio operativo.'}
+                                        {job.notes || order?.notes || 'Nessuna nota particolare specificata dal cliente o dall\'ufficio operativo.'}
                                     </p>
                                 </div>
                             </div>
@@ -1023,7 +771,7 @@ export function JobDetailPage() {
                             <div className="p-6">
                                 <PhotoUpload
                                     jobId={job.id}
-                                    onUploadComplete={() => {}}
+                                    onUploadComplete={() => { }}
                                 />
                             </div>
                         </div>

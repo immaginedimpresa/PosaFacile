@@ -2,8 +2,8 @@
 -- FIX: CONFERMA ORDINI, NOTIFICHE PROFESSIONISTA, TABELLA JOBS E TIMELINE
 -- ====================================================================
 --
--- 1. Risolve il blocco RLS che impediva al cliente di passare l'ordine da
---    'draft' a 'confirmed' dopo il pagamento.
+-- 1. Il pagamento non passa più da un UPDATE diretto, bloccato dalla RLS
+--    (giustamente: il cliente non deve potersi segnare pagato da solo).
 -- 2. Introduce la funzione SECURITY DEFINER `confirm_order_payment` per
 --    garantire transizioni di pagamento atomiche ed esenti da errori RLS.
 -- 3. Crea il trigger di sincronizzazione automatica verso `public.jobs`:
@@ -16,20 +16,12 @@
 --    creazione diretta, sia all'assegnazione da parte dell'amministrazione.
 
 -- --------------------------------------------------------------------
--- 1. RLS POLICY FIX SU ORDERS
+-- 1. RLS SU ORDERS: INVARIATA
 -- --------------------------------------------------------------------
-
-DROP POLICY IF EXISTS "Users can update own draft orders" ON public.orders;
-CREATE POLICY "Users can update own draft orders" 
-  ON public.orders FOR UPDATE 
-  USING (
-    (auth.uid() = user_id OR auth.uid() = customer_id)
-    AND (status = 'draft' OR status = 'confirmed')
-  )
-  WITH CHECK (
-    (auth.uid() = user_id OR auth.uid() = customer_id)
-    AND status IN ('draft', 'confirmed', 'pending')
-  );
+-- Il cliente continua a poter modificare solo i propri ordini in bozza.
+-- Aprire la policy agli stati 'confirmed'/'pending' gli avrebbe permesso di
+-- segnarsi da solo payment_status = 'paid': la conferma del pagamento passa
+-- soltanto dalla funzione confirm_order_payment qui sotto.
 
 -- --------------------------------------------------------------------
 -- 2. RPC ATOMICA: CONFIRM_ORDER_PAYMENT
@@ -57,11 +49,29 @@ BEGIN
         RAISE EXCEPTION 'Ordine % non trovato', p_order_id;
     END IF;
 
-    -- Controllo autorizzazione: utente proprietario o admin
-    IF auth.uid() IS NOT NULL AND auth.uid() NOT IN (v_order.user_id, v_order.customer_id) THEN
-        IF COALESCE((auth.jwt() -> 'user_metadata' ->> 'role'), '') <> 'admin' THEN
+    -- Solo il proprietario dell'ordine, un admin o il backend. Un utente
+    -- anonimo non passa: altrimenti bastava conoscere l'id di un ordine per
+    -- segnarlo come pagato. Il ruolo admin si legge con is_admin() e non dai
+    -- user_metadata del JWT, che l'utente può modificare da solo.
+    -- IS DISTINCT FROM e non NOT IN: con user_id NULL, NOT IN darebbe NULL e
+    -- lascerebbe passare chiunque.
+    IF NOT public.is_service_role() AND NOT public.is_admin() THEN
+        IF auth.uid() IS NULL
+           OR (auth.uid() IS DISTINCT FROM v_order.user_id
+               AND auth.uid() IS DISTINCT FROM v_order.customer_id) THEN
             RAISE EXCEPTION 'Non autorizzato ad aggiornare questo ordine';
         END IF;
+    END IF;
+
+    -- Già pagato: la transizione non si ripete, e con lei le notifiche.
+    IF v_order.payment_status = 'paid' THEN
+        RETURN jsonb_build_object(
+            'success', true,
+            'order_id', p_order_id,
+            'status', v_order.status,
+            'payment_status', 'paid',
+            'already_paid', true
+        );
     END IF;
 
     v_intent := COALESCE(p_payment_intent_id, 'pi_' || MD5(p_order_id::text || NOW()::text));
@@ -83,7 +93,10 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.confirm_order_payment(UUID, TEXT, TEXT) TO authenticated, anon;
+-- Il pagamento oggi è simulato: la funzione si fida del client. Con un
+-- pagamento vero la conferma dovrà arrivare dal webhook del provider.
+REVOKE ALL ON FUNCTION public.confirm_order_payment(UUID, TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.confirm_order_payment(UUID, TEXT, TEXT) TO authenticated;
 
 -- --------------------------------------------------------------------
 -- 3. SINCRONIZZAZIONE AUTOMATICA VERSO PUBLIC.JOBS
@@ -361,7 +374,7 @@ BEGIN
             'Grazie per il tuo acquisto! Abbiamo ricevuto il tuo ordine di € ' || v_total || ' ed è in elaborazione.',
             'order_created',
             '/dashboard?tab=orders',
-            jsonb_build_object('order_id', NEW.id, 'total', NEW.total, 'email_template', 'order_confirmed.customer')
+            jsonb_build_object('order_id', NEW.id, 'total', NEW.total, 'email_template', 'order_created.customer')
         );
     END IF;
 
@@ -466,7 +479,7 @@ BEGIN
                 'Ordine #' || v_order_num || ' Confermato!',
                 'Grazie per il tuo acquisto! Abbiamo ricevuto il tuo ordine di € ' || v_total || ' ed è in elaborazione.',
                 'order_created', '/dashboard?tab=orders',
-                jsonb_build_object('order_id', NEW.id, 'total', NEW.total, 'email_template', 'order_confirmed.customer')
+                jsonb_build_object('order_id', NEW.id, 'total', NEW.total, 'email_template', 'order_created.customer')
             );
         END IF;
     END IF;

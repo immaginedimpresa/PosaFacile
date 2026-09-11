@@ -99,7 +99,7 @@ export function CustomerDashboard() {
                     *,
                     professional:users!professional_id(first_name, last_name)
                 `)
-                .eq('customer_id', user.id)
+                .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`)
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -109,9 +109,44 @@ export function CustomerDashboard() {
                 professional: Array.isArray(order.professional) ? order.professional[0] : order.professional
             })) as Order[]
 
+            // Arricchisci i dettagli del professionista da professional_profiles per telefono, nome azienda e verifica
+            const proIds = Array.from(new Set(
+                typedData
+                    .map(o => (o as any).installation_professional_id || (o as any).professional_id)
+                    .filter(Boolean)
+            ))
+
+            if (proIds.length > 0) {
+                try {
+                    const { data: profiles } = await supabase
+                        .from('professional_profiles')
+                        .select('id, company_name, full_name, phone, verified')
+                        .in('id', proIds)
+
+                    if (profiles && profiles.length > 0) {
+                        const profileMap = new Map(profiles.map(p => [p.id, p]))
+                        typedData.forEach(order => {
+                            const pid = (order as any).installation_professional_id || (order as any).professional_id
+                            const prof = pid ? profileMap.get(pid) : null
+                            if (prof) {
+                                order.professional = {
+                                    ...(order.professional || {}),
+                                    full_name: prof.full_name || order.professional?.full_name || 'Posatore Certificato',
+                                    company_name: prof.company_name || order.professional?.company_name || '',
+                                    phone: prof.phone || (order.professional as any)?.phone,
+                                    verified: prof.verified ?? true,
+                                }
+                            }
+                        })
+                    }
+                } catch {
+                    // ignore profile enrich error
+                }
+            }
+
             typedData.forEach(order => {
-                if (order.professional) {
-                    order.professional.full_name = `${order.professional.first_name} ${order.professional.last_name}`.trim()
+                if (order.professional && !order.professional.full_name) {
+                    order.professional.full_name = `${order.professional.first_name || ''} ${order.professional.last_name || ''}`.trim() || 'Posatore Certificato'
                 }
             })
 
@@ -232,19 +267,17 @@ export function CustomerDashboard() {
                     <button
                         type="button"
                         onClick={() => handleTabChange('quotes')}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'quotes'
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'quotes'
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
                                 : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-                        }`}
+                            }`}
                     >
                         <span className="flex items-center gap-2.5">
                             <Clock size={18} /> Preventivi Salvati
                         </span>
                         {savedQuotes.length > 0 && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                activeTab === 'quotes' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
-                            }`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'quotes' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
+                                }`}>
                                 {savedQuotes.length}
                             </span>
                         )}
@@ -253,19 +286,17 @@ export function CustomerDashboard() {
                     <button
                         type="button"
                         onClick={() => handleTabChange('orders')}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'orders'
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'orders'
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
                                 : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-                        }`}
+                            }`}
                     >
                         <span className="flex items-center gap-2.5">
                             <Package size={18} /> I miei Ordini
                         </span>
                         {orders.length > 0 && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                activeTab === 'orders' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
-                            }`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'orders' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
+                                }`}>
                                 {orders.length}
                             </span>
                         )}
@@ -274,11 +305,10 @@ export function CustomerDashboard() {
                     <button
                         type="button"
                         onClick={() => handleTabChange('messages')}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'messages'
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'messages'
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
                                 : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-                        }`}
+                            }`}
                     >
                         <span className="flex items-center gap-2.5">
                             <span className="relative flex h-2 w-2">
@@ -292,9 +322,8 @@ export function CustomerDashboard() {
                                 Live
                             </span>
                             {orders.filter(o => o.status !== 'draft').length > 0 && (
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                    activeTab === 'messages' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
-                                }`}>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'messages' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
+                                    }`}>
                                     {orders.filter(o => o.status !== 'draft').length}
                                 </span>
                             )}
@@ -304,11 +333,10 @@ export function CustomerDashboard() {
                     <button
                         type="button"
                         onClick={() => handleTabChange('notifications')}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'notifications'
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'notifications'
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
                                 : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-                        }`}
+                            }`}
                     >
                         <span className="flex items-center gap-2.5">
                             <Bell size={18} /> Notifiche
@@ -323,11 +351,10 @@ export function CustomerDashboard() {
                     <button
                         type="button"
                         onClick={() => handleTabChange('settings')}
-                        className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                            activeTab === 'settings'
+                        className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${activeTab === 'settings'
                                 ? 'bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs'
                                 : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-                        }`}
+                            }`}
                     >
                         <Settings size={18} /> Profilo & Impostazioni
                     </button>
@@ -340,7 +367,7 @@ export function CustomerDashboard() {
                         <div className="bg-white border border-stone-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-6 mb-6 border-b border-stone-100">
                                 <div>
-                                    <h2 className="text-xl font-bold text-stone-900">Preventivi Salvati</h2>
+                                    <h2 className="text-xl font-bold text-stone-900">Preventivi</h2>
                                     <p className="text-xs sm:text-sm text-stone-500 mt-0.5">
                                         Riprendi, modifica o finalizza i tuoi preventivi calcolati online.
                                     </p>
@@ -392,11 +419,10 @@ export function CustomerDashboard() {
                                                             <h3 className="font-bold text-base sm:text-lg text-stone-900">
                                                                 {quote.name || 'Preventivo Personalizzato'}
                                                             </h3>
-                                                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                                                                isConverted
+                                                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${isConverted
                                                                     ? 'bg-emerald-100 text-emerald-800'
                                                                     : 'bg-amber-100 text-amber-900'
-                                                            }`}>
+                                                                }`}>
                                                                 {isConverted ? 'Ordine Confermato' : 'Bozza Salvata'}
                                                             </span>
                                                         </div>

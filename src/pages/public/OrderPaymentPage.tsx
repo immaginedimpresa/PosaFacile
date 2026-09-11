@@ -49,11 +49,13 @@ export function OrderPaymentPage() {
 
         try {
             // First attempt: Call atomic SECURITY DEFINER RPC
-            const { error: rpcError } = await (supabase.rpc as any)('confirm_order_payment', {
+            // supabase.rpc va chiamato sul client: staccato, `(supabase.rpc as any)(...)`
+            // perde il riferimento e fallisce prima ancora di arrivare al database.
+            const { error: rpcError } = await supabase.rpc('confirm_order_payment' as any, {
                 p_order_id: id,
                 p_payment_method: 'credit_card',
                 p_payment_intent_id: `pi_simulated_${Date.now()}`
-            })
+            } as any)
 
             if (rpcError) {
                 console.warn('confirm_order_payment RPC not available or failed, fallback to direct update:', rpcError)

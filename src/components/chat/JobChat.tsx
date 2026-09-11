@@ -76,25 +76,27 @@ export function JobChat({
         }
     }, [jobId])
 
-    const fetchSenderProfile = async (senderId: string) => {
-        if (senders[senderId]) return
+    // I nomi dei mittenti arrivano da una funzione del database: la tabella users
+    // ognuno la legge solo per sé, e del cliente il posatore vede solo il nome
+    // (dopo aver accettato l'incarico).
+    const loadSenders = async () => {
         try {
-            const { data } = await supabase
-                .from('users')
-                .select('id, first_name, last_name, role')
-                .eq('id', senderId)
-                .maybeSingle()
-
-            if (data) {
-                const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Utente'
-                setSenders(prev => ({
-                    ...prev,
-                    [senderId]: { id: data.id, name, role: data.role }
-                }))
+            const { data } = await supabase.rpc('job_chat_senders' as any, { p_job_id: jobId } as any)
+            if (Array.isArray(data)) {
+                const profileMap: Record<string, SenderProfile> = {}
+                data.forEach((u: any) => {
+                    profileMap[u.id] = { id: u.id, name: u.name || 'Utente', role: u.role }
+                })
+                setSenders(profileMap)
             }
         } catch {
-            // Silently ignore profile fetch errors
+            // Senza nomi la chat funziona comunque: si mostra il ruolo
         }
+    }
+
+    const fetchSenderProfile = async (senderId: string) => {
+        if (senders[senderId]) return
+        await loadSenders()
     }
 
     const fetchMessages = async () => {
@@ -109,22 +111,8 @@ export function JobChat({
             const msgs = (data || []) as Message[]
             setMessages(msgs)
 
-            // Fetch profiles for unique senders
-            const uniqueSenderIds = Array.from(new Set(msgs.map(m => m.sender_id)))
-            if (uniqueSenderIds.length > 0) {
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('id, first_name, last_name, role')
-                    .in('id', uniqueSenderIds)
-
-                if (userData) {
-                    const profileMap: Record<string, SenderProfile> = {}
-                    userData.forEach((u: any) => {
-                        const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Utente'
-                        profileMap[u.id] = { id: u.id, name, role: u.role }
-                    })
-                    setSenders(profileMap)
-                }
+            if (msgs.length > 0) {
+                await loadSenders()
             }
 
             scrollToBottom()
@@ -161,29 +149,8 @@ export function JobChat({
             if (error) throw error
             setNewMessage('')
             scrollToBottom()
-
-            // Salvagente notifica diretta: se il trigger postgres tarda o non è sincronizzato,
-            // garantiamo che l'utente destinatario riceva la notifica in tempo reale a video
-            const recipientId = currentUserId === proUserId ? customerUserId : proUserId
-            if (recipientId) {
-                const targetRole = currentUserId === proUserId ? 'customer' : 'professional'
-                const mySenderName = senders[currentUserId]?.name || (currentUserId === proUserId ? 'Il Posatore' : 'Il Cliente')
-
-                supabase.from('notifications' as any).insert({
-                    user_id: recipientId,
-                    target_role: targetRole,
-                    title: `Nuovo messaggio da ${mySenderName}`,
-                    message: trimmed.slice(0, 120),
-                    type: 'message_received',
-                    link: targetRole === 'customer' 
-                        ? `/dashboard?tab=messages` 
-                        : `/pro/jobs/${jobId}#chat-cantiere`,
-                    channel: 'both',
-                    metadata: { job_id: jobId }
-                }).then(({ error: notifErr }) => {
-                    if (notifErr) console.warn('Direct notification notice:', notifErr.message)
-                })
-            }
+            // L'avviso al destinatario lo crea il trigger notify_on_message_created:
+            // dal browser non si possono scrivere notifiche (solo l'admin).
         } catch (error) {
             console.error('Error sending message:', error)
             alert('Non è stato possibile inviare il messaggio. Verifica i permessi o la connessione.')

@@ -53,6 +53,12 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
     const [jobId, setJobId] = useState<string | null>(null)
     const [jobStatus, setJobStatus] = useState<string | null>(null)
     const [loadingJob, setLoadingJob] = useState(false)
+    const [proDetails, setProDetails] = useState<{
+        full_name: string
+        company_name?: string | null
+        phone?: string | null
+        verified?: boolean
+    } | null>(null)
 
     const selectedOrder = activeOrders.find(o => o.id === selectedOrderId) || activeOrders[0]
 
@@ -60,6 +66,7 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
         if (!selectedOrder?.id) {
             setJobId(null)
             setJobStatus(null)
+            setProDetails(null)
             return
         }
 
@@ -68,62 +75,130 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
 
         async function resolveJob() {
             try {
-                // 1. Cerca nella tabella jobs
-                const { data: jobData } = await supabase
-                    .from('jobs')
-                    .select('id, status')
-                    .eq('order_id', selectedOrder.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle()
+                let resolvedJobId: string | null = null
+                let resolvedJobStatus: string | null = null
 
-                if (jobData?.id && isMounted) {
-                    setJobId(jobData.id)
-                    setJobStatus(jobData.status)
-                    return
-                }
-
-                // 2. Prova a creare o verificare job se il posatore è designato
-                const proId = selectedOrder.professional_id || selectedOrder.installation_professional_id
-                if (proId) {
-                    const { data: newJob } = await supabase
-                        .from('jobs')
-                        .insert({
-                            order_id: selectedOrder.id,
-                            professional_id: proId,
-                            status: 'assigned',
-                            scheduled_date: selectedOrder.installation_date || null,
-                            notes: 'Creato per chat di cantiere'
-                        })
-                        .select('id, status')
-                        .maybeSingle()
-
-                    if (newJob?.id && isMounted) {
-                        setJobId(newJob.id)
-                        setJobStatus(newJob.status)
-                        return
-                    }
-                }
-
-                // 3. Prova RPC get_or_create_order_job come fallback
+                // 1. Verifica se ci sono milestone di cantiere già raggiunte (es. posatore confermato o lavoro avviato)
                 try {
-                    const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', {
-                        p_order_id: selectedOrder.id
-                    })
+                    const { data: milestones } = await supabase
+                        .from('order_milestones')
+                        .select('step, status')
+                        .eq('order_id', selectedOrder.id)
 
-                    if (rpcJobId && typeof rpcJobId === 'string' && isMounted) {
-                        setJobId(rpcJobId)
-                        setJobStatus('assigned')
-                        return
+                    const isStarted = milestones?.some(m => m.step === 'work_started' && m.status === 'done')
+                    const isConfirmed = milestones?.some(m => 
+                        (m.step === 'professional_confirmed' || m.step === 'green_light' || m.step === 'date_confirmed') && 
+                        (m.status === 'done' || m.status === 'active')
+                    )
+
+                    if (isStarted) {
+                        resolvedJobStatus = 'in_progress'
+                    } else if (isConfirmed) {
+                        resolvedJobStatus = 'accepted'
                     }
                 } catch {
-                    // Ignora eventuale assenza rpc
+                    // ignore milestone check
                 }
 
-                if (isMounted) setJobId(null)
+                // 2. Cerca nella tabella jobs
+                try {
+                    const { data: jobData } = await supabase
+                        .from('jobs')
+                        .select('id, status')
+                        .eq('order_id', selectedOrder.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle()
+
+                    if (jobData?.id) {
+                        resolvedJobId = jobData.id
+                        if (jobData.status) resolvedJobStatus = jobData.status
+                    }
+                } catch {
+                    // ignore jobs RLS
+                }
+
+                // 3. Cerca nelle notifiche metadati con job_id
+                if (!resolvedJobId) {
+                    try {
+                        const { data: notifData } = await supabase
+                            .from('notifications' as any)
+                            .select('metadata')
+                            .not('metadata', 'is', null)
+                            .order('created_at', { ascending: false })
+                            .limit(30)
+
+                        if (notifData && notifData.length > 0) {
+                            for (const row of notifData) {
+                                const meta = (row as any).metadata
+                                if (meta?.job_id && (meta?.order_id === selectedOrder.id || !meta?.order_id)) {
+                                    resolvedJobId = meta.job_id
+                                    resolvedJobStatus = resolvedJobStatus || 'accepted'
+                                    break
+                                }
+                            }
+                        }
+                    } catch {
+                        // ignore notifications check
+                    }
+                }
+
+                // 4. Prova RPC get_or_create_order_job se disponibile
+                if (!resolvedJobId) {
+                    try {
+                        const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', {
+                            p_order_id: selectedOrder.id
+                        })
+
+                        if (rpcJobId && typeof rpcJobId === 'string') {
+                            resolvedJobId = rpcJobId
+                            resolvedJobStatus = resolvedJobStatus || 'accepted'
+                        }
+                    } catch {
+                        // ignore rpc
+                    }
+                }
+
+                // 5. Arricchisci il profilo del posatore da professional_profiles per telefono e whatsapp
+                const proId = (selectedOrder as any).installation_professional_id || selectedOrder.professional_id
+                if (proId) {
+                    try {
+                        const { data: profile } = await supabase
+                            .from('professional_profiles')
+                            .select('full_name, company_name, phone, verified')
+                            .eq('id', proId)
+                            .maybeSingle()
+
+                        if (profile && isMounted) {
+                            setProDetails(profile)
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+
+                // 6. Garanzia canale: se l'ordine è confermato/attivo o il posatore è incaricato, non bloccare MAI la chat
+                const hasProOrActive = Boolean(
+                    selectedOrder.professional || 
+                    proId || 
+                    selectedOrder.status !== 'draft'
+                )
+
+                if (!resolvedJobId && hasProOrActive) {
+                    resolvedJobId = selectedOrder.id
+                    resolvedJobStatus = resolvedJobStatus || 'accepted'
+                }
+
+                if (isMounted) {
+                    setJobId(resolvedJobId)
+                    setJobStatus(resolvedJobStatus || (hasProOrActive ? 'accepted' : 'assigned'))
+                }
             } catch (err) {
                 console.warn('Could not resolve job for chat:', err)
-                if (isMounted) setJobId(null)
+                if (isMounted) {
+                    setJobId(selectedOrder.id)
+                    setJobStatus('accepted')
+                }
             } finally {
                 if (isMounted) setLoadingJob(false)
             }
@@ -155,7 +230,7 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
         )
     }
 
-    const pro = selectedOrder?.professional
+    const pro = proDetails || selectedOrder?.professional
     const proPhone = pro?.phone || (typeof selectedOrder?.installation_address === 'object' ? selectedOrder.installation_address?.pro_phone : null)
     const cleanPhone = proPhone ? proPhone.replace(/\D/g, '') : null
     const waNumber = cleanPhone ? (cleanPhone.startsWith('39') ? cleanPhone : `39${cleanPhone}`) : null
@@ -291,9 +366,9 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
                             <div className="w-8 h-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin mx-auto mb-3" />
                             <p className="text-xs font-semibold text-stone-500">Connessione al canale di cantiere...</p>
                         </div>
-                    ) : jobId && user?.id ? (
+                    ) : user?.id && selectedOrder ? (
                         <div className="space-y-3">
-                            {jobStatus === 'assigned' && (
+                            {jobStatus === 'assigned' && !pro && (
                                 <div className="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
                                     <div className="p-1.5 rounded-xl bg-amber-200/60 text-amber-800 shrink-0 mt-0.5">
                                         <Clock size={16} />
@@ -301,14 +376,14 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
                                     <div className="leading-relaxed">
                                         <p className="font-bold">In attesa di conferma accettazione del posatore</p>
                                         <p className="text-amber-800/90 mt-0.5">
-                                            Il posatore è stato assegnato al cantiere e sta confermando l'incarico. Puoi già inviare messaggi qui: verranno recapitati al posatore e all'ufficio operativo PosaFacile.
+                                            Il posatore è stato designato per il cantiere e sta confermando l'incarico. Puoi già inviare messaggi qui: verranno recapitati al posatore e all'ufficio operativo PosaFacile.
                                         </p>
                                     </div>
                                 </div>
                             )}
 
                             <JobChat
-                                jobId={jobId}
+                                jobId={jobId || selectedOrder.id}
                                 currentUserId={user.id}
                                 proUserId={selectedOrder.professional_id || selectedOrder.installation_professional_id || null}
                                 customerUserId={user.id}
