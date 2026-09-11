@@ -34,6 +34,33 @@ export async function generateContent(config: VertexConfig, model: string, body:
     throw new Error('Il servizio anteprime è occupato. Riprova tra poco.')
 }
 
+/**
+ * Una generazione di immagine, con i ritentativi che servono davvero.
+ *
+ * Il modello ogni tanto chiude senza restituire niente, con `IMAGE_RECITATION`
+ * o `SAFETY`, e capita anche su foto di arredamento del tutto innocue: è
+ * transitorio, e al secondo colpo la stessa richiesta passa. Senza ritentativo
+ * il cliente vede un errore per una richiesta valida. Si alza un po' la
+ * temperatura a ogni giro, perché ripresentare una richiesta identica a un
+ * rifiuto la fa rifiutare di nuovo.
+ */
+export async function generateImage(config: VertexConfig, model: string, body: Record<string, unknown>): Promise<string> {
+    let reason = 'sconosciuto'
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const generationConfig = body.generationConfig as { temperature?: number } | undefined
+        const response = await generateContent(config, model, {
+            ...body,
+            generationConfig: { ...generationConfig, temperature: (generationConfig?.temperature ?? 0.15) + attempt * 0.15 },
+        })
+        for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+            if (part.inlineData?.data) return part.inlineData.data
+        }
+        reason = response.candidates?.[0]?.finishReason ?? 'sconosciuto'
+        console.warn(`${model}: nessuna immagine (finishReason ${reason}), tentativo ${attempt + 1}/3`)
+    }
+    throw new Error("Il modello non è riuscito a generare l'anteprima. Riprova, o prova con un'altra foto.")
+}
+
 export function responseText(response: GeminiResponse): string {
     return (response.candidates?.[0]?.content?.parts ?? []).filter(p => !p.thought).map(p => p.text ?? '').join('')
 }

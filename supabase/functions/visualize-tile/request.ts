@@ -1,4 +1,4 @@
-import type { Pattern } from './texture.ts'
+import type { Pattern } from './pattern.ts'
 export interface VisualizerRequest {
     roomImage: string; tileImage: string; productId?: string; surface: 'floor' | 'wall'
     layingPattern: Pattern; tileWidth?: number; tileHeight?: number; tileScale: number; debug: boolean
