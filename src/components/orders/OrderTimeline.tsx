@@ -58,7 +58,6 @@ export function OrderProgressBar({
 
     const progress = timelineProgress(steps)
     const attuale = pickCurrentStep(steps)
-    const rilevanti = steps.filter((s) => s.status !== 'skipped')
 
     // Modalità Integrata (Embedded all'interno della card principale ordine/preventivo)
     if (embedded) {
@@ -115,47 +114,6 @@ export function OrderProgressBar({
                             />
                         </div>
                     </div>
-
-                    {/* Micro-indicatori tappe (da tablet/desktop sm+) */}
-                    {rilevanti.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-stone-200/50 hidden sm:flex items-center justify-between gap-1 text-[10px]">
-                            {rilevanti.map((step, idx) => {
-                                const isDone = step.status === 'done'
-                                const isActive = step.status === 'active' || step.status === 'blocked'
-                                return (
-                                    <div
-                                        key={step.key || idx}
-                                        title={`${step.label}: ${step.status === 'done' ? 'Completato' : step.status === 'active' ? 'In corso' : 'In attesa'}`}
-                                        className="flex items-center gap-1.5 shrink-0"
-                                    >
-                                        <span
-                                            className={`w-1.5 h-1.5 rounded-full ${
-                                                isDone
-                                                    ? 'bg-emerald-500'
-                                                    : isActive
-                                                    ? 'bg-orange-500 ring-2 ring-orange-200'
-                                                    : 'bg-stone-300'
-                                            }`}
-                                        />
-                                        <span
-                                            className={`truncate max-w-[85px] ${
-                                                isActive
-                                                    ? 'font-bold text-stone-900'
-                                                    : isDone
-                                                    ? 'font-medium text-stone-600'
-                                                    : 'text-stone-400'
-                                            }`}
-                                        >
-                                            {step.label}
-                                        </span>
-                                        {idx < rilevanti.length - 1 && (
-                                            <span className="text-stone-300 ml-0.5">›</span>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
                 </div>
             </div>
         )
