@@ -498,16 +498,84 @@
 .pf-config-intro > div {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     gap: 30px;
 }
 .pf-config-intro h1 {
     font-size: 46px;
 }
-.pf-config-intro > div > p {
-    color: #716a65;
+.pf-config-intro-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.pf-intro-auth-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #ffffff;
+    border: 1px solid #e7e5e4;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #44403c;
+    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.04);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.pf-intro-auth-pill:hover {
+    background: #fffaf5;
+    border-color: #f97316;
+    color: #ea580c;
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.1);
+}
+.pf-intro-user-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    background: #ffffff;
+    border: 1px solid #e7e5e4;
+    border-radius: 9999px;
     font-size: 12px;
-    line-height: 1.8;
+    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.04);
+}
+.pf-intro-user-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #059669;
+    font-weight: 600;
+}
+.pf-intro-user-link {
+    color: #ea580c;
+    font-weight: 500;
+    text-decoration: none;
+}
+.pf-intro-user-link:hover {
+    text-decoration: underline;
+}
+.pf-intro-trash-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e7e5e4;
+    color: #78716c;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(28, 25, 23, 0.04);
+    transition: all 0.15s ease;
+}
+.pf-intro-trash-btn:hover {
+    border-color: #fca5a5;
+    background: #fef2f2;
+    color: #dc2626;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.1);
 }
 .pf-config-layout {
     display: grid;
@@ -613,26 +681,17 @@
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-}
-.pf-config-form-heading .pf-eyebrow {
-    color: #995b32;
-    font-size: 9px;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f2ede4;
 }
 .pf-config-form-heading h2 {
-    font-size: 30px;
-    font-weight: 500;
-    letter-spacing: -0.035em;
-    line-height: 1.2;
-    margin-top: 12px;
-}
-.pf-config-form-heading > button {
-    color: #a8a29e;
-    padding: 10px;
-    border-radius: 8px;
-}
-.pf-config-form-heading > button:hover {
-    background: #fff1f2;
-    color: #be123c;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: #1c1917;
+    margin: 0;
+    line-height: 1.25;
 }
 .pf-config-session {
     display: flex;
@@ -1018,15 +1077,14 @@
         padding-block: 24px 27px;
     }
     .pf-config-intro > div {
-        display: block;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
     }
     .pf-config-intro h1 {
-        font-size: 39px;
-    }
-    .pf-config-intro > div > p {
-        max-width: none;
-        font-size: 12px;
-        margin-top: 17px;
+        font-size: 36px;
     }
     .pf-config-layout {
         padding-bottom: 38px;
@@ -1036,13 +1094,7 @@
         border-radius: 14px;
     }
     .pf-config-form-heading h2 {
-        font-size: 26px;
-    }
-    .pf-config-form-heading {
-        gap: 10px;
-    }
-    .pf-config-form-heading > button {
-        padding: 7px;
+        font-size: 20px;
     }
     .pf-config-session {
         display: block;
@@ -1197,10 +1249,15 @@
 }
 .pf-config-form-heading {
     flex-shrink: 0;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f2ede4;
 }
 .pf-config-form-heading h2 {
-    font-size: 26px;
-    margin-top: 7px;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    color: #1c1917;
 }
 .pf-config-session {
     flex-shrink: 0;
@@ -1303,9 +1360,13 @@
         display: none;
     }
     .pf-config-intro h1 {
-        font-size: 24px;
+        font-size: 22px;
         max-width: 330px;
         line-height: 1.15;
+    }
+    .pf-config-intro-actions {
+        width: 100%;
+        justify-content: space-between;
     }
     .pf-config-layout {
         width: calc(100% - 24px);
@@ -1315,7 +1376,7 @@
         padding: 17px 14px;
     }
     .pf-config-form-heading h2 {
-        font-size: 23px;
+        font-size: 18px;
     }
     .pf-config-form-heading .pf-eyebrow {
         font-size: 8px;

@@ -144,10 +144,11 @@ export function ConfiguratorPage() {
         switch (currentStep) {
             case 1: // Luogo
                 return Boolean(
-                    location.indirizzo &&
-                    location.citta &&
-                    location.provincia &&
-                    location.cap,
+                    location.indirizzo?.trim() &&
+                    location.civico?.trim() &&
+                    location.citta?.trim() &&
+                    location.provincia?.trim() &&
+                    location.cap?.trim(),
                 )
             case 2: // Accesso e Scarico
                 return Boolean(deliveryAccess.destination)
@@ -263,19 +264,6 @@ export function ConfiguratorPage() {
         }
     }
 
-    const stepDescriptions = [
-        'Partiamo da casa tua.',
-        'Accesso al cantiere e consegna dei materiali.',
-        'Scegli il tuo professionista.',
-        'Che cosa immagini?',
-        'La materia del tuo progetto.',
-        'Diamo spazio alle tue idee.',
-        'Il dettaglio che cambia tutto.',
-        'Guarda il risultato nella tua stanza.',
-        'A ogni progetto, i suoi servizi.',
-        'Troviamo il momento giusto.',
-        'Il tuo progetto, in ogni dettaglio.',
-    ]
     const formattedTotal = new Intl.NumberFormat('it-IT', {
         style: 'currency',
         currency: 'EUR',
@@ -302,12 +290,33 @@ export function ConfiguratorPage() {
                                 <span>alla tua nuova casa.</span>
                             </h1>
                         </div>
-                        <p>
-                            Un passo alla volta, tutte le scelte al posto
-                            giusto.
-                            <br />
-                            Costruiamo insieme il tuo preventivo personalizzato.
-                        </p>
+                        <div className="pf-config-intro-actions">
+                            {user ? (
+                                <div className="pf-intro-user-pill">
+                                    <span className="pf-intro-user-status">
+                                        <Check size={14} className="text-emerald-600" />
+                                        <span>Salvato</span>
+                                    </span>
+                                    <Link to="/dashboard?tab=quotes" className="pf-intro-user-link">
+                                        I tuoi preventivi →
+                                    </Link>
+                                </div>
+                            ) : (
+                                <Link to="/login?redirect=/configuratore" className="pf-intro-auth-pill">
+                                    <LogIn size={15} />
+                                    <span>Accedi per salvare</span>
+                                </Link>
+                            )}
+                            <button
+                                type="button"
+                                onClick={handleClearQuote}
+                                aria-label="Ricomincia il preventivo"
+                                title="Ricomincia il preventivo"
+                                className="pf-intro-trash-btn"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div className="pf-container pf-config-layout">
@@ -365,46 +374,9 @@ export function ConfiguratorPage() {
                     </aside>
                     <div className="pf-config-workspace">
                         <div className="pf-config-form-heading">
-                            <div>
-                                <p className="pf-eyebrow">
-                                    PASSO {String(currentStep).padStart(2, '0')}{' '}
-                                    ·{' '}
-                                    {STEPS[
-                                        currentStep - 1
-                                    ]?.label.toUpperCase()}
-                                </p>
-                                <h2>{stepDescriptions[currentStep - 1]}</h2>
-                            </div>
-                            <button
-                                onClick={handleClearQuote}
-                                aria-label="Ricomincia il preventivo"
-                                title="Ricomincia il preventivo"
-                            >
-                                <Trash2 size={17} />
-                            </button>
-                        </div>
-                        <div className="pf-config-session">
-                            {user ? (
-                                <>
-                                    <span>
-                                        <Check size={20} /> Le tue scelte
-                                        restano memorizzate.
-                                    </span>
-                                    <Link to="/dashboard?tab=quotes">
-                                        I tuoi preventivi →
-                                    </Link>
-                                </>
-                            ) : (
-                                <>
-                                    <span>
-                                        Stai progettando come ospite. Accedi per
-                                        conservare le tue scelte quando esci.
-                                    </span>
-                                    <Link to="/login?redirect=/configuratore">
-                                        Accedi per salvare →
-                                    </Link>
-                                </>
-                            )}
+                            <h2>
+                                {currentStep} - {STEPS[currentStep - 1]?.label}
+                            </h2>
                         </div>
                         {selectedProduct && currentStep > 5 && (
                             <div className="pf-config-selected">

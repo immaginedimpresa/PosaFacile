@@ -21,7 +21,7 @@ export function Step6Location() {
                     </div>
                     <div>
                         <h3 className="font-bold text-stone-900 text-base">Indirizzo di lavoro</h3>
-                        <p className="text-xs text-stone-500">Città, CAP e via dell&apos;intervento di posa</p>
+                        <p className="text-xs text-stone-500">Città, CAP, via e numero civico dell&apos;intervento di posa</p>
                     </div>
                 </div>
 

@@ -170,8 +170,10 @@ export function Step7Summary() {
                             delivery_cost: deliveryCost,
                         }],
                         installation_address: {
-                            street: location.indirizzo,
-                            address: location.indirizzo,
+                            street: location.civico ? `${location.indirizzo}, ${location.civico}` : location.indirizzo,
+                            address: location.civico ? `${location.indirizzo}, ${location.civico}` : location.indirizzo,
+                            civico: location.civico,
+                            street_name: location.indirizzo,
                             city: location.citta,
                             province: location.provincia,
                             postal_code: location.cap,
@@ -230,8 +232,10 @@ export function Step7Summary() {
                                 delivery_cost: deliveryCost,
                             }],
                             installation_address: {
-                                street: location.indirizzo,
-                                address: location.indirizzo,
+                                street: location.civico ? `${location.indirizzo}, ${location.civico}` : location.indirizzo,
+                                address: location.civico ? `${location.indirizzo}, ${location.civico}` : location.indirizzo,
+                                civico: location.civico,
+                                street_name: location.indirizzo,
                                 city: location.citta,
                                 province: location.provincia,
                                 postal_code: location.cap,
@@ -368,7 +372,9 @@ export function Step7Summary() {
                     <MapPin className="w-5 h-5 text-orange-500" />
                     Luogo di lavoro & Accesso Cantiere
                 </h4>
-                <p className="text-sm font-semibold text-stone-900">{location.indirizzo}</p>
+                <p className="text-sm font-semibold text-stone-900">
+                    {location.indirizzo}{location.civico ? `, ${location.civico}` : ''}
+                </p>
                 <p className="text-sm text-gray-500">{location.cap} {location.citta} ({location.provincia})</p>
 
                 <div className="flex items-center gap-2 mt-3">

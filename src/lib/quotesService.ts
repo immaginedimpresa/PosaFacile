@@ -87,10 +87,14 @@ export async function saveCurrentQuote(
             laying_type: state.layingType || 'dritta',
             services: {
                 ...state.services,
+                civico: state.location.civico,
+                street_name: state.location.indirizzo,
                 delivery_access: state.deliveryAccess,
                 delivery_cost: state.getDeliveryCost(),
             },
-            address: state.location.indirizzo || '',
+            address: state.location.civico
+                ? `${state.location.indirizzo}, ${state.location.civico}`
+                : (state.location.indirizzo || ''),
             city: state.location.citta || '',
             provincia: state.location.provincia || '',
             cap: state.location.cap || '',

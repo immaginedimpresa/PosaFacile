@@ -93,6 +93,7 @@ export interface AdditionalServices {
 // Step 6: Location & Date
 export interface LocationInfo {
     indirizzo: string
+    civico: string
     citta: string
     provincia: string
     cap: string
@@ -205,6 +206,7 @@ const initialState = {
     },
     location: {
         indirizzo: '',
+        civico: '',
         citta: '',
         provincia: '',
         cap: '',
@@ -288,7 +290,8 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                         soglieQty: Number(servicesObj.soglieQty) || 0,
                     },
                     location: {
-                        indirizzo: quote.address || '',
+                        indirizzo: (servicesObj.street_name || (quote.address || '').split(',')[0]).trim(),
+                        civico: servicesObj.civico || (quote.address?.includes(',') ? quote.address.split(',')[1].trim() : ''),
                         citta: quote.city || '',
                         provincia: quote.provincia || '',
                         cap: quote.cap || '',

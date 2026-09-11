@@ -5,6 +5,7 @@ import { geocodeComune, searchStreets, type Coordinates, type StreetSuggestion }
 
 export interface AddressValue {
     indirizzo: string
+    civico: string
     citta: string
     provincia: string
     cap: string
@@ -109,7 +110,8 @@ export function AddressAutocomplete({ value, onChange }: AddressAutocompleteProp
 
     const selectStreet = (s: StreetSuggestion) => {
         onChange({
-            indirizzo: [s.street, s.housenumber].filter(Boolean).join(' '),
+            indirizzo: s.street || s.label.split(',')[0].replace(/\s+\d+.*$/, '').trim(),
+            ...(s.housenumber ? { civico: s.housenumber } : {}),
             // Il CAP e le coordinate del civico sono più precisi di quelli del comune.
             lat: s.lat,
             lon: s.lon,
@@ -169,42 +171,68 @@ export function AddressAutocomplete({ value, onChange }: AddressAutocompleteProp
                 )}
             </div>
 
-            {/* Via */}
-            <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Indirizzo e civico <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                    <input
-                        type="text"
-                        className={inputClass}
-                        placeholder={comuneConfirmed ? 'Via Roma 15' : 'Scegli prima il comune'}
-                        value={value.indirizzo}
-                        onChange={e => { onChange({ indirizzo: e.target.value }); setStreetOpen(true) }}
-                        onFocus={() => setStreetOpen(true)}
-                        autoComplete="off"
-                    />
-                    {streetLoading && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" size={18} />
+            {/* Indirizzo e Numero Civico separati */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                {/* Indirizzo / Via */}
+                <div className="sm:col-span-3 relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Indirizzo / Via <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            className={inputClass}
+                            placeholder={comuneConfirmed ? 'es. Via Roma, Corso Garibaldi' : 'Scegli prima il comune'}
+                            value={value.indirizzo}
+                            onChange={e => { onChange({ indirizzo: e.target.value }); setStreetOpen(true) }}
+                            onFocus={() => setStreetOpen(true)}
+                            autoComplete="off"
+                        />
+                        {streetLoading && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" size={18} />
+                        )}
+                    </div>
+
+                    {streetOpen && streetOptions.length > 0 && (
+                        <ul className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg">
+                            {streetOptions.map((s, i) => (
+                                <li key={`${s.label}-${i}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => selectStreet(s)}
+                                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-50 flex items-center justify-between"
+                                    >
+                                        <span className="text-gray-900">{s.street || s.label}</span>
+                                        <div className="flex items-center gap-2">
+                                            {s.housenumber && (
+                                                <span className="font-medium text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-700">
+                                                    civ. {s.housenumber}
+                                                </span>
+                                            )}
+                                            {s.postcode && <span className="text-xs text-gray-400">{s.postcode}</span>}
+                                        </div>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
                     )}
                 </div>
 
-                {streetOpen && streetOptions.length > 0 && (
-                    <ul className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg">
-                        {streetOptions.map((s, i) => (
-                            <li key={`${s.label}-${i}`}>
-                                <button
-                                    type="button"
-                                    onClick={() => selectStreet(s)}
-                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-50"
-                                >
-                                    <span className="text-gray-900">{s.label}</span>
-                                    {s.postcode && <span className="ml-2 text-xs text-gray-500">{s.postcode}</span>}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
+                {/* Numero Civico (Campo Obbligatorio) */}
+                <div className="sm:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        N. Civico <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        className={inputClass}
+                        placeholder="es. 10"
+                        value={value.civico || ''}
+                        onChange={e => onChange({ civico: e.target.value })}
+                        required
+                        autoComplete="off"
+                    />
+                </div>
             </div>
 
             {/* CAP e provincia derivano dal comune: modificabili, ma già corretti */}
