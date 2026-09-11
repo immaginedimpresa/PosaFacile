@@ -865,6 +865,8 @@ export type Database = {
           smaltimento: number | null
           battiscopa: number | null
           soglie: number | null
+          porto_piano: number | null
+          porto_piano_attivo: boolean | null
           professional_id: string
           servizi_esclusi: string[]
           updated_at: string
@@ -882,6 +884,8 @@ export type Database = {
           smaltimento?: number | null
           battiscopa?: number | null
           soglie?: number | null
+          porto_piano?: number | null
+          porto_piano_attivo?: boolean | null
           professional_id: string
           servizi_esclusi?: string[]
           updated_at?: string
@@ -899,6 +903,8 @@ export type Database = {
           smaltimento?: number | null
           battiscopa?: number | null
           soglie?: number | null
+          porto_piano?: number | null
+          porto_piano_attivo?: boolean | null
           professional_id?: string
           servizi_esclusi?: string[]
           updated_at?: string

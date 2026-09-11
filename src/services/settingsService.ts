@@ -30,6 +30,14 @@ export const DEFAULT_LOGISTICS: LogisticsSettings = {
     noUnloadingZoneSurcharge: 35,
 }
 
+import {
+    offersMaterialHandling,
+    materialHandlingRatePerFloor,
+    markupMultiplier,
+    type ProfessionalRates,
+    type MarkupOverrides,
+} from '@/services/ratesService'
+
 export type MaterialHandling = 'client' | 'pro' | 'carrier'
 
 export interface DeliveryBreakdown {
@@ -40,6 +48,8 @@ export interface DeliveryBreakdown {
     isBoxDelivery: boolean
     isStreetDelivery: boolean
     handlingBy: MaterialHandling
+    proRatePerMqFloor?: number
+    proOffersHandling?: boolean
 }
 
 /**
@@ -57,6 +67,12 @@ export function calculateDeliveryCost(
         hasFreightElevator?: boolean
     } | null | undefined,
     settings?: LogisticsSettings | null,
+    proOptions?: {
+        baseMq?: number
+        rates?: ProfessionalRates | null
+        markupPercent?: number | null
+        markupOverrides?: MarkupOverrides | null
+    },
 ): DeliveryBreakdown {
     const cfg = settings || DEFAULT_LOGISTICS
     const base = Number(cfg.baseDeliveryCost) || 0
@@ -72,27 +88,44 @@ export function calculateDeliveryCost(
         ? 'carrier'
         : (delivery?.handlingBy || 'client')
 
+    const proOffers = offersMaterialHandling(proOptions?.rates ?? null)
+
     // Sosta distante: se scarico a bordo strada con il cliente che fa da sé,
     // lo scarico avviene velocemente sulla strada senza sosta prolungata.
     // Se invece c'è il posatore che effettua la salita al piano, o scarico nel box,
     // o consegna al piano con sosta distante (>50m), si applica il supplemento sosta.
-    const parkingSurcharge = (!isStreetDelivery || handlingBy === 'pro') && (delivery?.hasUnloadingZone === false)
+    const parkingSurcharge = (!isStreetDelivery || (handlingBy === 'pro' && proOffers)) && (delivery?.hasUnloadingZone === false)
         ? (Number(cfg.noUnloadingZoneSurcharge) || 0)
         : 0
 
     let floorCost = 0
+    let proRatePerMqFloor = 0
 
     // Il costo del piano si applica solo se il piano è superiore E il materiale viene
     // trasportato dal corriere ('carrier') o dal posatore ('pro').
     // Se ci pensa il cliente ('client'), il costo è zero (€ 0.00).
-    const needsPaidFloorCarrying = (isFloorDelivery || handlingBy === 'pro') && delivery?.floorType === 'upper'
+    const needsPaidFloorCarrying = (isFloorDelivery || (handlingBy === 'pro' && proOffers)) && delivery?.floorType === 'upper'
 
     if (needsPaidFloorCarrying) {
         const floors = Math.max(1, Number(delivery?.floorNumber) || 1)
-        const ratePerFloor = delivery?.hasFreightElevator
-            ? (Number(cfg.costPerFloorWithLift) || 0)
-            : (Number(cfg.costPerFloorNoLift) || 0)
-        floorCost = floors * ratePerFloor
+        if (handlingBy === 'pro') {
+            // Calcolato sui mq e la tariffa a mq/piano del posatore + eventuale markup di piattaforma
+            const baseRate = materialHandlingRatePerFloor(proOptions?.rates ?? null)
+            const mult = markupMultiplier(
+                'porto_piano',
+                proOptions?.markupPercent,
+                proOptions?.markupOverrides,
+            )
+            proRatePerMqFloor = Math.round(baseRate * mult * 100) / 100
+            const mq = Math.max(0, Number(proOptions?.baseMq) || 0)
+            floorCost = Math.round(mq * floors * proRatePerMqFloor * 100) / 100
+        } else {
+            // Consegna diretta al piano con facchini del corriere (a forfait per piano)
+            const ratePerFloor = delivery?.hasFreightElevator
+                ? (Number(cfg.costPerFloorWithLift) || 0)
+                : (Number(cfg.costPerFloorNoLift) || 0)
+            floorCost = floors * ratePerFloor
+        }
     }
 
     return {
@@ -103,6 +136,8 @@ export function calculateDeliveryCost(
         isBoxDelivery: isBox,
         isStreetDelivery,
         handlingBy,
+        proRatePerMqFloor,
+        proOffersHandling: proOffers,
     }
 }
 

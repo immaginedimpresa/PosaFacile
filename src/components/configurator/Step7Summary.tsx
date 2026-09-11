@@ -169,9 +169,11 @@ export function Step7Summary() {
                         }],
                         installation_address: {
                             street: location.indirizzo,
+                            address: location.indirizzo,
                             city: location.citta,
                             province: location.provincia,
                             postal_code: location.cap,
+                            cap: location.cap,
                             delivery_access: deliveryAccess,
                             delivery_cost: deliveryCost,
                         },
@@ -227,9 +229,11 @@ export function Step7Summary() {
                             }],
                             installation_address: {
                                 street: location.indirizzo,
+                                address: location.indirizzo,
                                 city: location.citta,
                                 province: location.provincia,
                                 postal_code: location.cap,
+                                cap: location.cap,
                                 delivery_access: deliveryAccess,
                                 delivery_cost: deliveryCost,
                             },

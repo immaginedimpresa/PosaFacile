@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { ArrowLeft, MapPin, Calendar, Clock, User, Package } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Clock, User, Package, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { OrderTimeline } from '@/components/orders/OrderTimeline'
 import { DurationCard } from '@/components/orders/DurationCard'
@@ -239,18 +239,79 @@ export function CustomerOrderDetailPage() {
                         </div>
                     )}
 
-                    {/* Address Card */}
-                    <div className="bg-white border rounded-xl p-6 shadow-sm">
-                        <div className="flex items-center gap-3 mb-4 text-green-600">
+                    {/* Address & Logistics Card */}
+                    <div className="bg-white border rounded-xl p-6 shadow-sm space-y-4">
+                        <div className="flex items-center gap-3 text-green-600">
                             <MapPin size={24} />
                             <h3 className="font-semibold text-gray-900 text-lg">Indirizzo di Installazione</h3>
                         </div>
                         <div className="pl-9">
-                            <p className="font-medium text-gray-900">{order.installation_address.address}</p>
-                            <p className="text-gray-600">
-                                {order.installation_address.cap} {order.installation_address.city} ({order.installation_address.province})
-                            </p>
+                            {typeof order.installation_address === 'string' ? (
+                                <p className="font-medium text-gray-900">{order.installation_address}</p>
+                            ) : (
+                                <>
+                                    <p className="font-medium text-gray-900">
+                                        {order.installation_address?.address || order.installation_address?.street || 'Indirizzo non specificato'}
+                                    </p>
+                                    <p className="text-gray-600">
+                                        {order.installation_address?.cap || order.installation_address?.postal_code || ''} {order.installation_address?.city || ''} {order.installation_address?.province ? `(${order.installation_address.province})` : ''}
+                                    </p>
+                                </>
+                            )}
                         </div>
+
+                        {/* Informazioni Logistica e Scarico se presenti */}
+                        {(() => {
+                            const delAccess =
+                                (typeof order.installation_address === 'object' && order.installation_address?.delivery_access) ||
+                                (order as any).items?.[0]?.delivery_access
+                            if (!delAccess) return null
+
+                            return (
+                                <div className="mt-4 pt-4 border-t border-gray-100 pl-9 space-y-2">
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        <Truck size={14} className="text-orange-500" />
+                                        <span>Logistica di Scarico & Accesso Cantiere</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        <div className="p-2.5 bg-gray-50 rounded-lg">
+                                            <span className="text-gray-400 block text-[10px] font-bold uppercase">Punto di Scarico</span>
+                                            <span className="font-semibold text-gray-900">
+                                                {delAccess.destination === 'street'
+                                                    ? 'Bordo Strada (Sponda Idraulica)'
+                                                    : delAccess.destination === 'box'
+                                                    ? 'Box / Garage (Piano Terra)'
+                                                    : 'Al Piano (Facchini corriere)'}
+                                            </span>
+                                        </div>
+                                        <div className="p-2.5 bg-gray-50 rounded-lg">
+                                            <span className="text-gray-400 block text-[10px] font-bold uppercase">Piano dei Lavori</span>
+                                            <span className="font-semibold text-gray-900">
+                                                {delAccess.floorType === 'ground'
+                                                    ? 'Piano Terra'
+                                                    : `${delAccess.floorNumber}° Piano ${delAccess.hasFreightElevator ? '(Con ascensore)' : '(Senza ascensore)'}`}
+                                            </span>
+                                        </div>
+                                        {delAccess.destination !== 'floor' && (
+                                            <div className="p-2.5 bg-gray-50 rounded-lg sm:col-span-2">
+                                                <span className="text-gray-400 block text-[10px] font-bold uppercase">Movimentazione al Piano</span>
+                                                <span className="font-semibold text-gray-900">
+                                                    {delAccess.handlingBy === 'pro'
+                                                        ? 'Affidata al Posatore'
+                                                        : 'A cura del Cliente prima dei lavori'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {delAccess.logisticsNotes && (
+                                            <div className="p-2.5 bg-gray-50 rounded-lg sm:col-span-2">
+                                                <span className="text-gray-400 block text-[10px] font-bold uppercase">Note Consegna / Autista</span>
+                                                <span className="italic text-gray-700 font-medium">&ldquo;{delAccess.logisticsNotes}&rdquo;</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        })()}
                     </div>
 
                     {/* Schedule Card */}

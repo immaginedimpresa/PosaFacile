@@ -25,6 +25,10 @@ export interface ProfessionalRates {
     smaltimento: number | null
     battiscopa: number | null
     soglie: number | null
+    /** Se il posatore effettua il servizio di portare il materiale al piano */
+    porto_piano_attivo?: boolean | null
+    /** Quanto prende a mq da portare per ciascun piano (€/mq per piano) */
+    porto_piano?: number | null
     /** Lavorazioni che il professionista non esegue. */
     servizi_esclusi: string[]
 }
@@ -42,11 +46,14 @@ export const RATE_DEFAULTS = {
     smaltimento: 8,
     battiscopa: 6,
     soglie: 35,
+    porto_piano: 2.0,
 } as const
 
 export const emptyRates = (professionalId: string): ProfessionalRates => ({
     professional_id: professionalId,
     ...RATE_DEFAULTS,
+    porto_piano_attivo: true,
+    porto_piano: 2.0,
     servizi_esclusi: [],
 })
 
@@ -93,7 +100,13 @@ export async function fetchRates(professionalId: string): Promise<ProfessionalRa
         if (error) console.warn('Tariffe non lette:', error.message)
         return emptyRates(professionalId)
     }
-    return data as ProfessionalRates
+    return {
+        ...data,
+        porto_piano_attivo: data.porto_piano_attivo ?? true,
+        porto_piano: data.porto_piano !== null && data.porto_piano !== undefined
+            ? Number(data.porto_piano)
+            : RATE_DEFAULTS.porto_piano,
+    } as ProfessionalRates
 }
 
 export async function saveRates(rates: ProfessionalRates): Promise<void> {
@@ -121,6 +134,9 @@ export function layingRate(rates: ProfessionalRates | null, layingType: LayingTy
 
 /** Tariffa di una lavorazione accessoria, con lo stesso criterio di ripiego. */
 export function serviceRate(rates: ProfessionalRates | null, chiave: string): number {
+    if (chiave === 'porto_piano') {
+        return num(rates?.porto_piano, RATE_DEFAULTS.porto_piano)
+    }
     const voce = VOCI_SERVIZI.find((v) => v.chiave === chiave)
     if (!voce) return 0
     return num(rates?.[voce.campo], RATE_DEFAULTS[voce.campo as keyof typeof RATE_DEFAULTS])
@@ -134,6 +150,7 @@ export function serviceRate(rates: ProfessionalRates | null, chiave: string): nu
 export const VOCI_MARKUP: { campo: string; label: string; gruppo: 'posa' | 'servizi' }[] = [
     ...VOCI_POSA.map((v) => ({ campo: String(v.campo), label: v.label, gruppo: 'posa' as const })),
     ...VOCI_SERVIZI.map((v) => ({ campo: String(v.campo), label: v.label, gruppo: 'servizi' as const })),
+    { campo: 'porto_piano', label: 'Porto materiale al piano (€/mq per piano)', gruppo: 'servizi' as const },
 ]
 
 /** Mappa voce -> percentuale. Le voci assenti usano il markup generale. */
@@ -169,3 +186,18 @@ export const campoPosa = (layingType: LayingType): string => CAMPO_PER_POSA[layi
 /** Vero se il professionista non esegue quella lavorazione. */
 export const servizioEscluso = (rates: ProfessionalRates | null, chiave: string): boolean =>
     Boolean(rates?.servizi_esclusi?.includes(chiave))
+
+/**
+ * Vero se il professionista offre il servizio di portare il materiale al piano.
+ */
+export const offersMaterialHandling = (rates: ProfessionalRates | null): boolean => {
+    if (!rates) return true
+    if (rates.porto_piano_attivo === false) return false
+    if (rates.servizi_esclusi?.includes('porto_piano')) return false
+    return true
+}
+
+/** Tariffa per portare il materiale al piano (€ al mq per piano). */
+export const materialHandlingRatePerFloor = (rates: ProfessionalRates | null): number => {
+    return num(rates?.porto_piano, RATE_DEFAULTS.porto_piano)
+}

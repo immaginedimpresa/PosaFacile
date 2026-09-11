@@ -22,9 +22,14 @@ interface Professional {
     distance_km: number | null
 }
 
+import { toast } from 'sonner'
+import { offersMaterialHandling } from '@/services/ratesService'
+
 export function Step7ProfessionalSelect() {
     const {
         location,
+        deliveryAccess,
+        setDeliveryAccess,
         selectedProfessional,
         setSelectedProfessional,
         setProfessionalRates,
@@ -107,8 +112,17 @@ export function Step7ProfessionalSelect() {
             markup_fixed: pro.markup_fixed ?? 0,
             markup_overrides: pro.markup_overrides ?? {},
         })
-        // In background carichiamo i listini del professionista per i passaggi successivi
-        setProfessionalRates(await fetchRates(pro.id))
+        const rates = await fetchRates(pro.id)
+        setProfessionalRates(rates)
+
+        // Se al passaggio precedente l'utente aveva scelto "Lo porta il posatore" ma questo posatore non offre il servizio:
+        if (deliveryAccess.handlingBy === 'pro' && !offersMaterialHandling(rates)) {
+            setDeliveryAccess({ handlingBy: 'client' })
+            toast.info(
+                `${pro.company_name || pro.full_name} non effettua il trasporto al piano: il materiale dovrà essere portato al piano a cura del cliente (o puoi scegliere la consegna al piano del corriere).`,
+                { duration: 6000 }
+            )
+        }
     }
 
     if (loading) {

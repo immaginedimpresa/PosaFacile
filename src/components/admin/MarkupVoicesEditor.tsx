@@ -126,7 +126,14 @@ export function MarkupVoicesEditor({
 
         return (
             <tr key={voce.campo} className="hover:bg-stone-50/50">
-                <td className="px-4 py-2.5 text-sm font-medium text-stone-800">{voce.label}</td>
+                <td className="px-4 py-2.5 text-sm font-medium text-stone-800">
+                    <span>{voce.label}</span>
+                    {voce.campo === 'porto_piano' && rates?.porto_piano_attivo === false && (
+                        <span className="ml-2 text-[10px] font-bold uppercase text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
+                            Disattivato dal posatore
+                        </span>
+                    )}
+                </td>
                 <td className="px-4 py-2.5 text-sm text-stone-600 text-right tabular-nums">
                     {base !== null ? `€ ${base.toFixed(2)}` : '—'}
                 </td>

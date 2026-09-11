@@ -21,6 +21,7 @@ export function StepDeliveryAccess() {
         getDeliveryBreakdown,
         loadLogisticsSettings,
         logisticsSettings,
+        selectedProfessional,
     } = useConfiguratorStore()
 
     useEffect(() => {
@@ -233,39 +234,68 @@ export function StepDeliveryAccess() {
                             </div>
 
                             {/* Lo porterà il posatore */}
-                            <div
-                                onClick={() => setDeliveryAccess({ handlingBy: 'pro' })}
-                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                                    handlingBy === 'pro'
-                                        ? 'border-orange-500 bg-orange-50/50 ring-2 ring-orange-500/10'
-                                        : 'border-stone-200 hover:border-stone-300 bg-white'
-                                }`}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                                        handlingBy === 'pro' ? 'bg-orange-500 text-white' : 'bg-stone-100 text-stone-500'
-                                    }`}>
-                                        <HardHat className="w-4 h-4" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            <h4 className="font-bold text-stone-900 text-sm">Lo porta il posatore</h4>
-                                            <span className="text-[10px] uppercase font-bold bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">
-                                                Servizio Posatore
-                                            </span>
+                            {selectedProfessional && breakdown.proOffersHandling === false ? (
+                                <div className="p-4 rounded-xl border-2 border-stone-200 bg-stone-50/70 opacity-60 flex flex-col justify-between cursor-not-allowed">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-stone-200 text-stone-400 flex items-center justify-center shrink-0">
+                                            <HardHat className="w-4 h-4" />
                                         </div>
-                                        <p className="text-xs text-stone-500 leading-relaxed">
-                                            Il posatore si occuperà di salire tutti i materiali dal {isStreet ? 'bordo strada' : 'box'} fino al piano di lavoro.
-                                        </p>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h4 className="font-bold text-stone-600 text-sm">Lo porta il posatore</h4>
+                                                <span className="text-[10px] uppercase font-bold bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded">
+                                                    Non offerto
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-stone-500 leading-relaxed">
+                                                {selectedProfessional.company_name || selectedProfessional.full_name} non esegue il servizio di trasporto materiali al piano.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 pt-2 border-t border-stone-200 flex items-center justify-between text-xs font-bold text-stone-400">
+                                        <span>Servizio non disponibile</span>
+                                        <span>—</span>
                                     </div>
                                 </div>
-                                <div className="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold">
-                                    <span className="text-stone-700">In base al piano e ascensore</span>
-                                    <span className="text-orange-700 font-black">
-                                        {isGround ? '€ 0.00' : `+€ ${breakdown.floorCost.toFixed(2)}`}
-                                    </span>
+                            ) : (
+                                <div
+                                    onClick={() => setDeliveryAccess({ handlingBy: 'pro' })}
+                                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                                        handlingBy === 'pro'
+                                            ? 'border-orange-500 bg-orange-50/50 ring-2 ring-orange-500/10'
+                                            : 'border-stone-200 hover:border-stone-300 bg-white'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                            handlingBy === 'pro' ? 'bg-orange-500 text-white' : 'bg-stone-100 text-stone-500'
+                                        }`}>
+                                            <HardHat className="w-4 h-4" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h4 className="font-bold text-stone-900 text-sm">Lo porta il posatore</h4>
+                                                <span className="text-[10px] uppercase font-bold bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">
+                                                    Servizio Posatore
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-stone-500 leading-relaxed">
+                                                Il posatore si occuperà di salire tutti i materiali dal {isStreet ? 'bordo strada' : 'box'} fino al piano di lavoro.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 pt-2 border-t border-stone-100 flex items-center justify-between text-xs font-bold">
+                                        <span className="text-stone-700">
+                                            {breakdown.proRatePerMqFloor && breakdown.proRatePerMqFloor > 0
+                                                ? `€ ${breakdown.proRatePerMqFloor.toFixed(2)}/mq per piano`
+                                                : 'A tariffa posatore per piano'}
+                                        </span>
+                                        <span className="text-orange-700 font-black">
+                                            {isGround ? '€ 0.00' : breakdown.floorCost > 0 ? `+€ ${breakdown.floorCost.toFixed(2)}` : 'Calcolato sui mq'}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Euro, Hammer, Info, Save, Wrench } from 'lucide-react'
+import { Euro, Hammer, Info, Save, Wrench, Truck } from 'lucide-react'
 import {
     VOCI_POSA,
     VOCI_SERVIZI,
@@ -58,6 +58,26 @@ export function RatesSettings({ professionalId, onSaved }: RatesSettingsProps) {
                 servizi_esclusi: esclusi.includes(chiave)
                     ? esclusi.filter((s) => s !== chiave)
                     : [...esclusi, chiave],
+            }
+        })
+    }
+
+    const isPortoPianoAttivo = rates.porto_piano_attivo !== false && !rates.servizi_esclusi?.includes('porto_piano')
+
+    const togglePortoPiano = () => {
+        setRates((prev) => {
+            if (!prev) return prev
+            const nuovoStato = !isPortoPianoAttivo
+            const esclusi = prev.servizi_esclusi ?? []
+            const nuoviEsclusi = nuovoStato
+                ? esclusi.filter((s) => s !== 'porto_piano')
+                : (esclusi.includes('porto_piano') ? esclusi : [...esclusi, 'porto_piano'])
+
+            return {
+                ...prev,
+                porto_piano_attivo: nuovoStato,
+                servizi_esclusi: nuoviEsclusi,
+                porto_piano: prev.porto_piano ?? 2.0,
             }
         })
     }
@@ -205,6 +225,90 @@ export function RatesSettings({ professionalId, onSaved }: RatesSettingsProps) {
                     </div>
             </div>
 
+            </div>
+
+            {/* Trasporto Materiale al Piano (dal punto di scarico strada/box al piano di lavoro) */}
+            <div className={CARD}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-5 mb-5">
+                    <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0">
+                            <Truck size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-base font-bold text-stone-900">Trasporto Materiale al Piano</h3>
+                                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                                    isPortoPianoAttivo
+                                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
+                                        : 'bg-stone-100 text-stone-500'
+                                }`}>
+                                    {isPortoPianoAttivo ? 'Servizio Attivo' : 'Non Eseguito'}
+                                </span>
+                            </div>
+                            <p className="text-xs text-stone-500 mt-0.5">
+                                Portare bancali, piastrelle e collante dal punto di scarico merci (bordo strada o box) fino al piano dell&apos;immobile
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Switch Toggle */}
+                    <div className="flex items-center gap-3 self-end sm:self-center">
+                        <span className="text-xs font-semibold text-stone-700">
+                            {isPortoPianoAttivo ? 'Eseguo il servizio' : 'Non la eseguo'}
+                        </span>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isPortoPianoAttivo}
+                            aria-label={`Trasporto materiale al piano: ${isPortoPianoAttivo ? 'attivo' : 'disattivato'}`}
+                            onClick={togglePortoPiano}
+                            className={`w-12 h-6 rounded-full flex-shrink-0 transition-colors relative cursor-pointer ${
+                                isPortoPianoAttivo ? 'bg-orange-500' : 'bg-stone-200'
+                            }`}
+                        >
+                            <span
+                                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                                    isPortoPianoAttivo ? 'left-0.5 translate-x-6' : 'left-0.5'
+                                }`}
+                            />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Tariffa al mq per piano */}
+                {isPortoPianoAttivo ? (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-center p-4 bg-orange-50/40 rounded-xl border border-orange-200/60">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-stone-800 mb-1">
+                                    Quanto prendi al mq per ciascun piano?
+                                </label>
+                                <p className="text-xs text-stone-500 leading-relaxed">
+                                    Compenso calcolato automaticamente moltiplicando la tua tariffa per i mq complessivi del cantiere e per il numero di piani da salire.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3 justify-start md:justify-end">
+                                <div className="w-36">
+                                    {campoPrezzo('porto_piano', rates.porto_piano as number | null)}
+                                </div>
+                                <span className="text-xs font-bold text-stone-600 whitespace-nowrap">
+                                    € / mq per piano
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="text-xs text-stone-500 flex items-center gap-2 bg-stone-50 p-3 rounded-lg border border-stone-100">
+                            <Info size={14} className="text-orange-500 shrink-0" />
+                            <span>
+                                <strong>Esempio di calcolo:</strong> per un appartamento al 2° piano di 50 mq, con tariffa di € {(Number(rates.porto_piano) || 2.0).toFixed(2)}/mq per piano, il tuo compenso per la movimentazione sarà di € {(50 * 2 * (Number(rates.porto_piano) || 2.0)).toFixed(2)}.
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-4 bg-stone-50 rounded-xl border border-stone-200/80 text-xs text-stone-500">
+                        Hai disattivato questo servizio. I clienti che selezionano te come posatore non potranno affidarti la salita dei materiali dal punto di scarico: dovranno portarli al piano autonomamente prima dell&apos;inizio della posa oppure richiedere la consegna al piano al corriere.
+                    </div>
+                )}
             </div>
 
             <button

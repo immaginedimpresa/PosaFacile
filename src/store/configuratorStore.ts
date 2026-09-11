@@ -407,11 +407,17 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             },
 
             getDeliveryBreakdown: () => {
-                const { deliveryAccess, logisticsSettings } = get()
+                const { deliveryAccess, logisticsSettings, dimensions, professionalRates, selectedProfessional } = get()
                 if (!logisticsSettings) {
                     get().loadLogisticsSettings()
                 }
-                return calculateDeliveryCost(deliveryAccess, logisticsSettings)
+                const baseMq = (dimensions?.pavimentoMq || 0) + (dimensions?.paretiMq || 0)
+                return calculateDeliveryCost(deliveryAccess, logisticsSettings, {
+                    baseMq,
+                    rates: professionalRates,
+                    markupPercent: selectedProfessional?.markup_percent,
+                    markupOverrides: selectedProfessional?.markup_overrides,
+                })
             },
 
             getDeliveryCost: () => {
