@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Upload, Camera, Sparkles, Download, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     visualizeTile,
+    readPhoto,
     type LayingPattern,
     type RoomType,
     type Surface,
@@ -54,6 +55,8 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
     const [error, setError] = useState<string | null>(null)
     const [layingPattern, setLayingPattern] = useState<LayingPattern>(initialLayingPattern)
     const [roomType, setRoomType] = useState<RoomType>(initialRoomType)
+    const [tileScale, setTileScale] = useState(1)
+    const requestId = useRef(0)
     const [surface, setSurface] = useState<Surface>(initialSurface)
 
     // Le scelte fatte altrove nel configuratore vanno adottate anche quando
@@ -77,28 +80,28 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
         if (initialImage) setImage(initialImage)
     }, [initialImage])
 
-    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                setError('Immagine troppo grande. Max 5MB.')
-                return
-            }
+    useEffect(() => {
+        requestId.current++
+        setProcessing(false)
+        setResultImage(null)
+    }, [productImageUrl, productId, tileWidth, tileHeight, image, layingPattern, surface, tileScale])
 
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setImage(reader.result as string)
-                onImageChange?.(reader.result as string)
-                setResultImage(null)
-                setError(null)
-            }
-            reader.readAsDataURL(file)
-        }
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        e.target.value = ''
+        if (!file) return
+        const { dataUrl, error: photoError } = await readPhoto(file)
+        if (photoError || !dataUrl) { setError(photoError); return }
+        setImage(dataUrl)
+        onImageChange?.(dataUrl)
+        setResultImage(null)
+        setError(null)
     }
 
     const handleVisualize = async () => {
         if (!image || !productImageUrl) return
 
+        const currentRequest = ++requestId.current
         setProcessing(true)
         setError(null)
 
@@ -111,7 +114,10 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
             surface,
             tileWidth,
             tileHeight,
+            tileScale,
         })
+
+        if (currentRequest !== requestId.current) return
 
         setProcessing(false)
 
@@ -140,6 +146,7 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
     }
 
     const handleReset = () => {
+        requestId.current++
         setImage(null)
         onImageChange?.(null)
         setResultImage(null)
@@ -195,7 +202,7 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                                 <div className="text-white flex flex-col items-center">
                                     <Sparkles className="w-12 h-12 animate-pulse mb-3 text-yellow-400" />
                                     <p className="font-semibold text-lg">L'IA sta elaborando...</p>
-                                    <p className="text-sm text-gray-300">Attendere 15-30 secondi</p>
+                                    <p className="text-sm text-gray-300">Riconoscimento della superficie e applicazione della piastrella</p>
                                 </div>
                             </div>
                         )}
@@ -204,7 +211,7 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                         {resultImage && !processing && (
                             <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                 <Sparkles size={14} />
-                                Generato con AI
+                                Anteprima della piastrella
                             </div>
                         )}
 
@@ -296,6 +303,16 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {!processing && (
+                        <label className="block text-sm text-gray-600">
+                            Dimensione apparente delle piastrelle: {Math.round(tileScale * 100)}%
+                            <input aria-label="Dimensione apparente delle piastrelle" type="range" min="0.5" max="2" step="0.1"
+                                value={tileScale} onChange={e => setTileScale(Number(e.target.value))}
+                                className="block w-full mt-2 accent-orange-500" />
+                            <span className="block text-xs mt-1">La scala della stanza è stimata dalla foto. Regola se le piastrelle appaiono troppo grandi o piccole, poi genera l’anteprima.</span>
+                        </label>
                     )}
 
                     {/* Error message */}

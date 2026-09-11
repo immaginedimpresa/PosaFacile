@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
     ArrowUpRight,
@@ -53,6 +53,7 @@ export function HeroTileStudio({
     result,
     onResultChange,
 }: HeroTileStudioProps) {
+    const requestId = useRef(0)
     const fileRef = useRef<HTMLInputElement>(null)
     const [generating, setGenerating] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -61,6 +62,8 @@ export function HeroTileStudio({
     const [superficie, setSuperficie] = useState<Surface>('floor')
     const [posa, setPosa] = useState<LayingPattern>('dritta')
     const [mostraOriginale, setMostraOriginale] = useState(false)
+
+    useEffect(() => { requestId.current++; setGenerating(false) }, [tile?.id, photo])
 
     const accettaFile = async (file: File | undefined | null) => {
         if (!file) return
@@ -78,6 +81,7 @@ export function HeroTileStudio({
         const tileImage = tileSampleUrl(tile)
         if (!photo || !tileImage) return
 
+        const currentRequest = ++requestId.current
         setGenerating(true)
         setError(null)
         const { image, error: genError } = await visualizeTile({
@@ -90,6 +94,7 @@ export function HeroTileStudio({
             tileWidth: tile?.format_width,
             tileHeight: tile?.format_height,
         })
+        if (currentRequest !== requestId.current) return
         setGenerating(false)
 
         if (genError || !image) {
@@ -107,7 +112,7 @@ export function HeroTileStudio({
             <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="pf-visually-hidden"
                 onChange={(e) => {
                     const file = e.target.files?.[0]
@@ -158,7 +163,7 @@ export function HeroTileStudio({
                     <div className="pf-studio-loading">
                         <Loader2 size={30} className="pf-spin" />
                         <p>Sto posando {tile?.name ?? 'la piastrella'}…</p>
-                        <small>Bastano pochi secondi</small>
+                        <small>Riconosco la superficie e applico il campione</small>
                     </div>
                 )}
 
@@ -240,6 +245,8 @@ export function HeroTileStudio({
                     </div>
                 )}
             </div>
+
+            {result && <p className="pf-studio-hint">Scala della stanza stimata dalla foto. Per regolarla, apri “Prova con AI”.</p>}
 
             {error && (
                 <p className="pf-studio-error" role="alert">

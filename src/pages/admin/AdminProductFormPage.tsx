@@ -242,7 +242,7 @@ export function AdminProductFormPage() {
                 <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs p-6">
                     <div className="-mx-6 px-6 pb-4 mb-6 border-b border-stone-100">
                         <h2 className="text-base sm:text-lg font-bold text-stone-900">Immagini e texture</h2>
-                        <p className="text-xs text-stone-500 mt-0.5">La prima immagine è quella che vede il cliente e che usa il visualizzatore</p>
+                        <p className="text-xs text-stone-500 mt-0.5">La prima immagine è la copertina del catalogo. Scegli il campione per l’anteprima qui sotto.</p>
                     </div>
                     <ImageUpload
                         images={formData.images as string[]}
@@ -256,7 +256,7 @@ export function AdminProductFormPage() {
                             Texture per Visualizzatore IA
                         </h3>
                         <p className="text-sm text-stone-500 mb-4">
-                            Scegli quale immagine usare per il rendering 3D/IA. Deve essere una foto piatta del materiale.
+                            Scegli una foto frontale di una singola piastrella, senza arredi o prospettiva. Per il mosaico usa un foglio completo. L’immagine sarà ripetuta con il formato indicato nella scheda: titolo e descrizione non ne modificano l’aspetto.
                         </p>
 
                         <div className="flex items-center gap-4">

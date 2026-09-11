@@ -24,6 +24,7 @@ export function Step7Summary() {
         getMaterialCost,
         getLayingCost,
         getDeliveryCost,
+        getDeliveryBreakdown,
         getSubtotal,
         getVat,
         getTotal,
@@ -45,6 +46,7 @@ export function Step7Summary() {
     const materialCost = getMaterialCost()
     const layingCost = getLayingCost()
     const deliveryCost = getDeliveryCost()
+    const deliveryBreakdown = getDeliveryBreakdown()
     const subtotal = getSubtotal()
     const vat = getVat()
     const total = getTotal()
@@ -522,7 +524,7 @@ export function Step7Summary() {
                                     : deliveryAccess.handlingBy === 'pro'
                                         ? (deliveryAccess.floorType === 'ground'
                                             ? 'Facchinaggio a piano terra a carico del posatore'
-                                            : `Facchinaggio a cura del posatore • ${deliveryAccess.hasFreightElevator ? 'Con montacarichi' : 'A piedi via scale'}`)
+                                            : `Facchinaggio a cura del posatore (${totalMq} m² × ${deliveryAccess.floorNumber}° piano @ €${(deliveryBreakdown.proRatePerMqFloor || 2).toFixed(2)}/m²/piano) • ${deliveryAccess.hasFreightElevator ? 'Con montacarichi' : 'A piedi via scale'}`)
                                         : 'Nessun costo: il cliente provvede personalmente alla movimentazione al piano'
                                 }
                                 {!deliveryAccess.hasUnloadingZone && ' • Sosta distante (>50m)'}
