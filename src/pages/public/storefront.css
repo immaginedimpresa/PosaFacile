@@ -1306,6 +1306,85 @@
     padding-top: 10px;
     padding-bottom: 10px;
 }
+.pf-config-workspace-footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 16px;
+    margin-top: 12px;
+    border-top: 1px solid #f2ede4;
+    background: #fff;
+    z-index: 10;
+}
+.pf-config-workspace-footer .pf-button,
+.pf-config-workspace-footer .pf-config-back {
+    cursor: pointer;
+    font-weight: 600;
+}
+.pf-config-workspace-footer .pf-button {
+    padding: 12px 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 10px;
+    font-size: 13px;
+}
+.pf-config-workspace-footer .pf-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.pf-config-workspace-footer .pf-config-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e7e5e4;
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: #57534e;
+    font-size: 13px;
+    background: #fff;
+    transition: all 0.2s;
+}
+.pf-config-workspace-footer .pf-config-back:hover {
+    background: #f5f5f4;
+    color: #1c1917;
+}
+.pf-config-workspace-footer-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.pf-config-workspace-phase-badge,
+.pf-config-workspace-step-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #78716c;
+    background: #fafaf9;
+    border: 1px solid #e7e5e4;
+    padding: 5px 12px;
+    border-radius: 9999px;
+}
+.pf-config-workspace-total {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 13px;
+    color: #1c1917;
+}
+.pf-config-workspace-total small {
+    font-size: 11px;
+    color: #78716c;
+}
+.pf-config-workspace-total strong {
+    font-weight: 700;
+    color: #0c0a09;
+}
 .pf-config-bottom {
     position: static;
     flex-shrink: 0;
@@ -1434,5 +1513,23 @@
     .pf-config-bottom .pf-button {
         min-height: 42px;
         padding-block: 11px;
+    }
+    .pf-config-workspace-footer {
+        padding-top: 10px;
+        margin-top: 8px;
+        gap: 8px;
+    }
+    .pf-config-workspace-footer-center {
+        display: none;
+    }
+    .pf-config-workspace-footer .pf-button {
+        padding: 10px 16px;
+        min-height: 42px;
+        font-size: 12px;
+    }
+    .pf-config-workspace-footer .pf-config-back {
+        padding: 10px 14px;
+        min-height: 42px;
+        font-size: 12px;
     }
 }

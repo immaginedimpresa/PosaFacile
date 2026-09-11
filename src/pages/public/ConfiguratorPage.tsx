@@ -67,6 +67,8 @@ export function ConfiguratorPage() {
         selectedProduct,
         location,
         deliveryAccess,
+        deliverySubStep,
+        setDeliverySubStep,
         projectInfo,
         dimensions,
         layingType,
@@ -178,8 +180,27 @@ export function ConfiguratorPage() {
 
     const handleNext = () => {
         if (!canProceed) return
+        if (currentStep === 2 && deliverySubStep < 4) {
+            setDeliverySubStep(deliverySubStep + 1)
+            const stepEl = document.querySelector('.pf-config-step')
+            if (stepEl) {
+                stepEl.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+            window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                    .matches
+                    ? 'instant'
+                    : 'smooth',
+            })
+            return
+        }
         if (currentStep < STEPS.length) {
             nextStep()
+            const stepEl = document.querySelector('.pf-config-step')
+            if (stepEl) {
+                stepEl.scrollTo({ top: 0, behavior: 'smooth' })
+            }
             window.scrollTo({
                 top: 0,
                 behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -193,8 +214,27 @@ export function ConfiguratorPage() {
     }
 
     const handlePrev = () => {
+        if (currentStep === 2 && deliverySubStep > 1) {
+            setDeliverySubStep(deliverySubStep - 1)
+            const stepEl = document.querySelector('.pf-config-step')
+            if (stepEl) {
+                stepEl.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+            window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                    .matches
+                    ? 'instant'
+                    : 'smooth',
+            })
+            return
+        }
         if (currentStep > 1) {
             prevStep()
+            const stepEl = document.querySelector('.pf-config-step')
+            if (stepEl) {
+                stepEl.scrollTo({ top: 0, behavior: 'smooth' })
+            }
             window.scrollTo({
                 top: 0,
                 behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -392,75 +432,87 @@ export function ConfiguratorPage() {
                         <div className="pf-config-step" key={currentStep}>
                             {renderStep()}
                         </div>
+
+                        {/* Footer con pulsanti Indietro e Avanti FISSI rispetto a pf-config-workspace */}
+                        <div className="pf-config-workspace-footer">
+                            {currentStep > 1 || (currentStep === 2 && deliverySubStep > 1) ? (
+                                <button
+                                    type="button"
+                                    className="pf-config-back"
+                                    aria-label="Passaggio precedente"
+                                    onClick={handlePrev}
+                                >
+                                    <ArrowLeft size={16} />
+                                    <span>Indietro</span>
+                                </button>
+                            ) : (
+                                <Link
+                                    to="/catalog"
+                                    className="pf-config-back"
+                                    aria-label="Torna al catalogo"
+                                >
+                                    <ArrowLeft size={16} />
+                                    <span>Catalogo</span>
+                                </Link>
+                            )}
+
+                            <div className="pf-config-workspace-footer-center">
+                                {currentStep === 2 ? (
+                                    <div className="pf-config-workspace-phase-badge">
+                                        <span>Fase <strong>{deliverySubStep}</strong> di 4</span>
+                                        <span className="text-stone-300">·</span>
+                                        <span className="font-semibold text-orange-600">
+                                            {deliverySubStep === 1 && 'Scarico'}
+                                            {deliverySubStep === 2 && 'Piano'}
+                                            {deliverySubStep === 3 && 'Movimentazione'}
+                                            {deliverySubStep === 4 && 'Sosta e note'}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="pf-config-workspace-step-badge">
+                                        <span>Passo <strong>{currentStep}</strong> di {STEPS.length}</span>
+                                    </div>
+                                )}
+                                {total > 0 && (
+                                    <div className="pf-config-workspace-total">
+                                        <small>Totale stimato:</small>
+                                        <strong>{formattedTotal}</strong>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                className="pf-button pf-button-orange"
+                                onClick={handleNext}
+                                disabled={!canProceed}
+                            >
+                                {currentStep === 2 && deliverySubStep < 4 ? (
+                                    <>
+                                        <span>Avanti</span>
+                                        <ArrowRight size={16} />
+                                    </>
+                                ) : currentStep < STEPS.length ? (
+                                    <>
+                                        <span>Continua</span>
+                                        <ArrowRight size={16} />
+                                    </>
+                                ) : !user ? (
+                                    <>
+                                        <LogIn size={16} />
+                                        <span>Accedi e conferma</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Conferma</span>
+                                        <Check size={16} />
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </main>
-            <div className="pf-config-bottom">
-                <div className="pf-container">
-                    {currentStep > 1 ? (
-                        <button
-                            className="pf-config-back"
-                            aria-label="Passaggio precedente"
-                            onClick={handlePrev}
-                        >
-                            <ArrowLeft size={17} />
-                            <span>Indietro</span>
-                        </button>
-                    ) : (
-                        <Link
-                            to="/catalog"
-                            className="pf-config-back"
-                            aria-label="Torna al catalogo"
-                        >
-                            <ArrowLeft size={17} />
-                            <span>Catalogo</span>
-                        </Link>
-                    )}
-                    <div className="pf-config-bottom-progress">
-                        <span>
-                            Passo {currentStep} di {STEPS.length}{' '}
-                            <strong>{STEPS[currentStep - 1]?.label}</strong>
-                        </span>
-                        <div
-                            role="progressbar"
-                            aria-label="Avanzamento del preventivo"
-                            aria-valuemin={1}
-                            aria-valuemax={STEPS.length}
-                            aria-valuenow={currentStep}
-                        >
-                            <span
-                                style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
-                            />
-                        </div>
-                    </div>
-                    {total > 0 && (
-                        <div className="pf-config-total">
-                            <small>Totale stimato · IVA inclusa</small>
-                            <strong>{formattedTotal}</strong>
-                        </div>
-                    )}
-                    <button
-                        className="pf-button pf-button-orange"
-                        onClick={handleNext}
-                        disabled={!canProceed}
-                    >
-                        {currentStep < STEPS.length ? (
-                            <>
-                                Continua <ArrowRight size={17} />
-                            </>
-                        ) : !user ? (
-                            <>
-                                <LogIn size={17} />
-                                <span>Accedi e conferma</span>
-                            </>
-                        ) : (
-                            <>
-                                Conferma <Check size={17} />
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
         </div>
     )
 }

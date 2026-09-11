@@ -156,6 +156,8 @@ export interface ConfiguratorState {
     setServices: (services: Partial<AdditionalServices>) => void
     setLocation: (loc: Partial<LocationInfo>) => void
     setDeliveryAccess: (access: Partial<DeliveryAccessInfo>) => void
+    deliverySubStep: number
+    setDeliverySubStep: (step: number) => void
     loadLogisticsSettings: (force?: boolean) => Promise<void>
     setSelectedProfessional: (pro: SelectedProfessional | null) => void
     setProfessionalRates: (rates: ProfessionalRates | null) => void
@@ -224,6 +226,7 @@ const initialState = {
         hasFreightElevator: false,
         logisticsNotes: '',
     },
+    deliverySubStep: 1,
     logisticsSettings: null as LogisticsSettings | null,
     activeQuoteId: null,
     selectedProfessional: null,
@@ -346,6 +349,8 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             setDeliveryAccess: (access) => set((state) => ({
                 deliveryAccess: { ...state.deliveryAccess, ...access }
             })),
+
+            setDeliverySubStep: (step) => set({ deliverySubStep: Math.max(1, Math.min(4, step)) }),
 
             loadLogisticsSettings: async (force = false) => {
                 try {

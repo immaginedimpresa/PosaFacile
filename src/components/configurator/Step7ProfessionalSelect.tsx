@@ -136,7 +136,7 @@ export function Step7ProfessionalSelect() {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold mb-2">Scegli il tuo Professionista</h2>
+
                 <p className="text-gray-600">
                     {widenedToRegion
                         ? <>Nessun posatore copre <strong>{location.provincia}</strong>: ecco i disponibili nella stessa regione</>
@@ -163,7 +163,7 @@ export function Step7ProfessionalSelect() {
                     </button>
                 </motion.div>
             ) : (
-                <div className="space-y-4 max-h-[32rem] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[34rem] overflow-y-auto pr-1">
                     {professionals.map((pro, index) => {
                         const isSelected = selectedProfessional?.id === pro.id
                         return (
@@ -171,67 +171,58 @@ export function Step7ProfessionalSelect() {
                                 key={pro.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.06 }}
+                                transition={{ delay: index * 0.05 }}
                                 onClick={() => handleSelect(pro)}
-                                className={`p-5 sm:p-6 rounded-2xl border-2 cursor-pointer transition-all ${isSelected
+                                className={`p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${isSelected
                                     ? 'border-orange-500 bg-orange-50/50 ring-2 ring-orange-500/10 shadow-xs'
                                     : 'border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50/50'
                                     }`}
                             >
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center text-white text-xl sm:text-2xl font-bold flex-shrink-0 shadow-xs">
-                                            {pro.full_name?.charAt(0) || 'P'}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="text-base sm:text-lg font-bold text-stone-900 truncate">{pro.full_name}</h3>
-                                                {isSelected && (
-                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-orange-100 text-orange-800 px-2 py-0.5 rounded-md sm:hidden">
-                                                        Selezionato
-                                                    </span>
+                                <div>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-xs">
+                                                {pro.full_name?.charAt(0) || 'P'}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className="text-base font-bold text-stone-900 truncate">{pro.full_name}</h3>
+                                                {pro.company_name && (
+                                                    <p className="text-stone-500 text-xs truncate">{pro.company_name}</p>
                                                 )}
                                             </div>
-                                            {pro.company_name && (
-                                                <p className="text-stone-500 text-xs sm:text-sm truncate">{pro.company_name}</p>
-                                            )}
-                                            <div className="flex items-center gap-3 sm:gap-4 mt-2 flex-wrap">
-                                                <div className="flex items-center gap-1">
-                                                    <Star className="text-yellow-500 fill-yellow-500" size={15} />
-                                                    <span className="font-bold text-xs sm:text-sm text-stone-800">{pro.rating.toFixed(1)}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1 text-stone-600">
-                                                    <Briefcase size={15} className="text-stone-400" />
-                                                    <span className="text-xs sm:text-sm">{pro.years_experience} anni</span>
-                                                </div>
-                                                {pro.distance_km !== null && (
-                                                    <div className="flex items-center gap-1 text-stone-600">
-                                                        <MapPin size={15} className="text-stone-400" />
-                                                        <span className="text-xs sm:text-sm">
-                                                            a {Math.round(pro.distance_km)} km
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {pro.bio && (
-                                                <p className="text-stone-500 text-xs mt-2 line-clamp-2 leading-relaxed">{pro.bio}</p>
-                                            )}
                                         </div>
-                                    </div>
-
-                                    {/* Action button: no price / estimate shown! */}
-                                    <div className="text-right flex-shrink-0">
                                         {isSelected ? (
-                                            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-500 text-white text-xs sm:text-sm font-bold shadow-xs">
-                                                <Check size={16} />
-                                                <span>Selezionato</span>
+                                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-bold shrink-0 shadow-xs">
+                                                <Check size={14} />
+                                                <span>Scelto</span>
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center px-4 py-2 rounded-xl border border-stone-200 text-stone-700 bg-white hover:bg-stone-100 text-xs sm:text-sm font-semibold transition-all">
-                                                Seleziona
+                                            <span className="inline-flex items-center px-3 py-1.5 rounded-lg border border-stone-200 text-stone-700 bg-white hover:bg-stone-100 text-xs font-semibold shrink-0 transition-all">
+                                                Scegli
                                             </span>
                                         )}
                                     </div>
+
+                                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-stone-100 flex-wrap text-xs text-stone-600">
+                                        <div className="flex items-center gap-1 font-semibold text-stone-800">
+                                            <Star className="text-yellow-500 fill-yellow-500" size={14} />
+                                            <span>{pro.rating.toFixed(1)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Briefcase size={14} className="text-stone-400" />
+                                            <span>{pro.years_experience} anni</span>
+                                        </div>
+                                        {pro.distance_km !== null && (
+                                            <div className="flex items-center gap-1">
+                                                <MapPin size={14} className="text-stone-400" />
+                                                <span>~{Math.round(pro.distance_km)} km</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {pro.bio && (
+                                        <p className="text-stone-500 text-xs mt-2.5 line-clamp-2 leading-relaxed">{pro.bio}</p>
+                                    )}
                                 </div>
                             </motion.div>
                         )

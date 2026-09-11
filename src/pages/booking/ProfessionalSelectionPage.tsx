@@ -89,7 +89,7 @@ export function ProfessionalSelectionPage() {
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Scegli il tuo Professionista</h1>
+
                     <p className="text-gray-600">
                         Professionisti disponibili in provincia di <strong>{installationAddress?.province}</strong> ({installationAddress?.city})
                     </p>
@@ -127,55 +127,51 @@ export function ProfessionalSelectionPage() {
                 )}
 
                 {/* Professionals List */}
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {professionals.map((pro, index) => (
                         <motion.div
                             key={pro.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow"
+                            transition={{ delay: index * 0.06 }}
+                            className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 hover:shadow-md transition-all flex flex-col justify-between"
                         >
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                                {/* Info */}
-                                <div className="flex-1">
-                                    <div className="flex items-start gap-4 mb-3">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                            <div>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-xs">
                                             {pro.full_name?.charAt(0) || 'P'}
                                         </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-gray-900">{pro.full_name}</h3>
+                                        <div className="min-w-0">
+                                            <h3 className="text-base font-bold text-gray-900 truncate">{pro.full_name}</h3>
                                             {pro.company_name && (
-                                                <p className="text-gray-600">{pro.company_name}</p>
+                                                <p className="text-gray-500 text-xs truncate">{pro.company_name}</p>
                                             )}
-                                            <div className="flex items-center gap-4 mt-2">
-                                                {/* Rating */}
-                                                <div className="flex items-center gap-1">
-                                                    <Star className="text-yellow-500 fill-yellow-500" size={16} />
-                                                    <span className="font-semibold text-gray-900">{pro.rating.toFixed(1)}</span>
-                                                </div>
-                                                {/* Experience */}
-                                                <div className="flex items-center gap-1 text-gray-600">
-                                                    <Briefcase size={16} />
-                                                    <span className="text-sm">{pro.years_experience} anni</span>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
-                                    {/* Bio */}
-                                    {pro.bio && (
-                                        <p className="text-gray-600 text-sm line-clamp-2">{pro.bio}</p>
-                                    )}
+                                    <button
+                                        onClick={() => handleSelectProfessional(pro)}
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-colors shrink-0"
+                                    >
+                                        <span>Scegli</span>
+                                        <ArrowRight size={14} />
+                                    </button>
                                 </div>
 
-                                {/* Action */}
-                                <button
-                                    onClick={() => handleSelectProfessional(pro)}
-                                    className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-colors whitespace-nowrap"
-                                >
-                                    Scegli
-                                    <ArrowRight size={20} />
-                                </button>
+                                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100 flex-wrap text-xs text-gray-600">
+                                    <div className="flex items-center gap-1 font-semibold text-gray-900">
+                                        <Star className="text-yellow-500 fill-yellow-500" size={14} />
+                                        <span>{pro.rating.toFixed(1)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Briefcase size={14} className="text-gray-400" />
+                                        <span>{pro.years_experience} anni</span>
+                                    </div>
+                                </div>
+
+                                {pro.bio && (
+                                    <p className="text-gray-600 text-xs mt-2.5 line-clamp-2 leading-relaxed">{pro.bio}</p>
+                                )}
                             </div>
                         </motion.div>
                     ))}
