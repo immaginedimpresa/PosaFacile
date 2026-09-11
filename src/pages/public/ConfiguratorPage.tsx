@@ -18,7 +18,6 @@ import {
     ArrowLeft,
     ArrowRight,
     Check,
-    Layers,
     Trash2,
     LogIn,
 } from 'lucide-react'
@@ -281,9 +280,6 @@ export function ConfiguratorPage() {
                     </nav>
                     <div>
                         <div>
-                            <p className="pf-eyebrow">
-                                LA TUA IDEA, IL NOSTRO PROSSIMO PROGETTO
-                            </p>
                             <h1>
                                 Facciamo spazio
                                 <br />
@@ -363,14 +359,6 @@ export function ConfiguratorPage() {
                                 ))}
                             </ol>
                         </nav>
-                        <div className="pf-config-sidebar-note">
-                            <Layers size={24} strokeWidth={1.4} />
-                            <h3>La tua casa, le tue scelte.</h3>
-                            <p>
-                                Puoi tornare ai passaggi precedenti e rivedere
-                                ogni dettaglio prima di confermare.
-                            </p>
-                        </div>
                     </aside>
                     <div className="pf-config-workspace">
                         <div className="pf-config-form-heading">
