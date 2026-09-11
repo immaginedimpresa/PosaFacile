@@ -138,6 +138,7 @@ export interface ConfiguratorState {
     /** Tariffe del posatore scelto: sono loro a fare il preventivo. */
     professionalRates: ProfessionalRates | null
     selectedDate: Date | null
+    aiRoomImage: string | null
     aiResultImage: string | null
 
     // Actions
@@ -158,6 +159,7 @@ export interface ConfiguratorState {
     setSelectedProfessional: (pro: SelectedProfessional | null) => void
     setProfessionalRates: (rates: ProfessionalRates | null) => void
     setSelectedDate: (date: Date | null) => void
+    setAiRoomImage: (image: string | null) => void
     setAiResultImage: (image: string | null) => void
 
     // Computed
@@ -225,6 +227,7 @@ const initialState = {
     selectedProfessional: null,
     professionalRates: null,
     selectedDate: null,
+    aiRoomImage: null,
     aiResultImage: null,
 }
 
@@ -235,7 +238,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
 
             setCurrentStep: (step) => set({ currentStep: step }),
             setActiveQuoteId: (id) => set({ activeQuoteId: id }),
-            nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 10) })),
+            nextStep: () => set((state) => ({ currentStep: Math.min(state.currentStep + 1, 11) })),
             prevStep: () => set((state) => ({ currentStep: Math.max(state.currentStep - 1, 1) })),
 
             loadFromSavedQuote: (quote: any) => {
@@ -260,7 +263,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
 
                 set({
                     activeQuoteId: quote.id,
-                    currentStep: 10, // Go straight to summary
+                    currentStep: 11, // Go straight to summary
                     projectInfo: {
                         ambiente: quote.project_type || 'soggiorno',
                         intervento: 'ristrutturazione',
@@ -304,6 +307,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                         logisticsNotes: quote.delivery_access?.logisticsNotes || servicesObj.delivery_access?.logisticsNotes || '',
                     },
                     selectedDate: quote.scheduled_date ? new Date(quote.scheduled_date) : null,
+                    aiRoomImage: null,
                     aiResultImage: quote.ai_result_image || null,
                 })
             },
@@ -353,6 +357,7 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
             setProfessionalRates: (rates) => set({ professionalRates: rates }),
             setSelectedDate: (date) => set({ selectedDate: date }),
 
+            setAiRoomImage: (image) => set({ aiRoomImage: image }),
             setAiResultImage: (image) => set({ aiResultImage: image }),
 
             getTotalMq: () => {

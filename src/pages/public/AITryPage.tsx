@@ -53,7 +53,7 @@ export function AITryPage() {
     // sul server finche' l'utente non genera davvero l'anteprima.
     const daHome = (location.state ?? {}) as { photo?: string; productId?: string | null }
     const { products, loading } = useProducts({ status: 'active', limit: 12 })
-    const { setSelectedProduct, setAiResultImage, setCurrentStep } = useConfiguratorStore()
+    const { setSelectedProduct, setAiResultImage, setAiRoomImage, setCurrentStep } = useConfiguratorStore()
 
     const [selectedId, setSelectedId] = useState<string | null>(
         daHome.productId ?? searchParams.get('product'),
@@ -74,6 +74,7 @@ export function AITryPage() {
     const continuaAlPreventivo = () => {
         if (!prodotto) return
         setSelectedProduct(toSelectedProduct(prodotto))
+        if (foto) setAiRoomImage(foto)
         if (risultato) setAiResultImage(risultato)
         // Il prodotto è scelto: si riparte dal luogo di posa, non dal catalogo.
         setCurrentStep(1)

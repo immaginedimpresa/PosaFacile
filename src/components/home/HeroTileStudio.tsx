@@ -55,7 +55,9 @@ export function HeroTileStudio({
 }: HeroTileStudioProps) {
     const requestId = useRef(0)
     const fileRef = useRef<HTMLInputElement>(null)
-    const [generating, setGenerating] = useState(false)
+    const [pending, setPending] = useState<{ tileId?: string; photo: string | null } | null>(null)
+    const generating = pending !== null && pending.tileId === tile?.id && pending.photo === photo
+    const setGenerating = (value: boolean) => setPending(value ? { tileId: tile?.id, photo } : null)
     const [error, setError] = useState<string | null>(null)
     const [dragging, setDragging] = useState(false)
     const [ambiente, setAmbiente] = useState<RoomType>('soggiorno')
@@ -63,7 +65,11 @@ export function HeroTileStudio({
     const [posa, setPosa] = useState<LayingPattern>('dritta')
     const [mostraOriginale, setMostraOriginale] = useState(false)
 
-    useEffect(() => { requestId.current++; setGenerating(false) }, [tile?.id, photo])
+    useEffect(() => {
+        const counter = requestId
+        counter.current++
+        return () => { counter.current++ }
+    }, [tile?.id, photo])
 
     const accettaFile = async (file: File | undefined | null) => {
         if (!file) return
@@ -246,7 +252,7 @@ export function HeroTileStudio({
                 )}
             </div>
 
-            {result && <p className="pf-studio-hint">Scala della stanza stimata dalla foto. Per regolarla, apri “Prova con AI”.</p>}
+            {result && <p className="pf-studio-hint">Scala della stanza stimata dalla foto. Per regolarla, apri <Link to="/prova-ai" state={{ photo, productId: tile?.id }}>Prova con AI</Link>.</p>}
 
             {error && (
                 <p className="pf-studio-error" role="alert">

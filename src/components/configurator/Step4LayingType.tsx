@@ -1,9 +1,5 @@
-import { Sparkles } from 'lucide-react'
-import { AIVisualizer } from '@/components/ai/AIVisualizer'
 import { useConfiguratorStore, LAYING_TYPE_LABELS, type LayingType } from '@/store/configuratorStore'
 import { layingRate, markupMultiplier, campoPosa } from '@/services/ratesService'
-import { tileSampleUrl, type RoomType, type Surface } from '@/lib/tileVisualizer'
-
 
 const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
     { value: 'dritta', pattern: '▢ ▢ ▢\n▢ ▢ ▢\n▢ ▢ ▢' },
@@ -15,24 +11,17 @@ const LAYING_TYPES: { value: LayingType; pattern: string }[] = [
 
 export function Step4LayingType() {
     const {
-        layingType, setLayingType, getLayingCost, selectedProduct, setAiResultImage,
-        professionalRates, selectedProfessional, dimensions, projectInfo,
+        layingType,
+        setLayingType,
+        getLayingCost,
+        professionalRates,
+        selectedProfessional,
+        dimensions,
     } = useConfiguratorStore()
 
     const layingCost = getLayingCost()
     const baseMq = dimensions.pavimentoMq + dimensions.paretiMq
 
-    // L'anteprima riceveva sempre "pavimento" e "soggiorno", qualunque cosa
-    // avesse configurato il cliente. Sono le due informazioni che decidono cosa
-    // viene sostituito nella foto, e le abbiamo gia' chieste due passi fa: chi
-    // ha messo a preventivo solo il rivestimento di un bagno vedeva rifare il
-    // pavimento di un soggiorno.
-    const superficie: Surface = dimensions.paretiMq > dimensions.pavimentoMq ? 'wall' : 'floor'
-    // 'altro' non e' un ambiente che il generatore conosca: meglio tacere che
-    // dichiarare il valore sbagliato.
-    const ambiente = projectInfo.ambiente && projectInfo.ambiente !== 'altro'
-        ? (projectInfo.ambiente as RoomType)
-        : undefined
     const multiplierFor = (type: LayingType) =>
         markupMultiplier(
             campoPosa(type),
@@ -61,6 +50,7 @@ export function Step4LayingType() {
                     return (
                         <button
                             key={value}
+                            type="button"
                             onClick={() => setLayingType(value)}
                             className={`p-4 rounded-xl border-2 text-left transition-all ${isSelected ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
                                 }`}
@@ -104,32 +94,6 @@ export function Step4LayingType() {
                     Basato sulla superficie e tipo di posa selezionato
                 </p>
             </div>
-
-
-
-            {/* Visualizzatore AI: richiede piastrella e tipo di posa, entrambi noti a questo punto */}
-            {selectedProduct && selectedProduct.images && selectedProduct.images.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-5 h-5 text-purple-600" />
-                        <span className="font-medium text-purple-900">Visualizza nel tuo ambiente</span>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Carica una foto della tua stanza per vedere l'effetto finale con la posa {LAYING_TYPE_LABELS[layingType].toLowerCase()}.
-                    </p>
-                    <AIVisualizer
-                        productImageUrl={tileSampleUrl(selectedProduct)}
-                        productId={selectedProduct.id}
-                        productName={selectedProduct.name}
-                        tileWidth={selectedProduct.format_width ?? undefined}
-                        tileHeight={selectedProduct.format_height ?? undefined}
-                        initialLayingPattern={layingType}
-                        initialSurface={superficie}
-                        initialRoomType={ambiente}
-                        onResultGenerated={(img) => setAiResultImage(img)}
-                    />
-                </div>
-            )}
         </div>
     )
 }

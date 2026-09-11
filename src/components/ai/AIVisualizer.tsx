@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Upload, Camera, Sparkles, Download, RotateCcw } from 'lucide-react'
+import { Upload, Camera, Sparkles, Download, RotateCcw, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     visualizeTile,
@@ -18,6 +18,8 @@ interface AIVisualizerProps {
     initialLayingPattern?: LayingPattern
     /** Foto gia' caricata altrove, per esempio dalla home. */
     initialImage?: string | null
+    /** Risultato AI già generato. */
+    initialResultImage?: string | null
     initialRoomType?: RoomType
     /** Superficie da sostituire; se assente l'utente la sceglie qui. */
     initialSurface?: Surface
@@ -48,15 +50,17 @@ const ROOM_TYPES: { value: RoomType; label: string }[] = [
     { value: 'esterno', label: 'Esterno' },
 ]
 
-export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', initialImage = null, initialRoomType = 'soggiorno', initialSurface = 'floor', onImageChange, onResultGenerated }: AIVisualizerProps) {
+export function AIVisualizer({ productImageUrl, productId, productName = 'piastrella selezionata', tileWidth, tileHeight, initialLayingPattern = 'dritta', initialImage = null, initialResultImage = null, initialRoomType = 'soggiorno', initialSurface = 'floor', onImageChange, onResultGenerated }: AIVisualizerProps) {
     const [image, setImage] = useState<string | null>(initialImage)
-    const [resultImage, setResultImage] = useState<string | null>(null)
+    const [resultImage, setResultImage] = useState<string | null>(initialResultImage)
+    const [showOriginal, setShowOriginal] = useState(false)
     const [processing, setProcessing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [layingPattern, setLayingPattern] = useState<LayingPattern>(initialLayingPattern)
     const [roomType, setRoomType] = useState<RoomType>(initialRoomType)
     const [tileScale, setTileScale] = useState(1)
     const requestId = useRef(0)
+    const isFirstRender = useRef(true)
     const [surface, setSurface] = useState<Surface>(initialSurface)
 
     // Le scelte fatte altrove nel configuratore vanno adottate anche quando
@@ -81,10 +85,21 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
     }, [initialImage])
 
     useEffect(() => {
+        if (initialResultImage) setResultImage(initialResultImage)
+    }, [initialResultImage])
+
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false
+            return
+        }
         requestId.current++
         setProcessing(false)
         setResultImage(null)
+        setShowOriginal(false)
     }, [productImageUrl, productId, tileWidth, tileHeight, image, layingPattern, surface, tileScale])
+
+    useEffect(() => () => { requestId.current++ }, [])
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -150,6 +165,7 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
         setImage(null)
         onImageChange?.(null)
         setResultImage(null)
+        setShowOriginal(false)
         setError(null)
     }
 
@@ -184,8 +200,8 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                     {/* Image Display */}
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-black/5">
                         <img
-                            src={resultImage || image}
-                            alt={resultImage ? "Visualizzazione AI" : "La tua stanza"}
+                            src={resultImage && !showOriginal ? resultImage : (image ?? '')}
+                            alt={resultImage && !showOriginal ? "Visualizzazione AI" : "La tua stanza"}
                             className="w-full h-full object-contain"
                         />
 
@@ -207,25 +223,45 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                             </div>
                         )}
 
-                        {/* Result badge */}
+                        {/* Result badge / original badge */}
                         {resultImage && !processing && (
-                            <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-                                <Sparkles size={14} />
-                                Anteprima della piastrella
+                            <div className="absolute top-4 left-4 flex items-center gap-2">
+                                {showOriginal ? (
+                                    <div className="bg-slate-800/90 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow backdrop-blur-sm">
+                                        Stanza originale (Prima)
+                                    </div>
+                                ) : (
+                                    <div className="bg-green-600/95 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow backdrop-blur-sm">
+                                        <Sparkles size={13} />
+                                        Nuova Posa (Dopo)
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {/* Download rapido sull'immagine */}
+                        {/* Quick actions on image when resultImage is present */}
                         {resultImage && !processing && (
-                            <button
-                                type="button"
-                                onClick={handleDownload}
-                                title="Scarica immagine"
-                                aria-label="Scarica immagine"
-                                className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-md backdrop-blur hover:bg-white hover:text-gray-900 transition-colors"
-                            >
-                                <Download size={16} />
-                            </button>
+                            <div className="absolute top-4 right-4 flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOriginal(!showOriginal)}
+                                    title={showOriginal ? "Mostra anteprima posa" : "Mostra stanza originale"}
+                                    aria-label={showOriginal ? "Mostra anteprima posa" : "Mostra stanza originale"}
+                                    className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-white/90 text-gray-800 text-xs font-medium shadow-md backdrop-blur hover:bg-white transition-colors"
+                                >
+                                    <Eye size={14} className="text-orange-500" />
+                                    <span>{showOriginal ? 'Vedi Nuova Posa' : 'Vedi Prima'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDownload}
+                                    title="Scarica immagine"
+                                    aria-label="Scarica immagine"
+                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-md backdrop-blur hover:bg-white hover:text-gray-900 transition-colors"
+                                >
+                                    <Download size={15} />
+                                </button>
+                            </div>
                         )}
                     </div>
 
@@ -323,22 +359,33 @@ export function AIVisualizer({ productImageUrl, productId, productName = 'piastr
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex justify-center gap-3 pt-2">
+                    <div className="flex flex-wrap justify-center gap-3 pt-2">
                         <Button onClick={handleReset} variant="ghost" disabled={processing}>
                             <RotateCcw size={16} className="mr-2" />
                             {resultImage ? 'Nuova Foto' : 'Cambia Foto'}
                         </Button>
 
                         {resultImage ? (
-                            <Button onClick={handleDownload} className="gap-2 bg-green-600 hover:bg-green-700">
-                                <Download size={16} />
-                                Scarica Immagine
-                            </Button>
+                            <>
+                                <Button
+                                    type="button"
+                                    onClick={() => setShowOriginal(!showOriginal)}
+                                    variant="outline"
+                                    className="gap-2 border-orange-200 text-orange-700 hover:bg-orange-50"
+                                >
+                                    <Eye size={16} />
+                                    {showOriginal ? 'Mostra Simulazione' : 'Confronta con Originale'}
+                                </Button>
+                                <Button onClick={handleDownload} className="gap-2 bg-green-600 hover:bg-green-700 text-white">
+                                    <Download size={16} />
+                                    Scarica Immagine
+                                </Button>
+                            </>
                         ) : (
                             <Button
                                 onClick={handleVisualize}
                                 disabled={processing || !productImageUrl}
-                                className="gap-2 bg-orange-500 hover:bg-orange-600"
+                                className="gap-2 bg-orange-500 hover:bg-orange-600 text-white"
                             >
                                 <Sparkles size={16} />
                                 {processing ? 'Elaborazione...' : 'Genera Visualizzazione'}
