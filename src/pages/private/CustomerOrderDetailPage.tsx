@@ -229,14 +229,45 @@ export function CustomerOrderDetailPage() {
                     .limit(1)
                     .maybeSingle()
 
-                if (jobData?.id) {
-                    setJobId(jobData.id)
-                    setJobStatus(jobData.status)
-                } else {
-                    const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', { p_order_id: id })
-                    if (typeof rpcJobId === 'string' && rpcJobId) {
-                        setJobId(rpcJobId)
+                let resolvedJobId = jobData?.id || null
+                let resolvedJobStatus = jobData?.status || null
+
+                if (!resolvedJobId) {
+                    const proId = (formattedOrder as any).installation_professional_id || (formattedOrder as any).professional_id
+                    if (proId) {
+                        const { data: newJob } = await supabase
+                            .from('jobs')
+                            .insert({
+                                order_id: id,
+                                professional_id: proId,
+                                status: 'assigned',
+                                scheduled_date: (formattedOrder as any).installation_date || null,
+                                notes: 'Creato per chat di cantiere'
+                            })
+                            .select('id, status')
+                            .maybeSingle()
+                        if (newJob?.id) {
+                            resolvedJobId = newJob.id
+                            resolvedJobStatus = newJob.status
+                        }
                     }
+
+                    if (!resolvedJobId) {
+                        try {
+                            const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', { p_order_id: id })
+                            if (typeof rpcJobId === 'string' && rpcJobId) {
+                                resolvedJobId = rpcJobId
+                                resolvedJobStatus = 'assigned'
+                            }
+                        } catch {
+                            // ignore rpc
+                        }
+                    }
+                }
+
+                if (resolvedJobId) {
+                    setJobId(resolvedJobId)
+                    setJobStatus(resolvedJobStatus || 'assigned')
                 }
             } catch (jobErr) {
                 console.warn('Job chat ID fetch warning:', jobErr)
@@ -249,19 +280,27 @@ export function CustomerOrderDetailPage() {
         }
     }
 
-    // Scroll automatico alla chat o tab specifica se presente l'ancora nell'URL
+    // Scroll automatico alla chat o tab specifica se presente l'ancora o query param nell'URL
     useEffect(() => {
         if (!loading) {
-            if (window.location.hash === '#chat-cantiere' || window.location.hash === '#professionista') {
+            const searchParams = new URLSearchParams(window.location.search)
+            const tabParam = searchParams.get('tab')
+
+            if (
+                window.location.hash === '#chat-cantiere' ||
+                window.location.hash === '#professionista' ||
+                tabParam === 'chat' ||
+                tabParam === 'professional'
+            ) {
                 setActiveTab('professional')
                 const timer = setTimeout(() => {
                     const el = document.getElementById('chat-cantiere')
                     el?.scrollIntoView({ behavior: 'smooth' })
                 }, 300)
                 return () => clearTimeout(timer)
-            } else if (window.location.hash === '#superfici') {
+            } else if (window.location.hash === '#superfici' || tabParam === 'surfaces') {
                 setActiveTab('surfaces')
-            } else if (window.location.hash === '#stato') {
+            } else if (window.location.hash === '#stato' || tabParam === 'status') {
                 setActiveTab('status')
             }
         }
@@ -437,16 +476,39 @@ export function CustomerOrderDetailPage() {
                         </p>
                     </div>
 
-                    <div className="sm:text-right flex items-baseline sm:flex-col justify-between sm:justify-center gap-0.5 bg-stone-50/80 sm:bg-transparent p-2.5 sm:p-0 rounded-xl border border-stone-200/60 sm:border-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                            Importo Totale {titleType}
-                        </p>
-                        <div className="flex items-baseline gap-1.5 sm:justify-end">
-                            <p className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-                                €{totalCost.toFixed(2)}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 justify-between sm:justify-end">
+                        <div className="sm:text-right flex items-baseline sm:flex-col justify-between sm:justify-center gap-0.5 bg-stone-50/80 sm:bg-transparent p-2.5 sm:p-0 rounded-xl border border-stone-200/60 sm:border-0">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                                Importo Totale {titleType}
                             </p>
-                            <span className="text-[11px] text-stone-500 font-medium">IVA e posa inclusi</span>
+                            <div className="flex items-baseline gap-1.5 sm:justify-end">
+                                <p className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
+                                    €{totalCost.toFixed(2)}
+                                </p>
+                                <span className="text-[11px] text-stone-500 font-medium">IVA e posa inclusi</span>
+                            </div>
                         </div>
+
+                        {!isDraft && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab('professional')
+                                    setTimeout(() => {
+                                        const el = document.getElementById('chat-cantiere')
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' })
+                                    }, 200)
+                                }}
+                                className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
+                            >
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                </span>
+                                <MessageSquare size={15} />
+                                <span>Apri Chat Cantiere</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -505,18 +567,27 @@ export function CustomerOrderDetailPage() {
                 <button
                     type="button"
                     onClick={() => setActiveTab('professional')}
-                    className={`flex-1 flex items-center justify-center sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    className={`flex-1 flex items-center justify-between sm:justify-start gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                         activeTab === 'professional'
                             ? 'bg-white text-stone-900 shadow-xs border border-stone-200/80'
                             : 'text-stone-600 hover:text-stone-900 hover:bg-white/60'
                     }`}
                 >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeTab === 'professional' ? 'bg-purple-50 text-purple-600' : 'bg-stone-200/60 text-stone-500'}`}>
-                        <MessageSquare size={17} />
-                    </div>
-                    <div className="text-left">
-                        <div className="leading-tight">Professionista Incaricato & Chat</div>
-                        <div className="text-[10px] font-normal text-stone-400 hidden sm:block">Referente e messaggi</div>
+                    <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center relative ${activeTab === 'professional' ? 'bg-orange-50 text-orange-600' : 'bg-stone-200/60 text-stone-500'}`}>
+                            <MessageSquare size={17} />
+                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
+                            </span>
+                        </div>
+                        <div className="text-left">
+                            <div className="flex items-center gap-1.5 leading-tight">
+                                <span>Professionista Incaricato & Chat</span>
+                                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase px-1.5 py-0.2 rounded">Live</span>
+                            </div>
+                            <div className="text-[10px] font-normal text-stone-400 hidden sm:block">Referente e messaggi</div>
+                        </div>
                     </div>
                 </button>
             </div>
@@ -562,9 +633,13 @@ export function CustomerOrderDetailPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTab('professional')}
-                                                className="text-[11px] font-bold text-purple-700 hover:text-purple-800 cursor-pointer"
+                                                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-lg border border-orange-200/60 cursor-pointer transition-all"
                                             >
-                                                Vedi scheda →
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                                </span>
+                                                <span>Chat & Scheda →</span>
                                             </button>
                                         </div>
                                         <p className="font-extrabold text-stone-900 text-sm sm:text-base truncate mt-0.5">
@@ -726,7 +801,7 @@ export function CustomerOrderDetailPage() {
                             confirmedWorkDays={order.confirmed_work_days}
                             confirmedCalendarDays={order.confirmed_calendar_days}
                             proNote={order.duration_pro_note}
-                            hideAssumptions={true}
+                            startDate={inizioLavori}
                         />
 
                         {/* 3. INDIRIZZO DI POSA & LOGISTICA DI SCARICO */}
@@ -826,6 +901,18 @@ export function CustomerOrderDetailPage() {
                                     <Phone size={13} className="text-stone-400" /> Lun-Ven 09:00 - 18:00
                                 </p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('professional')}
+                                className="w-full mt-2 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-xs border border-orange-200/80 transition-all cursor-pointer"
+                            >
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                </span>
+                                <MessageSquare size={13} />
+                                <span>Scrivi nella Chat di Cantiere</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1242,24 +1329,39 @@ export function CustomerOrderDetailPage() {
                     {/* Colonna Destra (lg:col-span-7): Chat di Cantiere Integrata */}
                     <div className="lg:col-span-7 space-y-6">
                         <div id="chat-cantiere" className="scroll-mt-6">
-                            {jobId && user?.id && isJobAccepted ? (
-                                <JobChat
-                                    jobId={jobId}
-                                    currentUserId={user.id}
-                                    proUserId={(order as any).installation_professional_id || (order as any).professional_id || undefined}
-                                    customerUserId={user.id}
-                                    title="Chat di Cantiere"
-                                    subtitle="Canale diretto tra te, il posatore e PosaFacile"
-                                />
+                            {jobId && user?.id ? (
+                                <div className="space-y-3">
+                                    {jobStatus === 'assigned' && (
+                                        <div className="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
+                                            <div className="p-1.5 rounded-xl bg-amber-200/60 text-amber-800 shrink-0 mt-0.5">
+                                                <Clock size={16} />
+                                            </div>
+                                            <div className="leading-relaxed">
+                                                <p className="font-bold">In attesa di conferma accettazione del posatore</p>
+                                                <p className="text-amber-800/90 mt-0.5">
+                                                    Il posatore incaricato sta verificando le date e i dettagli del cantiere. Puoi già scrivere e inviare messaggi qui: saranno notificati al posatore e monitorati dal supporto operativo PosaFacile.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <JobChat
+                                        jobId={jobId}
+                                        currentUserId={user.id}
+                                        proUserId={(order as any).installation_professional_id || (order as any).professional_id || undefined}
+                                        customerUserId={user.id}
+                                        title="Chat di Cantiere"
+                                        subtitle={`Canale diretto tra te, ${order.professional?.full_name || 'il posatore'} e PosaFacile`}
+                                    />
+                                </div>
                             ) : (
                                 <div className="bg-white rounded-2xl border border-stone-200/90 shadow-xs overflow-hidden p-8 text-center space-y-4">
                                     <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center mx-auto border border-orange-100">
                                         <MessageSquare size={26} />
                                     </div>
                                     <div className="max-w-md mx-auto">
-                                        <h3 className="text-lg font-bold text-stone-900">Chat di Cantiere in Attivazione</h3>
+                                        <h3 className="text-lg font-bold text-stone-900">Assegnazione Cantiere in Corso</h3>
                                         <p className="text-xs text-stone-500 mt-1.5 leading-relaxed">
-                                            La chat bidirezionale in tempo reale si attiverà automaticamente non appena il posatore accetta l'incarico. Potrai scambiare messaggi, foto dello stato di fatto e coordinare i dettagli logistici.
+                                            Stiamo abbinando il posatore certificato più adatto alla tua zona geografica e al tipo di piastrella. La chat live si attiverà non appena assegnato l'incarico.
                                         </p>
                                     </div>
                                 </div>

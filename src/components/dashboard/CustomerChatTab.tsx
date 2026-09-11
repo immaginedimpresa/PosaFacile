@@ -51,6 +51,7 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
     })
 
     const [jobId, setJobId] = useState<string | null>(null)
+    const [jobStatus, setJobStatus] = useState<string | null>(null)
     const [loadingJob, setLoadingJob] = useState(false)
 
     const selectedOrder = activeOrders.find(o => o.id === selectedOrderId) || activeOrders[0]
@@ -58,6 +59,7 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
     useEffect(() => {
         if (!selectedOrder?.id) {
             setJobId(null)
+            setJobStatus(null)
             return
         }
 
@@ -76,25 +78,49 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
                     .maybeSingle()
 
                 if (jobData?.id && isMounted) {
-                    const isAccepted = jobData.status === 'accepted' || jobData.status === 'in_progress' || jobData.status === 'completed'
-                    if (isAccepted) {
-                        setJobId(jobData.id)
-                    } else {
-                        setJobId(null)
-                    }
+                    setJobId(jobData.id)
+                    setJobStatus(jobData.status)
                     return
                 }
 
-                // 2. Prova RPC get_or_create_order_job
-                const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', {
-                    p_order_id: selectedOrder.id
-                })
+                // 2. Prova a creare o verificare job se il posatore è designato
+                const proId = selectedOrder.professional_id || selectedOrder.installation_professional_id
+                if (proId) {
+                    const { data: newJob } = await supabase
+                        .from('jobs')
+                        .insert({
+                            order_id: selectedOrder.id,
+                            professional_id: proId,
+                            status: 'assigned',
+                            scheduled_date: selectedOrder.installation_date || null,
+                            notes: 'Creato per chat di cantiere'
+                        })
+                        .select('id, status')
+                        .maybeSingle()
 
-                if (rpcJobId && typeof rpcJobId === 'string' && isMounted) {
-                    setJobId(rpcJobId)
-                } else if (isMounted) {
-                    setJobId(null)
+                    if (newJob?.id && isMounted) {
+                        setJobId(newJob.id)
+                        setJobStatus(newJob.status)
+                        return
+                    }
                 }
+
+                // 3. Prova RPC get_or_create_order_job come fallback
+                try {
+                    const { data: rpcJobId } = await (supabase.rpc as any)('get_or_create_order_job', {
+                        p_order_id: selectedOrder.id
+                    })
+
+                    if (rpcJobId && typeof rpcJobId === 'string' && isMounted) {
+                        setJobId(rpcJobId)
+                        setJobStatus('assigned')
+                        return
+                    }
+                } catch {
+                    // Ignora eventuale assenza rpc
+                }
+
+                if (isMounted) setJobId(null)
             } catch (err) {
                 console.warn('Could not resolve job for chat:', err)
                 if (isMounted) setJobId(null)
@@ -194,7 +220,7 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
                                     )}
                                 </div>
                                 <p className="text-xs text-stone-500 font-medium truncate mt-0.5">
-                                    {pro?.company_name || 'Posatore Ufficiale PosaFacile'}
+                                    {pro?.company_name || 'Posatore certificato PosaFacile'}
                                 </p>
                             </div>
                         </div>
@@ -266,15 +292,31 @@ export function CustomerChatTab({ orders, initialOrderId }: CustomerChatTabProps
                             <p className="text-xs font-semibold text-stone-500">Connessione al canale di cantiere...</p>
                         </div>
                     ) : jobId && user?.id ? (
-                        <JobChat
-                            jobId={jobId}
-                            currentUserId={user.id}
-                            proUserId={selectedOrder.professional_id || selectedOrder.installation_professional_id || null}
-                            customerUserId={user.id}
-                            title={`Chat Cantiere #${selectedOrder.order_number}`}
-                            subtitle={`Conversazione con ${pro?.full_name || 'il posatore incaricato'}`}
-                            className="min-h-[500px]"
-                        />
+                        <div className="space-y-3">
+                            {jobStatus === 'assigned' && (
+                                <div className="bg-amber-50/90 border border-amber-200/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900 shadow-2xs">
+                                    <div className="p-1.5 rounded-xl bg-amber-200/60 text-amber-800 shrink-0 mt-0.5">
+                                        <Clock size={16} />
+                                    </div>
+                                    <div className="leading-relaxed">
+                                        <p className="font-bold">In attesa di conferma accettazione del posatore</p>
+                                        <p className="text-amber-800/90 mt-0.5">
+                                            Il posatore è stato assegnato al cantiere e sta confermando l'incarico. Puoi già inviare messaggi qui: verranno recapitati al posatore e all'ufficio operativo PosaFacile.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <JobChat
+                                jobId={jobId}
+                                currentUserId={user.id}
+                                proUserId={selectedOrder.professional_id || selectedOrder.installation_professional_id || null}
+                                customerUserId={user.id}
+                                title={`Chat Cantiere #${selectedOrder.order_number}`}
+                                subtitle={`Conversazione con ${pro?.full_name || 'il posatore incaricato'}`}
+                                className="min-h-[500px]"
+                            />
+                        </div>
                     ) : (
                         <div className="bg-white rounded-2xl border border-stone-200/90 p-8 text-center shadow-xs">
                             <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200/80">

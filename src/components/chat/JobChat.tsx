@@ -250,14 +250,32 @@ export function JobChat({
                         <span className="text-xs font-medium">Caricamento conversazione...</span>
                     </div>
                 ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 flex items-center justify-center mb-3">
+                    <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 border border-orange-100 flex items-center justify-center mb-3">
                             <MessageSquare size={22} />
                         </div>
-                        <p className="font-extrabold text-stone-800 text-sm">Nessun messaggio ancora</p>
-                        <p className="text-xs text-stone-500 max-w-xs mt-1 leading-relaxed">
-                            Utilizza questo canale protetto per coordinare l'accesso, chiarire dettagli e scambiare comunicazioni sul cantiere.
+                        <p className="font-extrabold text-stone-900 text-sm">Canale di Comunicazione Aperto</p>
+                        <p className="text-xs text-stone-500 max-w-sm mt-1 leading-relaxed">
+                            Questo canale è riservato a te, al posatore incaricato e all'assistenza PosaFacile. Puoi scrivere qui per qualsiasi chiarimento sui lavori, orari o consegna materiali.
                         </p>
+
+                        {/* Prompt rapidi suggeriti */}
+                        <div className="mt-4 flex flex-wrap gap-2 justify-center max-w-md">
+                            {[
+                                "Buongiorno, a che ora è previsto l'inizio dei lavori?",
+                                "Vorrei avere un chiarimento sulla consegna dei materiali",
+                                "Confermo che l'indirizzo e la data indicati sono corretti"
+                            ].map((suggestion, i) => (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => setNewMessage(suggestion)}
+                                    className="text-[11px] bg-white border border-stone-200/90 hover:border-orange-300 hover:bg-orange-50/50 text-stone-700 px-3 py-1.5 rounded-full transition-all shadow-2xs text-left cursor-pointer"
+                                >
+                                    💬 {suggestion}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     messages.map((msg) => {

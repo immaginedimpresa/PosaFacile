@@ -332,7 +332,8 @@ export function OrderDetailDrawer({
                                             confirmedWorkDays={order.confirmed_work_days}
                                             confirmedCalendarDays={order.confirmed_calendar_days}
                                             proNote={order.duration_pro_note}
-                                            showPhases
+                                            startDate={order.work_start_date || order.scheduled_date}
+                                            audience="team"
                                         />
                                     </div>
                                 ) : activeTab === 'details' ? (

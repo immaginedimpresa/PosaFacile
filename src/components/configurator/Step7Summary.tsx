@@ -449,7 +449,7 @@ export function Step7Summary() {
             </div>
 
             {/* Durata stimata del cantiere */}
-            <DurationCard estimate={durata} showPhases />
+            <DurationCard estimate={durata} startDate={effectiveDate} />
 
             {/* Price Breakdown */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">

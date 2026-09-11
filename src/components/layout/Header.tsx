@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Menu, X, ArrowUpRight, LogOut } from 'lucide-react'
+import { User, Menu, X, ArrowUpRight, LogOut, MessageSquare } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Logo } from '@/components/ui/Logo'
 import { useUserStore } from '@/store/userStore'
@@ -86,8 +86,24 @@ export function Header() {
                         ))}
                     </nav>
 
-                    {/* Azioni utente a destra (SOLO ICONE: Notifiche, Profilo, Esci) */}
+                    {/* Azioni utente a destra (ICONE: Chat Cantiere, Notifiche, Profilo, Esci) */}
                     <div className="flex items-center gap-1 sm:gap-2">
+                        {/* Chat di Cantiere con pallino pulsante (per utenti loggati) */}
+                        {user && (
+                            <Link
+                                to={userRole === 'professional' ? '/pro/jobs' : '/dashboard?tab=messages'}
+                                aria-label="Chat di Cantiere"
+                                title="Chat di Cantiere (Canale diretto)"
+                                className="relative rounded-full p-2 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
+                            >
+                                <MessageSquare size={19} />
+                                <span className="absolute top-1 right-1 flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                </span>
+                            </Link>
+                        )}
+
                         {/* Campanella Notifiche */}
                         {user && <NotificationBell variant="light" />}
 
@@ -188,6 +204,18 @@ export function Header() {
                         </Link>
                         {user ? (
                             <>
+                                <Link
+                                    to={userRole === 'professional' ? '/pro/jobs' : '/dashboard?tab=messages'}
+                                    onClick={closeMenu}
+                                    className="flex items-center justify-center gap-2 rounded-xl border border-orange-200/90 bg-orange-50/70 px-4 py-3 font-bold text-orange-950 shadow-2xs"
+                                >
+                                    <MessageSquare size={17} className="text-orange-600" />
+                                    <span>Chat di Cantiere</span>
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                    </span>
+                                </Link>
                                 <Link
                                     to={accountPath}
                                     onClick={closeMenu}

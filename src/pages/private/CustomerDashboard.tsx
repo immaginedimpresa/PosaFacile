@@ -281,15 +281,24 @@ export function CustomerDashboard() {
                         }`}
                     >
                         <span className="flex items-center gap-2.5">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                            </span>
                             <MessageSquare size={18} /> Chat di Cantiere
                         </span>
-                        {orders.filter(o => o.status !== 'draft').length > 0 && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-                                activeTab === 'messages' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
-                            }`}>
-                                {orders.filter(o => o.status !== 'draft').length}
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">
+                                Live
                             </span>
-                        )}
+                            {orders.filter(o => o.status !== 'draft').length > 0 && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                                    activeTab === 'messages' ? 'bg-orange-500 text-white' : 'bg-stone-200 text-stone-700'
+                                }`}>
+                                    {orders.filter(o => o.status !== 'draft').length}
+                                </span>
+                            )}
+                        </div>
                     </button>
 
                     <button
@@ -651,11 +660,15 @@ export function CustomerDashboard() {
                                                     {!isDraft && (
                                                         <Button
                                                             variant="outline"
-                                                            className="flex items-center gap-1.5 text-sm rounded-xl text-stone-700 hover:text-orange-600 hover:border-orange-200"
-                                                            onClick={() => navigate(`/dashboard/orders/${order.id}#chat-cantiere`)}
+                                                            className="flex items-center gap-2 text-sm rounded-xl text-stone-800 bg-orange-50/60 hover:bg-orange-100 hover:text-orange-950 border-orange-200/80 font-bold transition-all shadow-2xs cursor-pointer"
+                                                            onClick={() => navigate(`/dashboard?tab=messages&orderId=${order.id}`)}
                                                         >
-                                                            <MessageSquare size={15} className="text-orange-500" />
-                                                            Chat Cantiere
+                                                            <span className="relative flex h-2 w-2">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                                                            </span>
+                                                            <MessageSquare size={15} className="text-orange-600" />
+                                                            <span>Apri Chat Cantiere</span>
                                                         </Button>
                                                     )}
 

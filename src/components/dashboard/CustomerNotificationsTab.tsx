@@ -213,18 +213,36 @@ export function CustomerNotificationsTab() {
                                 </div>
 
                                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-stone-100">
-                                    {notif.link && (
-                                        <a
-                                            href={notif.link}
-                                            onClick={() => {
-                                                if (!notif.read) markAsRead(notif.id)
-                                            }}
-                                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition-colors"
-                                        >
-                                            <span>Visualizza</span>
-                                            <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                    )}
+                                    {notif.link && (() => {
+                                        const isChatNotif = notif.type === 'message_received' || notif.link.includes('chat') || notif.link.includes('tab=messages')
+                                        return isChatNotif ? (
+                                            <a
+                                                href={notif.link}
+                                                onClick={() => {
+                                                    if (!notif.read) markAsRead(notif.id)
+                                                }}
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-xs shadow-orange-500/25 active:scale-95"
+                                            >
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                                </span>
+                                                <MessageSquare className="w-3.5 h-3.5" />
+                                                <span>Apri Chat</span>
+                                            </a>
+                                        ) : (
+                                            <a
+                                                href={notif.link}
+                                                onClick={() => {
+                                                    if (!notif.read) markAsRead(notif.id)
+                                                }}
+                                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold transition-colors"
+                                            >
+                                                <span>Visualizza</span>
+                                                <ExternalLink className="w-3 h-3" />
+                                            </a>
+                                        )
+                                    })()}
 
                                     {!notif.read && (
                                         <button

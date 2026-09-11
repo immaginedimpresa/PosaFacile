@@ -93,7 +93,27 @@ BEGIN
         RETURN v_job_id;
     END IF;
 
-    RETURN NULL;
+    -- 3. Se non c'è ancora un professionista abbinato, crea comunque il job per il cantiere
+    -- con professional_id NULL (canale chat attivo con il team PosaFacile fin da subito)
+    INSERT INTO public.jobs (
+        order_id,
+        professional_id,
+        status,
+        scheduled_date,
+        notes,
+        created_at,
+        updated_at
+    ) VALUES (
+        p_order_id,
+        NULL,
+        'assigned',
+        COALESCE(v_order.work_start_date, v_order.installation_date),
+        COALESCE(v_order.notes, 'Cantiere registrato in attesa di posatore'),
+        NOW(),
+        NOW()
+    ) RETURNING id INTO v_job_id;
+
+    RETURN v_job_id;
 END;
 $$;
 

@@ -250,11 +250,22 @@ export function NotificationBell({
 
                                         {/* Indicatori aggiuntivi */}
                                         <div className="mt-1.5 flex items-center justify-between">
-                                            {notif.channel === 'both' && (
-                                                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">
-                                                    In-App + Email
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-1.5">
+                                                {(notif.type === 'message_received' || notif.link?.includes('chat')) && (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-orange-100 text-orange-800 text-[9px] font-black uppercase tracking-wider">
+                                                        <span className="relative flex h-1.5 w-1.5">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span>
+                                                        </span>
+                                                        Chat Cantiere
+                                                    </span>
+                                                )}
+                                                {notif.channel === 'both' && (
+                                                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">
+                                                        In-App + Email
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-1 ml-auto">
                                                 <button
                                                     type="button"
