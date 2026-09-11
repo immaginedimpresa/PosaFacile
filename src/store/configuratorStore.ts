@@ -40,6 +40,10 @@ export interface DeliveryAccessInfo {
     hasUnloadingZone: boolean
     hasFreightElevator: boolean
     logisticsNotes: string
+    /** Il cliente ha confermato che i bancali restano a terra (bordo strada o box). */
+    groundUnloadAcknowledged: boolean
+    /** Il cliente ha confermato che porterà lui il materiale al piano. */
+    carryUpAcknowledged: boolean
 }
 
 // Step 2: Product Selection
@@ -225,6 +229,8 @@ const initialState = {
         hasUnloadingZone: true,
         hasFreightElevator: false,
         logisticsNotes: '',
+        groundUnloadAcknowledged: false,
+        carryUpAcknowledged: false,
     },
     deliverySubStep: 1,
     logisticsSettings: null as LogisticsSettings | null,
@@ -311,6 +317,8 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                         hasUnloadingZone: (quote.delivery_access?.hasUnloadingZone ?? servicesObj.delivery_access?.hasUnloadingZone ?? true),
                         hasFreightElevator: (quote.delivery_access?.hasFreightElevator ?? servicesObj.delivery_access?.hasFreightElevator ?? false),
                         logisticsNotes: quote.delivery_access?.logisticsNotes || servicesObj.delivery_access?.logisticsNotes || '',
+                        groundUnloadAcknowledged: Boolean(quote.delivery_access?.groundUnloadAcknowledged ?? servicesObj.delivery_access?.groundUnloadAcknowledged),
+                        carryUpAcknowledged: Boolean(quote.delivery_access?.carryUpAcknowledged ?? servicesObj.delivery_access?.carryUpAcknowledged),
                     },
                     selectedDate: quote.scheduled_date ? new Date(quote.scheduled_date) : null,
                     aiRoomImage: null,
@@ -346,9 +354,23 @@ export const useConfiguratorStore = create<ConfiguratorState>()(
                 }
             }),
 
-            setDeliveryAccess: (access) => set((state) => ({
-                deliveryAccess: { ...state.deliveryAccess, ...access }
-            })),
+            setDeliveryAccess: (access) => set((state) => {
+                const prev = state.deliveryAccess
+                const next = { ...prev, ...access }
+                // Una conferma vale per la scelta a cui si riferisce: se la scelta cambia, va ridata.
+                if (next.destination !== prev.destination) {
+                    next.groundUnloadAcknowledged = access.groundUnloadAcknowledged ?? false
+                }
+                if (
+                    next.destination !== prev.destination ||
+                    next.floorType !== prev.floorType ||
+                    next.floorNumber !== prev.floorNumber ||
+                    next.handlingBy !== prev.handlingBy
+                ) {
+                    next.carryUpAcknowledged = access.carryUpAcknowledged ?? false
+                }
+                return { deliveryAccess: next }
+            }),
 
             setDeliverySubStep: (step) => set({ deliverySubStep: Math.max(1, Math.min(4, step)) }),
 

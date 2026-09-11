@@ -140,7 +140,7 @@ export function Step7Summary() {
                     alert('Il professionista selezionato non è più disponibile. Per favore selezionane un altro.')
                     // Reset stale data
                     useConfiguratorStore.getState().setSelectedProfessional(null)
-                    useConfiguratorStore.getState().setCurrentStep(3) // Go back to Pro selection
+                    useConfiguratorStore.getState().setCurrentStep(2) // Go back to Pro selection
                     setSubmitting(false)
                     return
                 }

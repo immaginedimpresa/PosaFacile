@@ -115,7 +115,7 @@ export function Step7ProfessionalSelect() {
         const rates = await fetchRates(pro.id)
         setProfessionalRates(rates)
 
-        // Se al passaggio precedente l'utente aveva scelto "Lo porta il posatore" ma questo posatore non offre il servizio:
+        // Se l'utente, tornando indietro, cambia posatore dopo aver scelto "Lo porta il posatore" e il nuovo non offre il servizio:
         if (deliveryAccess.handlingBy === 'pro' && !offersMaterialHandling(rates)) {
             setDeliveryAccess({ handlingBy: 'client' })
             toast.info(

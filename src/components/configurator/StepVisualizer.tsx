@@ -85,7 +85,7 @@ export function StepVisualizer() {
                     <span>Nessuna piastrella selezionata. Torna al passo precedente per scegliere un materiale.</span>
                     <button
                         type="button"
-                        onClick={() => setCurrentStep(5)}
+                        onClick={() => setCurrentStep(4)}
                         className="font-medium text-amber-900 underline ml-2"
                     >
                         Scegli piastrella

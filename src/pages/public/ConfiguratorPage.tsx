@@ -31,29 +31,35 @@ import { STATIC_PAGES } from '@/lib/seo'
 
 // Il flusso è strutturato in 11 passaggi logici:
 // 1. Luogo: Indirizzo e provincia
-// 2. Accesso e Scarico: Modalità di scarico (bordo strada, box, piano, montacarichi, sosta)
-// 3. Professionista: Selezione del posatore locale (senza stima visibile)
-// 4. Progetto: Ambiente e tipo di intervento
-// 5. Piastrella: Selezione materiale dal catalogo
-// 6. Dimensioni: Superfici e sfrido
-// 7. Posa: Schema di posa (tariffe posatore + markup)
-// 8. Anteprima: Simulazione fotorealistica AI nella stanza dell'utente
-// 9. Servizi: Servizi accessori
+// 2. Professionista: Selezione del posatore locale (senza stima visibile)
+// 3. Progetto: Ambiente e tipo di intervento
+// 4. Piastrella: Selezione materiale dal catalogo
+// 5. Dimensioni: Superfici e sfrido
+// 6. Posa: Schema di posa (tariffe posatore + markup)
+// 7. Anteprima: Simulazione fotorealistica AI nella stanza dell'utente
+// 8. Servizi: Servizi accessori
+// 9. Accesso e Scarico: Modalità di scarico (bordo strada, box, piano, montacarichi, sosta).
+//    Sta qui perché il facchinaggio del posatore si calcola sui suoi prezzi e sui mq.
 // 10. Data: Calendario e tempistiche
 // 11. Riepilogo: Preventivo dettagliato e invio
 const STEPS = [
     { num: 1, label: 'Luogo' },
-    { num: 2, label: 'Accesso e Scarico' },
-    { num: 3, label: 'Professionista' },
-    { num: 4, label: 'Progetto' },
-    { num: 5, label: 'Piastrella' },
-    { num: 6, label: 'Dimensioni' },
-    { num: 7, label: 'Posa' },
-    { num: 8, label: 'Anteprima' },
-    { num: 9, label: 'Servizi' },
+    { num: 2, label: 'Professionista' },
+    { num: 3, label: 'Progetto' },
+    { num: 4, label: 'Piastrella' },
+    { num: 5, label: 'Dimensioni' },
+    { num: 6, label: 'Posa' },
+    { num: 7, label: 'Anteprima' },
+    { num: 8, label: 'Servizi' },
+    { num: 9, label: 'Accesso e Scarico' },
     { num: 10, label: 'Data' },
     { num: 11, label: 'Riepilogo' },
 ]
+
+/** Il passo Accesso e Scarico, diviso in quattro sottopassi. */
+const DELIVERY_STEP = 9
+/** Il passo in cui si sceglie la piastrella: da lì in poi la si mostra in testata. */
+const PRODUCT_STEP = 4
 
 export function ConfiguratorPage() {
     useSeo(STATIC_PAGES.configurator)
@@ -151,23 +157,38 @@ export function ConfiguratorPage() {
                     location.provincia?.trim() &&
                     location.cap?.trim(),
                 )
-            case 2: // Accesso e Scarico
-                return Boolean(deliveryAccess.destination)
-            case 3: // Professionista
+            case 2: // Professionista
                 return Boolean(selectedProfessional)
-            case 4: // Progetto
+            case DELIVERY_STEP: { // Accesso e Scarico
+                if (!deliveryAccess.destination) return false
+                // Le note di avviso vanno confermate con la spunta, nel sottopasso in cui compaiono.
+                const leftAtGround = deliveryAccess.destination !== 'floor'
+                if (deliverySubStep === 1 && leftAtGround) {
+                    return Boolean(deliveryAccess.groundUnloadAcknowledged)
+                }
+                if (
+                    deliverySubStep === 3 &&
+                    leftAtGround &&
+                    deliveryAccess.floorType === 'upper' &&
+                    deliveryAccess.handlingBy === 'client'
+                ) {
+                    return Boolean(deliveryAccess.carryUpAcknowledged)
+                }
+                return true
+            }
+            case 3: // Progetto
                 return Boolean(projectInfo.ambiente && projectInfo.intervento)
-            case 5: // Piastrella
+            case PRODUCT_STEP: // Piastrella
                 return Boolean(selectedProduct)
-            case 6: // Dimensioni
+            case 5: // Dimensioni
                 return Boolean(
                     dimensions.pavimentoMq > 0 || dimensions.paretiMq > 0,
                 )
-            case 7: // Posa
+            case 6: // Posa
                 return Boolean(layingType)
-            case 8: // Anteprima
+            case 7: // Anteprima
                 return true
-            case 9: // Servizi
+            case 8: // Servizi
                 return true
             case 10: // Data
                 return Boolean(selectedDate || location.dataPreferita)
@@ -180,7 +201,7 @@ export function ConfiguratorPage() {
 
     const handleNext = () => {
         if (!canProceed) return
-        if (currentStep === 2 && deliverySubStep < 4) {
+        if (currentStep === DELIVERY_STEP && deliverySubStep < 4) {
             setDeliverySubStep(deliverySubStep + 1)
             const stepEl = document.querySelector('.pf-config-step')
             if (stepEl) {
@@ -214,7 +235,7 @@ export function ConfiguratorPage() {
     }
 
     const handlePrev = () => {
-        if (currentStep === 2 && deliverySubStep > 1) {
+        if (currentStep === DELIVERY_STEP && deliverySubStep > 1) {
             setDeliverySubStep(deliverySubStep - 1)
             const stepEl = document.querySelector('.pf-config-step')
             if (stepEl) {
@@ -279,21 +300,21 @@ export function ConfiguratorPage() {
             case 1:
                 return <Step6Location />
             case 2:
-                return <StepDeliveryAccess />
-            case 3:
                 return <Step7ProfessionalSelect />
-            case 4:
+            case 3:
                 return <Step1ProjectType />
-            case 5:
+            case PRODUCT_STEP:
                 return <Step2ProductSelect />
-            case 6:
+            case 5:
                 return <Step3Dimensions />
-            case 7:
+            case 6:
                 return <Step4LayingType />
-            case 8:
+            case 7:
                 return <StepVisualizer />
-            case 9:
+            case 8:
                 return <Step5Services />
+            case DELIVERY_STEP:
+                return <StepDeliveryAccess />
             case 10:
                 return <Step8CalendarSelect />
             case 11:
@@ -323,7 +344,7 @@ export function ConfiguratorPage() {
                             <h1>
                                 Facciamo spazio
                                 <br />
-                                <span>alla tua nuova casa.</span>
+                                <span>al tuo nuovo rivestimento.</span>
                             </h1>
                         </div>
                         <div className="pf-config-intro-actions">
@@ -406,7 +427,7 @@ export function ConfiguratorPage() {
                                 {currentStep} - {STEPS[currentStep - 1]?.label}
                             </h2>
                         </div>
-                        {selectedProduct && currentStep > 5 && (
+                        {selectedProduct && currentStep > PRODUCT_STEP && (
                             <div className="pf-config-selected">
                                 {selectedProduct.images[0] && (
                                     <img
@@ -435,7 +456,7 @@ export function ConfiguratorPage() {
 
                         {/* Footer con pulsanti Indietro e Avanti FISSI rispetto a pf-config-workspace */}
                         <div className="pf-config-workspace-footer">
-                            {currentStep > 1 || (currentStep === 2 && deliverySubStep > 1) ? (
+                            {currentStep > 1 ? (
                                 <button
                                     type="button"
                                     className="pf-config-back"
@@ -457,7 +478,7 @@ export function ConfiguratorPage() {
                             )}
 
                             <div className="pf-config-workspace-footer-center">
-                                {currentStep === 2 ? (
+                                {currentStep === DELIVERY_STEP ? (
                                     <div className="pf-config-workspace-phase-badge">
                                         <span>Fase <strong>{deliverySubStep}</strong> di 4</span>
                                         <span className="text-stone-300">·</span>
@@ -475,7 +496,7 @@ export function ConfiguratorPage() {
                                 )}
                                 {total > 0 && (
                                     <div className="pf-config-workspace-total">
-                                        <small>Totale stimato:</small>
+                                        <small>Totale stimato (IVA incl.):</small>
                                         <strong>{formattedTotal}</strong>
                                     </div>
                                 )}
@@ -487,7 +508,7 @@ export function ConfiguratorPage() {
                                 onClick={handleNext}
                                 disabled={!canProceed}
                             >
-                                {currentStep === 2 && deliverySubStep < 4 ? (
+                                {currentStep === DELIVERY_STEP && deliverySubStep < 4 ? (
                                     <>
                                         <span>Avanti</span>
                                         <ArrowRight size={16} />
